@@ -16,12 +16,16 @@ $articles = new WP_Query(
 <section class="section" id="articles">
 	<div class="wrap">
 		<h2><?php esc_html_e( 'Les articles de fond', 'plaidact-campaign' ); ?></h2>
-		<?php while ( $articles->have_posts() ) : $articles->the_post(); ?>
-			<article style="margin-bottom:1.5rem;">
-				<h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
-				<?php the_excerpt(); ?>
-			</article>
-		<?php endwhile; ?>
+		<?php if ( $articles->have_posts() ) : ?>
+			<?php while ( $articles->have_posts() ) : $articles->the_post(); ?>
+				<article class="plaidact-card" style="margin-bottom:1rem;">
+					<h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
+					<?php the_excerpt(); ?>
+				</article>
+			<?php endwhile; ?>
+		<?php else : ?>
+			<p><?php esc_html_e( 'Aucun article publié pour le moment.', 'plaidact-campaign' ); ?></p>
+		<?php endif; ?>
 		<?php wp_reset_postdata(); ?>
 	</div>
 </section>

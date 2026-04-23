@@ -10,6 +10,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Sanitizes plain text fields.
+ *
+ * @param string $value Field value.
+ * @return string
+ */
+function plaidact_sanitize_text( string $value ): string {
+	return sanitize_text_field( $value );
+}
+
+/**
  * Registers campaign Customizer settings.
  *
  * @param WP_Customize_Manager $wp_customize Manager instance.
@@ -53,9 +63,43 @@ function plaidact_campaign_customize_register( WP_Customize_Manager $wp_customiz
 	$wp_customize->add_section(
 		'plaidact_campaign_hero',
 		array(
-			'title'       => __( 'Hero - visuel de fond', 'plaidact-campaign' ),
-			'description' => __( 'Définit une image ou une vidéo de fond plein écran.', 'plaidact-campaign' ),
+			'title'       => __( 'Hero - contenu principal', 'plaidact-campaign' ),
+			'description' => __( 'Définit le message principal et le visuel de fond plein écran.', 'plaidact-campaign' ),
 			'priority'    => 31,
+		)
+	);
+
+	$wp_customize->add_setting(
+		'hero_title',
+		array(
+			'default'           => '',
+			'sanitize_callback' => 'plaidact_sanitize_text',
+		)
+	);
+
+	$wp_customize->add_control(
+		'hero_title',
+		array(
+			'label'   => __( 'Titre hero (optionnel)', 'plaidact-campaign' ),
+			'section' => 'plaidact_campaign_hero',
+			'type'    => 'text',
+		)
+	);
+
+	$wp_customize->add_setting(
+		'hero_subtitle',
+		array(
+			'default'           => '',
+			'sanitize_callback' => 'plaidact_sanitize_text',
+		)
+	);
+
+	$wp_customize->add_control(
+		'hero_subtitle',
+		array(
+			'label'   => __( 'Sous-titre hero (optionnel)', 'plaidact-campaign' ),
+			'section' => 'plaidact_campaign_hero',
+			'type'    => 'text',
 		)
 	);
 

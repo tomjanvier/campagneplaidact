@@ -11,12 +11,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 get_header();
 
-$hero_image = esc_url( (string) get_theme_mod( 'hero_background_image', '' ) );
-$hero_video = esc_url( (string) get_theme_mod( 'hero_background_video', '' ) );
+$hero_image    = esc_url( (string) get_theme_mod( 'hero_background_image', '' ) );
+$hero_video    = esc_url( (string) get_theme_mod( 'hero_background_video', '' ) );
+$hero_title    = (string) get_theme_mod( 'hero_title', get_bloginfo( 'name' ) );
+$hero_subtitle = (string) get_theme_mod( 'hero_subtitle', get_bloginfo( 'description' ) );
 ?>
 
 <header class="section campaign-header" id="top">
-	<div class="wrap" style="display:flex;justify-content:space-between;align-items:center;gap:1rem;">
+	<div class="wrap campaign-header__inner">
 		<a href="https://plaid-act.org" target="_blank" rel="noopener noreferrer" aria-label="PLAID·ACT">
 			<?php if ( has_custom_logo() ) : ?>
 				<?php the_custom_logo(); ?>
@@ -38,24 +40,24 @@ $hero_video = esc_url( (string) get_theme_mod( 'hero_background_video', '' ) );
 	</div>
 </header>
 
-<section class="section hero" id="accueil" style="position:relative;min-height:100vh;display:grid;place-items:center;overflow:hidden;">
+<section class="section hero" id="accueil">
 	<?php if ( $hero_video ) : ?>
-		<video autoplay muted loop playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">
+		<video class="hero__media" autoplay muted loop playsinline>
 			<source src="<?php echo $hero_video; ?>" type="video/mp4" />
 		</video>
 	<?php elseif ( $hero_image ) : ?>
-		<div style="position:absolute;inset:0;background:url('<?php echo $hero_image; ?>') center / cover no-repeat;"></div>
+		<div class="hero__media" style="background-image:url('<?php echo $hero_image; ?>');"></div>
 	<?php endif; ?>
 
-	<div class="wrap" style="position:relative;z-index:1;color:#fff;text-align:center;">
-		<h1 class="hero-title" style="font-size:clamp(2rem,6vw,5rem);line-height:1.1;">
-			<?php echo esc_html( get_bloginfo( 'name' ) ); ?>
-		</h1>
-		<p><?php echo esc_html( get_bloginfo( 'description' ) ); ?></p>
+	<div class="hero__overlay"></div>
+	<div class="wrap hero__content">
+		<h1 class="hero-title"><?php echo esc_html( $hero_title ); ?></h1>
+		<p><?php echo esc_html( $hero_subtitle ); ?></p>
 	</div>
 </section>
 
 <?php get_template_part( 'template-parts/sections/partners' ); ?>
+
 <?php if ( plaidact_is_enabled( 'enable_petition', true ) ) : ?>
 	<?php get_template_part( 'template-parts/sections/petition' ); ?>
 <?php endif; ?>

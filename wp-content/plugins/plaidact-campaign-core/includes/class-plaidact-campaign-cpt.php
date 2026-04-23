@@ -23,6 +23,8 @@ final class CPT {
 	 */
 	public static function boot(): void {
 		add_action( 'init', array( __CLASS__, 'register_post_types' ) );
+		add_action( 'init', array( __CLASS__, 'register_taxonomies' ) );
+		add_action( 'init', array( __CLASS__, 'register_partner_meta' ) );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'register_partner_metabox' ) );
 		add_action( 'save_post_plaid_partner', array( __CLASS__, 'save_partner_url' ) );
 	}
@@ -79,7 +81,59 @@ final class CPT {
 				'menu_position'=> 22,
 				'has_archive'  => false,
 				'rewrite'      => array( 'slug' => 'partenaires' ),
-				'supports'     => array( 'title', 'thumbnail' ),
+				'supports'     => array( 'title', 'thumbnail', 'page-attributes' ),
+			)
+		);
+	}
+
+	/**
+	 * Registers campaign taxonomies.
+	 *
+	 * @return void
+	 */
+	public static function register_taxonomies(): void {
+		register_taxonomy(
+			'plaid_breve_topic',
+			'plaid_breve',
+			array(
+				'label'             => __( 'Thématiques', 'plaidact-campaign-core' ),
+				'public'            => true,
+				'show_admin_column' => true,
+				'show_in_rest'      => true,
+				'hierarchical'      => true,
+			)
+		);
+
+		register_taxonomy(
+			'plaid_partner_type',
+			'plaid_partner',
+			array(
+				'label'             => __( 'Type de partenaire', 'plaidact-campaign-core' ),
+				'public'            => true,
+				'show_admin_column' => true,
+				'show_in_rest'      => true,
+				'hierarchical'      => true,
+			)
+		);
+	}
+
+	/**
+	 * Registers partner meta for REST and UI parity.
+	 *
+	 * @return void
+	 */
+	public static function register_partner_meta(): void {
+		register_post_meta(
+			'plaid_partner',
+			'_plaid_partner_url',
+			array(
+				'single'            => true,
+				'type'              => 'string',
+				'show_in_rest'      => true,
+				'sanitize_callback' => 'esc_url_raw',
+				'auth_callback'     => static function (): bool {
+					return current_user_can( 'edit_posts' );
+				},
 			)
 		);
 	}
