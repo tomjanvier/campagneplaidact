@@ -39,6 +39,7 @@ function plaidact_campaign_customize_register( WP_Customize_Manager $wp_customiz
 		'enable_petition'   => __( 'Afficher la section Pétition', 'plaidact-campaign' ),
 		'enable_socialwall' => __( 'Afficher la section Réseaux sociaux', 'plaidact-campaign' ),
 		'enable_articles'   => __( 'Afficher la section Articles', 'plaidact-campaign' ),
+		'enable_report_highlight' => __( 'Afficher la section Rapport PDF', 'plaidact-campaign' ),
 	);
 
 	foreach ( $toggle_settings as $setting_key => $label ) {
@@ -141,5 +142,86 @@ function plaidact_campaign_customize_register( WP_Customize_Manager $wp_customiz
 			),
 		)
 	);
+
+	$wp_customize->add_section(
+		'plaidact_campaign_report',
+		array(
+			'title'       => __( 'Rapport PDF mis en avant', 'plaidact-campaign' ),
+			'description' => __( 'Permet d’afficher une section premium pour un rapport / note téléchargeable.', 'plaidact-campaign' ),
+			'priority'    => 32,
+		)
+	);
+
+	$wp_customize->add_setting(
+		'report_title',
+		array(
+			'default'           => __( 'Rapport de campagne 2026', 'plaidact-campaign' ),
+			'sanitize_callback' => 'plaidact_sanitize_text',
+		)
+	);
+
+	$wp_customize->add_control(
+		'report_title',
+		array(
+			'label'   => __( 'Titre du rapport', 'plaidact-campaign' ),
+			'section' => 'plaidact_campaign_report',
+			'type'    => 'text',
+		)
+	);
+
+	$wp_customize->add_setting(
+		'report_excerpt',
+		array(
+			'default'           => __( 'Consultez notre note stratégique complète en PDF : constats, recommandations et plan d’action.', 'plaidact-campaign' ),
+			'sanitize_callback' => 'plaidact_sanitize_text',
+		)
+	);
+
+	$wp_customize->add_control(
+		'report_excerpt',
+		array(
+			'label'   => __( 'Texte de présentation', 'plaidact-campaign' ),
+			'section' => 'plaidact_campaign_report',
+			'type'    => 'text',
+		)
+	);
+
+	$wp_customize->add_setting(
+		'report_button_label',
+		array(
+			'default'           => __( 'Lire le rapport PDF', 'plaidact-campaign' ),
+			'sanitize_callback' => 'plaidact_sanitize_text',
+		)
+	);
+
+	$wp_customize->add_control(
+		'report_button_label',
+		array(
+			'label'   => __( 'Libellé du bouton', 'plaidact-campaign' ),
+			'section' => 'plaidact_campaign_report',
+			'type'    => 'text',
+		)
+	);
+
+	$wp_customize->add_setting(
+		'report_pdf_url',
+		array(
+			'default'           => '',
+			'sanitize_callback' => 'esc_url_raw',
+		)
+	);
+
+	$wp_customize->add_control(
+		'report_pdf_url',
+		array(
+			'label'       => __( 'URL du PDF', 'plaidact-campaign' ),
+			'section'     => 'plaidact_campaign_report',
+			'type'        => 'url',
+			'input_attrs' => array(
+				'placeholder' => 'https://example.org/rapport.pdf',
+			),
+		)
+	);
+
 }
 add_action( 'customize_register', 'plaidact_campaign_customize_register' );

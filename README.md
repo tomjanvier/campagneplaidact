@@ -21,12 +21,14 @@ Ce repository permet de créer rapidement des sites de campagnes homogènes, tou
    │     ├─ plaidact-campaign-core.php
    │     └─ includes/
    │        ├─ class-plaidact-campaign-cpt.php
-   │        └─ class-plaidact-campaign-shortcodes.php
+   │        ├─ class-plaidact-campaign-shortcodes.php
+   │        └─ class-plaidact-campaign-demo.php
    └─ themes/
       └─ plaidact-campaign/
          ├─ style.css
          ├─ functions.php
          ├─ front-page.php
+         ├─ index.php
          ├─ header.php
          ├─ footer.php
          ├─ inc/
@@ -37,6 +39,7 @@ Ce repository permet de créer rapidement des sites de campagnes homogènes, tou
                ├─ petition.php
                ├─ breves.php
                ├─ articles.php
+               ├─ report-highlight.php
                └─ social-wall.php
 ```
 
@@ -53,6 +56,9 @@ Ce repository permet de créer rapidement des sites de campagnes homogènes, tou
 - Shortcodes de base :
   - `[petition_form]`
   - `[plaid_social_wall]`
+- Outil **Outils → PLAID·ACT Démo** pour :
+  - exporter un **ZIP de démo** prêt à partager (`plaidact-demo.json` + README),
+  - importer ce ZIP sur un autre site en quelques clics.
 
 ### Activation
 
@@ -63,9 +69,11 @@ Ce repository permet de créer rapidement des sites de campagnes homogènes, tou
 ### Fonctionnalités
 
 - Template `front-page.php` one-page (hero + sections).
+- Fallback `index.php` (obligatoire pour l’installation du thème via ZIP WordPress).
 - Sections découplées en `template-parts/sections/*`.
-- Toggles Customizer pour activer/désactiver les blocs (pétition, social wall, articles).
+- Toggles Customizer pour activer/désactiver les blocs (pétition, social wall, articles, rapport PDF).
 - Hero personnalisable (titre, sous-titre, image/vidéo).
+- Bloc “**Rapport PDF mis en avant**” personnalisable (titre, texte, CTA, URL PDF).
 - Support logo personnalisé et menu one-page.
 - CSS de base pour hero, cartes, CTA.
 
@@ -77,11 +85,13 @@ Le thème peut fonctionner seul visuellement, mais les sections **Brèves**, **P
 
 1. Activer le plugin `plaidact-campaign-core` (network).
 2. Activer le thème `plaidact-campaign` sur un sous-site.
-3. Configurer :
+3. (Optionnel) Aller dans **Outils → PLAID·ACT Démo** pour importer un ZIP de démo.
+4. Configurer :
    - Menu one-page
    - Hero dans le Customizer
+   - Section “Rapport PDF mis en avant” dans le Customizer
    - Contenus (Brèves, Partenaires, Articles)
-4. Ajuster les shortcodes/embeds selon les outils réels de pétition et de social wall.
+5. Ajuster les shortcodes/embeds selon les outils réels de pétition et de social wall.
 
 ## Notes
 

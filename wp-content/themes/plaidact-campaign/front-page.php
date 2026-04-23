@@ -68,6 +68,10 @@ $hero_subtitle = (string) get_theme_mod( 'hero_subtitle', get_bloginfo( 'descrip
 	<?php get_template_part( 'template-parts/sections/articles' ); ?>
 <?php endif; ?>
 
+<?php if ( plaidact_is_enabled( 'enable_report_highlight', false ) ) : ?>
+	<?php get_template_part( 'template-parts/sections/report-highlight' ); ?>
+<?php endif; ?>
+
 <?php if ( plaidact_is_enabled( 'enable_socialwall', true ) ) : ?>
 	<?php get_template_part( 'template-parts/sections/social-wall' ); ?>
 <?php endif; ?>

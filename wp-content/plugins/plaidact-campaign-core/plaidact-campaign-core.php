@@ -19,6 +19,7 @@ define( 'PLAIDACT_CORE_PATH', plugin_dir_path( __FILE__ ) );
 
 require_once PLAIDACT_CORE_PATH . 'includes/class-plaidact-campaign-cpt.php';
 require_once PLAIDACT_CORE_PATH . 'includes/class-plaidact-campaign-shortcodes.php';
+require_once PLAIDACT_CORE_PATH . 'includes/class-plaidact-campaign-demo.php';
 
 /**
  * Bootstraps plugin modules.
@@ -28,5 +29,6 @@ require_once PLAIDACT_CORE_PATH . 'includes/class-plaidact-campaign-shortcodes.p
 function plaidact_campaign_core_init(): void {
 	\Plaidact\CampaignCore\CPT::boot();
 	\Plaidact\CampaignCore\Shortcodes::boot();
+	\Plaidact\CampaignCore\Demo::boot();
 }
 add_action( 'plugins_loaded', 'plaidact_campaign_core_init' );
