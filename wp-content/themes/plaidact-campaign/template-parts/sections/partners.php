@@ -17,7 +17,7 @@ $partners = new WP_Query(
 ?>
 <section class="<?php echo $in_hero ? 'hero-partners' : 'section partners-section'; ?>" id="partenaires">
 	<div class="<?php echo $in_hero ? 'hero-partners__inner' : 'wrap'; ?>">
-		<h2 class="<?php echo $in_hero ? 'hero-partners__title' : 'partners-section__title'; ?>"><?php esc_html_e( 'Nos partenaires', 'plaidact-campaign' ); ?></h2>
+		<h2 class="<?php echo $in_hero ? 'hero-partners__title' : 'partners-section__title'; ?>"><?php esc_html_e( 'Organisations qui portent la campagne', 'plaidact-campaign' ); ?></h2>
 		<div class="<?php echo $in_hero ? 'hero-partners__grid' : 'partners-section__grid'; ?>">
 			<?php if ( $partners->have_posts() ) : ?>
 				<?php while ( $partners->have_posts() ) : $partners->the_post(); ?>
@@ -31,7 +31,7 @@ $partners = new WP_Query(
 					</a>
 				<?php endwhile; ?>
 			<?php else : ?>
-				<p><?php esc_html_e( 'Ajoutez des partenaires dans l’administration pour afficher leurs logos ici.', 'plaidact-campaign' ); ?></p>
+				<p><?php esc_html_e( 'Ajoutez les organisations porteuses dans l’administration pour afficher leurs logos ici.', 'plaidact-campaign' ); ?></p>
 			<?php endif; ?>
 			<?php wp_reset_postdata(); ?>
 		</div>
