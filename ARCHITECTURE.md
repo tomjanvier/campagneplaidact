@@ -16,6 +16,9 @@ wp-content/
       ├─ front-page.php
       ├─ header.php
       ├─ footer.php
+      ├─ assets/
+      │  └─ fonts/
+      │     └─ gotham-noir.woff2 (fichier de police sous licence, optionnel)
       ├─ inc/
       │  └─ customizer.php
       └─ template-parts/
@@ -32,3 +35,4 @@ wp-content/
 - Plugin `plaidact-campaign-core` à activer en **network activation**.
 - Le thème est partagé par tous les sous-sites de campagne.
 - Les réglages du Customizer restent isolés par sous-site, ce qui permet de personnaliser chaque campagne sans dupliquer le code.
+- Si `assets/fonts/gotham-noir.woff2` n'est pas présent, le thème applique automatiquement une pile de polices système pour éviter toute requête 404.
