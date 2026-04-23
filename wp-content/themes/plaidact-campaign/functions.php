@@ -39,14 +39,19 @@ add_action( 'after_setup_theme', 'plaidact_campaign_theme_setup' );
 function plaidact_campaign_enqueue_assets(): void {
 	wp_enqueue_style( 'plaidact-campaign-style', get_stylesheet_uri(), array(), wp_get_theme()->get( 'Version' ) );
 
-	$custom_css = "
-	@font-face {
-		font-family: 'Gotham Noir';
-		src: url('" . esc_url( get_template_directory_uri() . '/assets/fonts/gotham-noir.woff2' ) . "') format('woff2');
-		font-display: swap;
+	$custom_css = ".hero-title { font-family: Inter, sans-serif; }";
+	$font_file  = get_template_directory() . '/assets/fonts/gotham-noir.woff2';
+
+	if ( file_exists( $font_file ) ) {
+		$custom_css = "
+		@font-face {
+			font-family: 'Gotham Noir';
+			src: url('" . esc_url( get_template_directory_uri() . '/assets/fonts/gotham-noir.woff2' ) . "') format('woff2');
+			font-display: swap;
+		}
+		.hero-title { font-family: 'Gotham Noir', Inter, sans-serif; }
+		";
 	}
-	.hero-title { font-family: 'Gotham Noir', Inter, sans-serif; }
-	";
 
 	wp_add_inline_style( 'plaidact-campaign-style', $custom_css );
 }
