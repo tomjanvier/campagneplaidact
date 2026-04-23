@@ -1,0 +1,34 @@
+/*
+Theme Name: PLAID·ACT Campaign Factory
+Theme URI: https://plaid-act.org
+Author: PLAID·ACT
+Description: Thème one-page FSE/Gutenberg optimisé pour campagnes multisite PLAID·ACT.
+Requires at least: 6.5
+Tested up to: 6.6
+Requires PHP: 8.1
+Version: 1.0.0
+Text Domain: plaidact-campaign
+*/
+
+:root {
+	--plaid-dark: #091320;
+	--plaid-light: #f6f8fb;
+	--plaid-accent: #ff4f5e;
+	--container: 1200px;
+}
+
+body {
+	margin: 0;
+	font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+	color: var(--plaid-dark);
+	background: var(--plaid-light);
+}
+
+.section {
+	padding: 4rem 1.25rem;
+}
+
+.wrap {
+	max-width: var(--container);
+	margin: 0 auto;
+}
