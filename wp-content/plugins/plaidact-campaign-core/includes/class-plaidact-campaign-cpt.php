@@ -64,16 +64,16 @@ final class CPT {
 			'plaid_partner',
 			array(
 				'labels'       => array(
-					'name'               => __( 'Partenaires', 'plaidact-campaign-core' ),
-					'singular_name'      => __( 'Partenaire', 'plaidact-campaign-core' ),
+					'name'               => __( 'Organisations porteuses', 'plaidact-campaign-core' ),
+					'singular_name'      => __( 'Organisation porteuse', 'plaidact-campaign-core' ),
 					'add_new'            => __( 'Ajouter', 'plaidact-campaign-core' ),
-					'add_new_item'       => __( 'Ajouter un partenaire', 'plaidact-campaign-core' ),
-					'edit_item'          => __( 'Modifier le partenaire', 'plaidact-campaign-core' ),
-					'new_item'           => __( 'Nouveau partenaire', 'plaidact-campaign-core' ),
+					'add_new_item'       => __( 'Ajouter une organisation porteuse', 'plaidact-campaign-core' ),
+					'edit_item'          => __( 'Modifier l’organisation porteuse', 'plaidact-campaign-core' ),
+					'new_item'           => __( 'Nouvelle organisation porteuse', 'plaidact-campaign-core' ),
 					'view_item'          => __( 'Voir le partenaire', 'plaidact-campaign-core' ),
-					'search_items'       => __( 'Rechercher un partenaire', 'plaidact-campaign-core' ),
-					'not_found'          => __( 'Aucun partenaire trouvé', 'plaidact-campaign-core' ),
-					'not_found_in_trash' => __( 'Aucun partenaire dans la corbeille', 'plaidact-campaign-core' ),
+					'search_items'       => __( 'Rechercher une organisation porteuse', 'plaidact-campaign-core' ),
+					'not_found'          => __( 'Aucune organisation porteuse trouvée', 'plaidact-campaign-core' ),
+					'not_found_in_trash' => __( 'Aucune organisation porteuse dans la corbeille', 'plaidact-campaign-core' ),
 				),
 				'public'       => true,
 				'show_in_rest' => true,
@@ -84,6 +84,23 @@ final class CPT {
 				'supports'     => array( 'title', 'thumbnail', 'page-attributes' ),
 			)
 		);
+
+		register_post_type(
+			'plaid_signature',
+			array(
+				'labels'       => array(
+					'name'          => __( 'Signatures pétition', 'plaidact-campaign-core' ),
+					'singular_name' => __( 'Signature', 'plaidact-campaign-core' ),
+				),
+				'public'       => false,
+				'show_ui'      => true,
+				'show_in_rest' => false,
+				'menu_icon'    => 'dashicons-yes-alt',
+				'menu_position'=> 23,
+				'supports'     => array( 'title' ),
+			)
+		);
+
 	}
 
 	/**

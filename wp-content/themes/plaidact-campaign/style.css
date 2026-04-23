@@ -1,6 +1,6 @@
 /*
-Theme Name: PLAID·ACT Campaign Factory
-Theme URI: https://plaid-act.org
+Theme Name: PLAID·ACT Campagne
+Theme URI: https://plaidact.org
 Author: PLAID·ACT
 Description: Thème one-page FSE/Gutenberg optimisé pour campagnes multisite PLAID·ACT.
 Requires at least: 6.5
@@ -330,4 +330,26 @@ body {
 	.partner-logo-card {
 		transition: none;
 	}
+}
+
+
+.hero__share {
+	position: absolute;
+	right: 1rem;
+	bottom: 1rem;
+	z-index: 3;
+	text-decoration: none;
+	background: rgb(9 19 32 / 70%);
+	color: #fff;
+	padding: 0.6rem 0.9rem;
+	border-radius: 999px;
+	font-weight: 600;
+}
+
+.hero-newsletter {
+	padding-top: 1.2rem;
+}
+
+.hero__mail-share {
+	margin-top: 1rem;
 }

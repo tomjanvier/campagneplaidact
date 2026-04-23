@@ -212,21 +212,22 @@ function plaidact_campaign_customize_register( WP_Customize_Manager $wp_customiz
 			$wp_customize,
 			'campaign_primary_color',
 			array(
-				'label'   => __( 'Couleur principale', 'plaidact-campaign' ),
+				'label'   => __( 'Couleur importante de campagne', 'plaidact-campaign' ),
 				'section' => 'plaidact_campaign_hero',
 			)
 		)
 	);
 
 	$wp_customize->add_control(
-		'hero_background_video',
-		array(
-			'label'       => __( 'URL vidéo de fond (mp4/webm)', 'plaidact-campaign' ),
-			'section'     => 'plaidact_campaign_hero',
-			'type'        => 'url',
-			'input_attrs' => array(
-				'placeholder' => 'https://cdn.plaid-act.org/campaign-hero.mp4',
-			),
+		new WP_Customize_Media_Control(
+			$wp_customize,
+			'hero_background_video_media',
+			array(
+				'label'      => __( 'Vidéo de fond depuis la médiathèque', 'plaidact-campaign' ),
+				'section'    => 'plaidact_campaign_hero',
+				'mime_type'  => 'video',
+				'settings'   => 'hero_background_video',
+			)
 		)
 	);
 
