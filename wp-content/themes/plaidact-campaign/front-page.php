@@ -19,7 +19,7 @@ $hero_subtitle = (string) get_theme_mod( 'hero_subtitle', get_bloginfo( 'descrip
 
 <header class="section campaign-header" id="top">
 	<div class="wrap campaign-header__inner">
-		<a href="https://plaid-act.org" target="_blank" rel="noopener noreferrer" aria-label="PLAID·ACT">
+		<a href="https://plaidact.org" target="_blank" rel="noopener noreferrer" aria-label="PLAID·ACT">
 			<?php if ( has_custom_logo() ) : ?>
 				<?php the_custom_logo(); ?>
 			<?php else : ?>
@@ -53,10 +53,9 @@ $hero_subtitle = (string) get_theme_mod( 'hero_subtitle', get_bloginfo( 'descrip
 	<div class="wrap hero__content">
 		<h1 class="hero-title"><?php echo esc_html( $hero_title ); ?></h1>
 		<p><?php echo esc_html( $hero_subtitle ); ?></p>
+		<?php get_template_part( 'template-parts/sections/partners', null, array( 'in_hero' => true ) ); ?>
 	</div>
 </section>
-
-<?php get_template_part( 'template-parts/sections/partners' ); ?>
 
 <?php if ( plaidact_is_enabled( 'enable_petition', true ) ) : ?>
 	<?php get_template_part( 'template-parts/sections/petition' ); ?>
