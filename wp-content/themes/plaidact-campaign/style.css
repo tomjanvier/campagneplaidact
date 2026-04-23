@@ -6,7 +6,7 @@ Description: Thème one-page FSE/Gutenberg optimisé pour campagnes multisite PL
 Requires at least: 6.5
 Tested up to: 6.6
 Requires PHP: 8.1
-Version: 1.0.0
+Version: 1.1.0
 Text Domain: plaidact-campaign
 */
 
@@ -22,6 +22,7 @@ body {
 	font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 	color: var(--plaid-dark);
 	background: var(--plaid-light);
+	line-height: 1.55;
 }
 
 .section {
@@ -31,4 +32,75 @@ body {
 .wrap {
 	max-width: var(--container);
 	margin: 0 auto;
+}
+
+.campaign-header {
+	position: sticky;
+	top: 0;
+	z-index: 40;
+	backdrop-filter: blur(6px);
+	background: rgb(255 255 255 / 92%);
+	padding-top: 1rem;
+	padding-bottom: 1rem;
+}
+
+.campaign-header__inner {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+}
+
+.hero {
+	position: relative;
+	min-height: 90vh;
+	display: grid;
+	place-items: center;
+	overflow: hidden;
+	color: #fff;
+}
+
+.hero__media {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	background-size: cover;
+	background-position: center;
+}
+
+.hero__overlay {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(180deg, rgb(9 19 32 / 20%) 0%, rgb(9 19 32 / 72%) 100%);
+}
+
+.hero__content {
+	position: relative;
+	z-index: 2;
+	text-align: center;
+}
+
+.hero-title {
+	font-size: clamp(2rem, 6vw, 5rem);
+	line-height: 1.1;
+	margin: 0;
+}
+
+.plaidact-card {
+	padding: 1rem;
+	background: #fff;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+}
+
+.plaidact-button {
+	display: inline-block;
+	background: var(--plaid-accent);
+	color: #fff;
+	padding: 0.7rem 1rem;
+	border-radius: 8px;
+	text-decoration: none;
+	font-weight: 600;
 }

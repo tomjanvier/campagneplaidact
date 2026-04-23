@@ -22,6 +22,7 @@ function plaidact_campaign_theme_setup(): void {
 	add_theme_support( 'editor-styles' );
 	add_theme_support( 'wp-block-styles' );
 	add_theme_support( 'responsive-embeds' );
+	add_theme_support( 'custom-logo' );
 
 	register_nav_menus(
 		array(
@@ -39,7 +40,7 @@ add_action( 'after_setup_theme', 'plaidact_campaign_theme_setup' );
 function plaidact_campaign_enqueue_assets(): void {
 	wp_enqueue_style( 'plaidact-campaign-style', get_stylesheet_uri(), array(), wp_get_theme()->get( 'Version' ) );
 
-	$custom_css = ".hero-title { font-family: Inter, sans-serif; }";
+	$custom_css = '.hero-title { font-family: Inter, sans-serif; }';
 	$font_file  = get_template_directory() . '/assets/fonts/gotham-noir.woff2';
 
 	if ( file_exists( $font_file ) ) {
