@@ -181,8 +181,13 @@ final class Demo {
 	private static function get_demo_payload(): array {
 		return array(
 			'theme_mods' => array(
-				'hero_title'             => __( 'Mobilisons-nous pour une Europe plus juste', 'plaidact-campaign-core' ),
-				'hero_subtitle'          => __( 'Une campagne citoyenne prête à l’emploi, multisite et orientée impact.', 'plaidact-campaign-core' ),
+				'hero_title'             => __( 'Agissons ensemble pour un monde plus juste.', 'plaidact-campaign-core' ),
+				'hero_subtitle'          => __( 'Un site de campagne simple, efficace et prêt à accueillir vos organisations partenaires.', 'plaidact-campaign-core' ),
+				'hero_primary_cta_label' => __( 'Signer la pétition', 'plaidact-campaign-core' ),
+				'hero_primary_cta_url'   => '#petition',
+				'hero_secondary_cta_label' => __( 'En savoir plus', 'plaidact-campaign-core' ),
+				'hero_secondary_cta_url' => '#breves',
+				'campaign_primary_color' => '#2f6d4b',
 				'enable_report_highlight'=> true,
 				'report_title'           => __( 'Note stratégique – Printemps 2026', 'plaidact-campaign-core' ),
 				'report_excerpt'         => __( 'Téléchargez notre note pour comprendre les enjeux et relayer des arguments solides.', 'plaidact-campaign-core' ),

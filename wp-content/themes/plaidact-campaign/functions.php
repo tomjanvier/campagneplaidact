@@ -54,6 +54,13 @@ function plaidact_campaign_enqueue_assets(): void {
 		";
 	}
 
+	$primary_color = (string) get_theme_mod( 'campaign_primary_color', '#2f6d4b' );
+	if ( ! sanitize_hex_color( $primary_color ) ) {
+		$primary_color = '#2f6d4b';
+	}
+
+	$custom_css .= ':root{--plaid-accent:' . $primary_color . ';--plaid-accent-soft:' . $primary_color . ';}';
+
 	wp_add_inline_style( 'plaidact-campaign-style', $custom_css );
 }
 add_action( 'wp_enqueue_scripts', 'plaidact_campaign_enqueue_assets' );

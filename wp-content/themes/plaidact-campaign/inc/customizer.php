@@ -131,6 +131,93 @@ function plaidact_campaign_customize_register( WP_Customize_Manager $wp_customiz
 		)
 	);
 
+	$wp_customize->add_setting(
+		'hero_primary_cta_label',
+		array(
+			'default'           => __( 'Signer la pétition', 'plaidact-campaign' ),
+			'sanitize_callback' => 'plaidact_sanitize_text',
+		)
+	);
+
+	$wp_customize->add_control(
+		'hero_primary_cta_label',
+		array(
+			'label'   => __( 'Libellé bouton principal', 'plaidact-campaign' ),
+			'section' => 'plaidact_campaign_hero',
+			'type'    => 'text',
+		)
+	);
+
+	$wp_customize->add_setting(
+		'hero_primary_cta_url',
+		array(
+			'default'           => '#petition',
+			'sanitize_callback' => 'esc_url_raw',
+		)
+	);
+
+	$wp_customize->add_control(
+		'hero_primary_cta_url',
+		array(
+			'label'   => __( 'URL bouton principal', 'plaidact-campaign' ),
+			'section' => 'plaidact_campaign_hero',
+			'type'    => 'url',
+		)
+	);
+
+	$wp_customize->add_setting(
+		'hero_secondary_cta_label',
+		array(
+			'default'           => __( 'En savoir plus', 'plaidact-campaign' ),
+			'sanitize_callback' => 'plaidact_sanitize_text',
+		)
+	);
+
+	$wp_customize->add_control(
+		'hero_secondary_cta_label',
+		array(
+			'label'   => __( 'Libellé lien secondaire', 'plaidact-campaign' ),
+			'section' => 'plaidact_campaign_hero',
+			'type'    => 'text',
+		)
+	);
+
+	$wp_customize->add_setting(
+		'hero_secondary_cta_url',
+		array(
+			'default'           => '#breves',
+			'sanitize_callback' => 'esc_url_raw',
+		)
+	);
+
+	$wp_customize->add_control(
+		'hero_secondary_cta_url',
+		array(
+			'label'   => __( 'URL lien secondaire', 'plaidact-campaign' ),
+			'section' => 'plaidact_campaign_hero',
+			'type'    => 'url',
+		)
+	);
+
+	$wp_customize->add_setting(
+		'campaign_primary_color',
+		array(
+			'default'           => '#2f6d4b',
+			'sanitize_callback' => 'sanitize_hex_color',
+		)
+	);
+
+	$wp_customize->add_control(
+		new WP_Customize_Color_Control(
+			$wp_customize,
+			'campaign_primary_color',
+			array(
+				'label'   => __( 'Couleur principale', 'plaidact-campaign' ),
+				'section' => 'plaidact_campaign_hero',
+			)
+		)
+	);
+
 	$wp_customize->add_control(
 		'hero_background_video',
 		array(
