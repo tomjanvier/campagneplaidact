@@ -20,7 +20,7 @@
 		</nav>
 		<div class="campaign-footer__meta">
 			<p>&copy; <?php echo esc_html( gmdate( 'Y' ) ); ?> PLAID·ACT — Tous droits réservés.</p>
-			<p><a href="https://plaid-act.org" target="_blank" rel="noopener noreferrer">Écosystème PLAID·ACT</a></p>
+			<p><a href="https://plaidact.org" target="_blank" rel="noopener noreferrer">Campagne propulsée par PLAID·ACT</a></p>
 		</div>
 	</div>
 </footer>

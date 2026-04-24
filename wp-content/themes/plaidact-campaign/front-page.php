@@ -69,7 +69,7 @@ $share_links = array(
 
 <section class="section hero" id="accueil">
 	<?php if ( $hero_video ) : ?>
-		<video class="hero__media" autoplay muted loop playsinline>
+		<video class="hero__media" autoplay muted loop playsinline preload="metadata" poster="<?php echo $hero_image ? $hero_image : ''; ?>">
 			<source src="<?php echo $hero_video; ?>" type="video/mp4" />
 		</video>
 	<?php elseif ( $hero_image ) : ?>
