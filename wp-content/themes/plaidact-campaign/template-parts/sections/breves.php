@@ -15,7 +15,7 @@ $breves = new WP_Query(
 ?>
 <section class="section" id="breves" style="background:#fff;">
 	<div class="wrap">
-		<h2><?php esc_html_e( 'Les brèves', 'plaidact-campaign' ); ?></h2>
+		<h2><?php echo esc_html( (string) get_theme_mod( 'breves_section_title', __( 'Les brèves', 'plaidact-campaign' ) ) ); ?></h2>
 		<?php if ( $breves->have_posts() ) : ?>
 			<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;">
 				<?php while ( $breves->have_posts() ) : $breves->the_post(); ?>
@@ -26,7 +26,7 @@ $breves = new WP_Query(
 				<?php endwhile; ?>
 			</div>
 		<?php else : ?>
-			<p><?php esc_html_e( 'Ajoutez des brèves depuis le plugin Campaign Core pour alimenter cette section.', 'plaidact-campaign' ); ?></p>
+			<p><?php echo esc_html( (string) get_theme_mod( 'breves_empty_text', __( 'Ajoutez des brèves depuis le plugin Campaign Core pour alimenter cette section.', 'plaidact-campaign' ) ) ); ?></p>
 		<?php endif; ?>
 		<?php wp_reset_postdata(); ?>
 	</div>

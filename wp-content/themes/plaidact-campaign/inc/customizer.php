@@ -40,6 +40,7 @@ function plaidact_campaign_customize_register( WP_Customize_Manager $wp_customiz
 		'enable_socialwall' => __( 'Afficher la section Réseaux sociaux', 'plaidact-campaign' ),
 		'enable_articles'   => __( 'Afficher la section Articles', 'plaidact-campaign' ),
 		'enable_report_highlight' => __( 'Afficher la section Rapport PDF', 'plaidact-campaign' ),
+		'enable_send_campaign' => __( 'Afficher la section Envoi par email', 'plaidact-campaign' ),
 	);
 
 	foreach ( $toggle_settings as $setting_key => $label ) {
@@ -60,6 +61,24 @@ function plaidact_campaign_customize_register( WP_Customize_Manager $wp_customiz
 			)
 		);
 	}
+
+	$wp_customize->add_setting(
+		'campaign_section_order',
+		array(
+			'default'           => 'petition,breves,articles,rapport,social_wall,send_mail',
+			'sanitize_callback' => 'plaidact_sanitize_text',
+		)
+	);
+
+	$wp_customize->add_control(
+		'campaign_section_order',
+		array(
+			'label'       => __( 'Ordre des sections', 'plaidact-campaign' ),
+			'description' => __( 'Séparez par des virgules : petition, breves, articles, rapport, social_wall, send_mail', 'plaidact-campaign' ),
+			'section'     => 'plaidact_campaign_sections',
+			'type'        => 'text',
+		)
+	);
 
 	$wp_customize->add_section(
 		'plaidact_campaign_hero',
@@ -239,6 +258,50 @@ function plaidact_campaign_customize_register( WP_Customize_Manager $wp_customiz
 			'priority'    => 32,
 		)
 	);
+
+	$wp_customize->add_section(
+		'plaidact_campaign_texts',
+		array(
+			'title'       => __( 'Textes des sections', 'plaidact-campaign' ),
+			'description' => __( 'Personnalisez les titres et textes de toutes les sections.', 'plaidact-campaign' ),
+			'priority'    => 33,
+		)
+	);
+
+	$text_settings = array(
+		'petition_section_title'       => __( 'Signer la pétition', 'plaidact-campaign' ),
+		'petition_section_description' => __( 'Collectez les signatures, activez l’email transactionnel via votre plugin SMTP WordPress et synchronisez Brevo automatiquement.', 'plaidact-campaign' ),
+		'breves_section_title'         => __( 'Les brèves', 'plaidact-campaign' ),
+		'breves_empty_text'            => __( 'Ajoutez des brèves depuis le plugin Campaign Core pour alimenter cette section.', 'plaidact-campaign' ),
+		'articles_section_title'       => __( 'Les articles de fond', 'plaidact-campaign' ),
+		'articles_empty_text'          => __( 'Aucun article publié pour le moment.', 'plaidact-campaign' ),
+		'partners_section_title'       => __( 'Organisations qui portent la campagne', 'plaidact-campaign' ),
+		'social_wall_title'            => __( 'Social Wall', 'plaidact-campaign' ),
+		'social_wall_description'      => __( 'Sélectionnez vos posts Bluesky, Instagram et autres depuis le back office pour les afficher ici.', 'plaidact-campaign' ),
+		'send_mail_section_title'      => __( 'Partager la campagne par email', 'plaidact-campaign' ),
+		'send_mail_section_description'=> __( 'Envoyez la campagne à vos proches depuis ce formulaire.', 'plaidact-campaign' ),
+		'report_eyebrow'               => __( 'À la une', 'plaidact-campaign' ),
+		'report_empty_hint'            => __( 'Ajoutez l’URL du PDF dans Apparence → Personnaliser → Rapport PDF mis en avant.', 'plaidact-campaign' ),
+	);
+
+	foreach ( $text_settings as $key => $default ) {
+		$wp_customize->add_setting(
+			$key,
+			array(
+				'default'           => $default,
+				'sanitize_callback' => 'plaidact_sanitize_text',
+			)
+		);
+
+		$wp_customize->add_control(
+			$key,
+			array(
+				'label'   => ucwords( str_replace( '_', ' ', $key ) ),
+				'section' => 'plaidact_campaign_texts',
+				'type'    => 'text',
+			)
+		);
+	}
 
 	$wp_customize->add_setting(
 		'report_title',

@@ -25,8 +25,11 @@ final class CPT {
 		add_action( 'init', array( __CLASS__, 'register_post_types' ) );
 		add_action( 'init', array( __CLASS__, 'register_taxonomies' ) );
 		add_action( 'init', array( __CLASS__, 'register_partner_meta' ) );
+		add_action( 'init', array( __CLASS__, 'register_social_embed_meta' ) );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'register_partner_metabox' ) );
+		add_action( 'add_meta_boxes', array( __CLASS__, 'register_social_embed_metabox' ) );
 		add_action( 'save_post_plaid_partner', array( __CLASS__, 'save_partner_url' ) );
+		add_action( 'save_post_plaid_social_embed', array( __CLASS__, 'save_social_embed_meta' ) );
 	}
 
 	/**
@@ -101,6 +104,30 @@ final class CPT {
 			)
 		);
 
+		register_post_type(
+			'plaid_social_embed',
+			array(
+				'labels'       => array(
+					'name'               => __( 'Social wall embeds', 'plaidact-campaign-core' ),
+					'singular_name'      => __( 'Social embed', 'plaidact-campaign-core' ),
+					'add_new'            => __( 'Ajouter', 'plaidact-campaign-core' ),
+					'add_new_item'       => __( 'Ajouter un post social', 'plaidact-campaign-core' ),
+					'edit_item'          => __( 'Modifier le post social', 'plaidact-campaign-core' ),
+					'new_item'           => __( 'Nouveau post social', 'plaidact-campaign-core' ),
+					'view_item'          => __( 'Voir le post social', 'plaidact-campaign-core' ),
+					'search_items'       => __( 'Rechercher un post social', 'plaidact-campaign-core' ),
+					'not_found'          => __( 'Aucun post social trouvé', 'plaidact-campaign-core' ),
+					'not_found_in_trash' => __( 'Aucun post social dans la corbeille', 'plaidact-campaign-core' ),
+				),
+				'public'       => false,
+				'show_ui'      => true,
+				'show_in_rest' => true,
+				'menu_icon'    => 'dashicons-share',
+				'menu_position'=> 24,
+				'supports'     => array( 'title', 'page-attributes' ),
+			)
+		);
+
 	}
 
 	/**
@@ -156,6 +183,55 @@ final class CPT {
 	}
 
 	/**
+	 * Registers social embed metadata.
+	 *
+	 * @return void
+	 */
+	public static function register_social_embed_meta(): void {
+		register_post_meta(
+			'plaid_social_embed',
+			'_plaid_social_platform',
+			array(
+				'single'            => true,
+				'type'              => 'string',
+				'show_in_rest'      => true,
+				'sanitize_callback' => 'sanitize_text_field',
+				'auth_callback'     => static function (): bool {
+					return current_user_can( 'edit_posts' );
+				},
+			)
+		);
+
+		register_post_meta(
+			'plaid_social_embed',
+			'_plaid_social_enabled',
+			array(
+				'single'            => true,
+				'type'              => 'boolean',
+				'show_in_rest'      => true,
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'auth_callback'     => static function (): bool {
+					return current_user_can( 'edit_posts' );
+				},
+			)
+		);
+
+		register_post_meta(
+			'plaid_social_embed',
+			'_plaid_social_embed_code',
+			array(
+				'single'            => true,
+				'type'              => 'string',
+				'show_in_rest'      => true,
+				'sanitize_callback' => 'wp_kses_post',
+				'auth_callback'     => static function (): bool {
+					return current_user_can( 'edit_posts' );
+				},
+			)
+		);
+	}
+
+	/**
 	 * Adds URL metabox for partners.
 	 *
 	 * @return void
@@ -166,6 +242,22 @@ final class CPT {
 			__( 'Lien du partenaire', 'plaidact-campaign-core' ),
 			array( __CLASS__, 'render_partner_metabox' ),
 			'plaid_partner',
+			'normal',
+			'default'
+		);
+	}
+
+	/**
+	 * Registers social wall metabox.
+	 *
+	 * @return void
+	 */
+	public static function register_social_embed_metabox(): void {
+		add_meta_box(
+			'plaid_social_embed_data',
+			__( 'Configuration de l’embed', 'plaidact-campaign-core' ),
+			array( __CLASS__, 'render_social_embed_metabox' ),
+			'plaid_social_embed',
 			'normal',
 			'default'
 		);
@@ -191,6 +283,36 @@ final class CPT {
 				value="<?php echo esc_attr( (string) $url ); ?>"
 				placeholder="https://example.org"
 			/>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Renders social embed fields.
+	 *
+	 * @param \WP_Post $post Current post object.
+	 * @return void
+	 */
+	public static function render_social_embed_metabox( \WP_Post $post ): void {
+		wp_nonce_field( 'plaid_social_embed_nonce_action', 'plaid_social_embed_nonce' );
+		$platform   = (string) get_post_meta( $post->ID, '_plaid_social_platform', true );
+		$enabled    = (bool) get_post_meta( $post->ID, '_plaid_social_enabled', true );
+		$embed_code = (string) get_post_meta( $post->ID, '_plaid_social_embed_code', true );
+		?>
+		<p>
+			<label for="plaid_social_platform"><strong><?php esc_html_e( 'Plateforme', 'plaidact-campaign-core' ); ?></strong></label>
+			<select id="plaid_social_platform" name="plaid_social_platform" class="widefat">
+				<?php foreach ( array( 'Bluesky', 'Instagram', 'X', 'YouTube', 'TikTok', 'LinkedIn' ) as $item ) : ?>
+					<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $platform, $item ); ?>><?php echo esc_html( $item ); ?></option>
+				<?php endforeach; ?>
+			</select>
+		</p>
+		<p>
+			<label><input type="checkbox" name="plaid_social_enabled" value="1" <?php checked( $enabled ); ?> /> <?php esc_html_e( 'Afficher ce post dans le social wall', 'plaidact-campaign-core' ); ?></label>
+		</p>
+		<p>
+			<label for="plaid_social_embed_code"><strong><?php esc_html_e( 'Code embed', 'plaidact-campaign-core' ); ?></strong></label>
+			<textarea id="plaid_social_embed_code" name="plaid_social_embed_code" class="widefat" rows="8" placeholder="<blockquote>...</blockquote>"><?php echo esc_textarea( $embed_code ); ?></textarea>
 		</p>
 		<?php
 	}
@@ -223,5 +345,29 @@ final class CPT {
 				delete_post_meta( $post_id, '_plaid_partner_url' );
 			}
 		}
+	}
+
+	/**
+	 * Saves social embed metabox fields.
+	 *
+	 * @param int $post_id Current post ID.
+	 * @return void
+	 */
+	public static function save_social_embed_meta( int $post_id ): void {
+		if ( ! isset( $_POST['plaid_social_embed_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['plaid_social_embed_nonce'] ) ), 'plaid_social_embed_nonce_action' ) ) {
+			return;
+		}
+
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+
+		update_post_meta( $post_id, '_plaid_social_platform', sanitize_text_field( (string) wp_unslash( $_POST['plaid_social_platform'] ?? 'Bluesky' ) ) );
+		update_post_meta( $post_id, '_plaid_social_enabled', isset( $_POST['plaid_social_enabled'] ) ? 1 : 0 );
+		update_post_meta( $post_id, '_plaid_social_embed_code', wp_kses_post( (string) wp_unslash( $_POST['plaid_social_embed_code'] ?? '' ) ) );
 	}
 }

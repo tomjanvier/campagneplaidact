@@ -64,6 +64,11 @@ final class Shortcodes {
 			'brevo_list_campaign'       => absint( $input['brevo_list_campaign'] ?? 0 ),
 			'petition_intro'            => sanitize_text_field( (string) ( $input['petition_intro'] ?? '' ) ),
 			'campaign_share_mail_title' => sanitize_text_field( (string) ( $input['campaign_share_mail_title'] ?? '' ) ),
+			'petition_title'            => sanitize_text_field( (string) ( $input['petition_title'] ?? '' ) ),
+			'petition_button_label'     => sanitize_text_field( (string) ( $input['petition_button_label'] ?? '' ) ),
+			'petition_optin_label'      => sanitize_text_field( (string) ( $input['petition_optin_label'] ?? '' ) ),
+			'send_mail_intro'           => sanitize_text_field( (string) ( $input['send_mail_intro'] ?? '' ) ),
+			'send_mail_button_label'    => sanitize_text_field( (string) ( $input['send_mail_button_label'] ?? '' ) ),
 		);
 	}
 
@@ -82,6 +87,11 @@ final class Shortcodes {
 				'brevo_list_campaign'       => 0,
 				'petition_intro'            => __( 'Signez pour soutenir la campagne.', 'plaidact-campaign-core' ),
 				'campaign_share_mail_title' => __( 'Découvre cette campagne PLAID·ACT', 'plaidact-campaign-core' ),
+				'petition_title'            => __( 'Signer la pétition', 'plaidact-campaign-core' ),
+				'petition_button_label'     => __( 'Signer maintenant', 'plaidact-campaign-core' ),
+				'petition_optin_label'      => __( 'M’inscrire aux newsletters PLAID·ACT et de cette campagne', 'plaidact-campaign-core' ),
+				'send_mail_intro'           => __( 'Partagez la campagne à votre réseau en un clic.', 'plaidact-campaign-core' ),
+				'send_mail_button_label'    => __( 'Envoyer la campagne', 'plaidact-campaign-core' ),
 			)
 		);
 		?>
@@ -95,6 +105,13 @@ final class Shortcodes {
 					<tr><th scope="row"><?php esc_html_e( 'Brevo API key', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[brevo_api_key]" type="text" value="<?php echo esc_attr( (string) $settings['brevo_api_key'] ); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'ID liste newsletter PLAID·ACT', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_plaidact]" type="number" value="<?php echo esc_attr( (string) $settings['brevo_list_plaidact'] ); ?>" class="small-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'ID liste newsletter campagne', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_campaign]" type="number" value="<?php echo esc_attr( (string) $settings['brevo_list_campaign'] ); ?>" class="small-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Titre bloc pétition', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_title]" type="text" value="<?php echo esc_attr( (string) $settings['petition_title'] ); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Texte intro pétition', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_intro]" type="text" value="<?php echo esc_attr( (string) $settings['petition_intro'] ); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Libellé bouton pétition', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_button_label]" type="text" value="<?php echo esc_attr( (string) $settings['petition_button_label'] ); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Texte consentement newsletter', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_optin_label]" type="text" value="<?php echo esc_attr( (string) $settings['petition_optin_label'] ); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Titre email de partage', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[campaign_share_mail_title]" type="text" value="<?php echo esc_attr( (string) $settings['campaign_share_mail_title'] ); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Texte bloc partage email', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[send_mail_intro]" type="text" value="<?php echo esc_attr( (string) $settings['send_mail_intro'] ); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Libellé bouton partage email', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[send_mail_button_label]" type="text" value="<?php echo esc_attr( (string) $settings['send_mail_button_label'] ); ?>" class="regular-text" /></td></tr>
 				</table>
 				<?php submit_button(); ?>
 			</form>
@@ -112,16 +129,17 @@ final class Shortcodes {
 		ob_start();
 		?>
 		<div class="plaidact-card plaidact-card--petition">
-			<p><?php esc_html_e( 'Signez la pétition. Chaque signature fait monter le compteur en direct.', 'plaidact-campaign-core' ); ?></p>
-			<p><strong><?php echo esc_html( number_format_i18n( $count ) ); ?></strong> / <?php echo esc_html( number_format_i18n( $goal ) ); ?></p>
-			<div style="height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden"><span style="display:block;height:100%;width:<?php echo esc_attr( (string) $progress ); ?>%;background:var(--plaid-accent,#2f6d4b);"></span></div>
-			<form method="post" action="<?php echo $action; ?>" style="margin-top:1rem;display:grid;gap:.6rem;">
+			<h3 class="plaidact-card__title"><?php echo esc_html( (string) ( $settings['petition_title'] ?? __( 'Signer la pétition', 'plaidact-campaign-core' ) ) ); ?></h3>
+			<p><?php echo esc_html( (string) ( $settings['petition_intro'] ?? __( 'Signez la pétition. Chaque signature fait monter le compteur en direct.', 'plaidact-campaign-core' ) ) ); ?></p>
+			<p class="plaidact-petition__count"><strong><?php echo esc_html( number_format_i18n( $count ) ); ?></strong> / <?php echo esc_html( number_format_i18n( $goal ) ); ?></p>
+			<div class="plaidact-progress"><span style="width:<?php echo esc_attr( (string) $progress ); ?>%;"></span></div>
+			<form method="post" action="<?php echo $action; ?>" class="plaidact-form-grid">
 				<input type="hidden" name="action" value="plaidact_petition_submit" />
 				<?php wp_nonce_field( 'plaidact_petition_submit_action', 'plaidact_petition_nonce' ); ?>
 				<input type="text" name="full_name" required placeholder="<?php esc_attr_e( 'Nom complet', 'plaidact-campaign-core' ); ?>" />
 				<input type="email" name="email" required placeholder="<?php esc_attr_e( 'Adresse email', 'plaidact-campaign-core' ); ?>" />
-				<label><input type="checkbox" name="newsletter_optin" value="1" checked /> <?php esc_html_e( 'M’inscrire aux newsletters PLAID·ACT et de cette campagne', 'plaidact-campaign-core' ); ?></label>
-				<button class="plaidact-button" type="submit"><?php esc_html_e( 'Signer maintenant', 'plaidact-campaign-core' ); ?></button>
+				<label><input type="checkbox" name="newsletter_optin" value="1" checked /> <?php echo esc_html( (string) ( $settings['petition_optin_label'] ?? __( 'M’inscrire aux newsletters PLAID·ACT et de cette campagne', 'plaidact-campaign-core' ) ) ); ?></label>
+				<button class="plaidact-button" type="submit"><?php echo esc_html( (string) ( $settings['petition_button_label'] ?? __( 'Signer maintenant', 'plaidact-campaign-core' ) ) ); ?></button>
 			</form>
 		</div>
 		<?php
@@ -242,14 +260,17 @@ final class Shortcodes {
 
 	public static function render_send_campaign_form(): string {
 		$action = esc_url( admin_url( 'admin-post.php' ) );
+		$settings = (array) get_option( 'plaidact_campaign_settings', array() );
 		ob_start();
 		?>
 		<div class="plaidact-card plaidact-card--send-mail">
-			<form method="post" action="<?php echo $action; ?>" style="display:flex;gap:.6rem;flex-wrap:wrap;">
+			<h3 class="plaidact-card__title"><?php echo esc_html( (string) ( $settings['campaign_share_mail_title'] ?? __( 'Découvre cette campagne PLAID·ACT', 'plaidact-campaign-core' ) ) ); ?></h3>
+			<p><?php echo esc_html( (string) ( $settings['send_mail_intro'] ?? __( 'Partagez la campagne à votre réseau en un clic.', 'plaidact-campaign-core' ) ) ); ?></p>
+			<form method="post" action="<?php echo $action; ?>" class="plaidact-form-inline">
 				<input type="hidden" name="action" value="plaidact_send_campaign_mail" />
 				<?php wp_nonce_field( 'plaidact_send_campaign_mail_action', 'plaidact_send_campaign_mail_nonce' ); ?>
 				<input type="email" name="to_email" required placeholder="<?php esc_attr_e( 'Email du destinataire', 'plaidact-campaign-core' ); ?>" />
-				<button class="plaidact-button" type="submit"><?php esc_html_e( 'Envoyer la campagne', 'plaidact-campaign-core' ); ?></button>
+				<button class="plaidact-button" type="submit"><?php echo esc_html( (string) ( $settings['send_mail_button_label'] ?? __( 'Envoyer la campagne', 'plaidact-campaign-core' ) ) ); ?></button>
 			</form>
 		</div>
 		<?php
@@ -274,25 +295,36 @@ final class Shortcodes {
 	}
 
 	public static function render_social_wall( array $atts = array() ): string {
-		$attributes = shortcode_atts(
+		$embeds = get_posts(
 			array(
-				'sources' => 'Instagram, Bluesky, YouTube',
-			),
-			$atts,
-			'plaid_social_wall'
+				'post_type'      => 'plaid_social_embed',
+				'post_status'    => 'publish',
+				'posts_per_page' => 18,
+				'orderby'        => array( 'menu_order' => 'ASC', 'date' => 'DESC' ),
+				'meta_key'       => '_plaid_social_enabled',
+				'meta_value'     => '1',
+			)
 		);
-
-		$sources = array_filter( array_map( 'trim', explode( ',', (string) $attributes['sources'] ) ) );
 
 		ob_start();
 		?>
 		<div class="plaidact-card plaidact-card--social">
-			<p><?php esc_html_e( 'Social wall connecté prochainement. Sources prévues :', 'plaidact-campaign-core' ); ?></p>
-			<ul>
-				<?php foreach ( $sources as $source ) : ?>
-					<li><?php echo esc_html( $source ); ?></li>
-				<?php endforeach; ?>
-			</ul>
+			<?php if ( ! empty( $embeds ) ) : ?>
+				<div class="plaidact-social-grid">
+					<?php foreach ( $embeds as $embed ) : ?>
+						<?php
+						$platform = (string) get_post_meta( $embed->ID, '_plaid_social_platform', true );
+						$code     = (string) get_post_meta( $embed->ID, '_plaid_social_embed_code', true );
+						?>
+						<article class="plaidact-social-card">
+							<p class="plaidact-social-card__platform"><?php echo esc_html( $platform ?: __( 'Réseau social', 'plaidact-campaign-core' ) ); ?></p>
+							<div class="plaidact-social-card__embed"><?php echo wp_kses_post( $code ); ?></div>
+						</article>
+					<?php endforeach; ?>
+				</div>
+			<?php else : ?>
+				<p><?php esc_html_e( 'Ajoutez des posts dans "Social wall embeds" puis activez-les pour les afficher ici.', 'plaidact-campaign-core' ); ?></p>
+			<?php endif; ?>
 		</div>
 		<?php
 		return (string) ob_get_clean();
