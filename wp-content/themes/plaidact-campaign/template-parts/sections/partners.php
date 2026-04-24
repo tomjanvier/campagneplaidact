@@ -17,7 +17,7 @@ $partners = new WP_Query(
 ?>
 <section class="<?php echo $in_hero ? 'hero-partners' : 'section partners-section'; ?>" id="partenaires">
 	<div class="<?php echo $in_hero ? 'hero-partners__inner' : 'wrap'; ?>">
-		<h2 class="<?php echo $in_hero ? 'hero-partners__title' : 'partners-section__title'; ?>"><?php esc_html_e( 'Organisations qui portent la campagne', 'plaidact-campaign' ); ?></h2>
+		<h2 class="<?php echo $in_hero ? 'hero-partners__title' : 'partners-section__title'; ?>"><?php echo esc_html( (string) get_theme_mod( 'partners_section_title', __( 'Organisations qui portent la campagne', 'plaidact-campaign' ) ) ); ?></h2>
 		<div class="<?php echo $in_hero ? 'hero-partners__grid' : 'partners-section__grid'; ?>">
 			<?php if ( $partners->have_posts() ) : ?>
 				<?php while ( $partners->have_posts() ) : $partners->the_post(); ?>

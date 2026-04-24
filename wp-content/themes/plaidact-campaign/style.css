@@ -353,3 +353,131 @@ body {
 .hero__mail-share {
 	margin-top: 1rem;
 }
+
+.hero__share-list {
+	position: absolute;
+	right: 1rem;
+	bottom: 1rem;
+	z-index: 3;
+	display: flex;
+	gap: 0.45rem;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	max-width: min(90vw, 540px);
+}
+
+.hero__share-link {
+	position: relative;
+	display: inline-grid;
+	place-items: center;
+	width: 2.2rem;
+	height: 2.2rem;
+	border-radius: 999px;
+	background: rgb(9 19 32 / 70%);
+	color: #fff;
+	text-decoration: none;
+	font-size: 0.72rem;
+	font-weight: 700;
+}
+
+.hero__share-tooltip {
+	position: absolute;
+	bottom: 125%;
+	left: 50%;
+	transform: translate(-50%, 8px);
+	background: #fff;
+	color: #091320;
+	padding: 0.25rem 0.45rem;
+	border-radius: 6px;
+	font-size: 0.72rem;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 180ms ease, transform 180ms ease;
+	white-space: nowrap;
+}
+
+.hero__share-link:hover .hero__share-tooltip,
+.hero__share-link:focus-visible .hero__share-tooltip {
+	opacity: 1;
+	transform: translate(-50%, 0);
+}
+
+.partner-logo-card {
+	min-height: 102px;
+	padding: 1.1rem;
+}
+
+.partner-logo-card img {
+	max-height: 56px;
+}
+
+.plaidact-card--petition,
+.plaidact-card--send-mail,
+.plaidact-card--social {
+	border-radius: 18px;
+	padding: 1.3rem;
+	box-shadow: 0 14px 36px rgb(9 19 32 / 8%);
+}
+
+.plaidact-card__title {
+	margin-top: 0;
+	margin-bottom: 0.4rem;
+}
+
+.plaidact-form-grid,
+.plaidact-form-inline {
+	display: grid;
+	gap: 0.7rem;
+	margin-top: 1rem;
+}
+
+.plaidact-form-inline {
+	grid-template-columns: minmax(220px, 1fr) auto;
+}
+
+.plaidact-form-grid input,
+.plaidact-form-inline input {
+	border: 1px solid #cbd5e1;
+	border-radius: 10px;
+	padding: 0.72rem 0.8rem;
+}
+
+.plaidact-progress {
+	height: 10px;
+	background: #e5e7eb;
+	border-radius: 999px;
+	overflow: hidden;
+}
+
+.plaidact-progress span {
+	display: block;
+	height: 100%;
+	background: var(--plaid-accent, #2f6d4b);
+}
+
+.plaidact-social-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: 1rem;
+}
+
+.plaidact-social-card {
+	padding: 1rem;
+	border-radius: 12px;
+	background: #fff;
+	border: 1px solid #e5e7eb;
+}
+
+.plaidact-social-card__platform {
+	margin: 0 0 0.6rem;
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: #475569;
+}
+
+@media (max-width: 680px) {
+	.plaidact-form-inline {
+		grid-template-columns: 1fr;
+	}
+}

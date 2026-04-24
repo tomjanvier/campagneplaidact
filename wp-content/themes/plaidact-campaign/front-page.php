@@ -19,8 +19,52 @@ $petition_url  = esc_url( (string) get_theme_mod( 'hero_primary_cta_url', '#peti
 $petition_text = (string) get_theme_mod( 'hero_primary_cta_label', __( 'Signer la pétition', 'plaidact-campaign' ) );
 $learn_url     = esc_url( (string) get_theme_mod( 'hero_secondary_cta_url', '#breves' ) );
 $learn_text    = (string) get_theme_mod( 'hero_secondary_cta_label', __( 'En savoir plus', 'plaidact-campaign' ) );
-$share_url     = rawurlencode( home_url( '/' ) );
+$share_page    = home_url( '/' );
+$share_url     = rawurlencode( $share_page );
 $share_text    = rawurlencode( $hero_title );
+
+$share_links = array(
+	array(
+		'label' => __( 'Facebook', 'plaidact-campaign' ),
+		'icon'  => 'f',
+		'url'   => 'https://www.facebook.com/sharer/sharer.php?u=' . $share_url,
+	),
+	array(
+		'label' => __( 'X / Twitter', 'plaidact-campaign' ),
+		'icon'  => '𝕏',
+		'url'   => 'https://twitter.com/intent/tweet?url=' . $share_url . '&text=' . $share_text,
+	),
+	array(
+		'label' => __( 'LinkedIn', 'plaidact-campaign' ),
+		'icon'  => 'in',
+		'url'   => 'https://www.linkedin.com/shareArticle?mini=true&url=' . $share_url,
+	),
+	array(
+		'label' => __( 'WhatsApp', 'plaidact-campaign' ),
+		'icon'  => 'wa',
+		'url'   => 'https://api.whatsapp.com/send?text=' . rawurlencode( $hero_title . ' ' . $share_page ),
+	),
+	array(
+		'label' => __( 'Telegram', 'plaidact-campaign' ),
+		'icon'  => 'tg',
+		'url'   => 'https://t.me/share/url?url=' . $share_url . '&text=' . $share_text,
+	),
+	array(
+		'label' => __( 'Bluesky', 'plaidact-campaign' ),
+		'icon'  => 'b',
+		'url'   => 'https://bsky.app/intent/compose?text=' . rawurlencode( $hero_title . ' ' . $share_page ),
+	),
+	array(
+		'label' => __( 'Email', 'plaidact-campaign' ),
+		'icon'  => '@',
+		'url'   => 'mailto:?subject=' . $share_text . '&body=' . rawurlencode( $hero_title . "\n\n" . $share_page ),
+	),
+	array(
+		'label' => __( 'Message', 'plaidact-campaign' ),
+		'icon'  => 'sms',
+		'url'   => 'sms:?body=' . rawurlencode( $hero_title . ' ' . $share_page ),
+	),
+);
 ?>
 
 <section class="section hero" id="accueil">
@@ -32,7 +76,14 @@ $share_text    = rawurlencode( $hero_title );
 		<div class="hero__media" style="background-image:url('<?php echo $hero_image; ?>');"></div>
 	<?php endif; ?>
 
-	<a class="hero__share" href="https://www.facebook.com/sharer/sharer.php?u=<?php echo esc_attr( $share_url ); ?>&quote=<?php echo esc_attr( $share_text ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Partager', 'plaidact-campaign' ); ?></a>
+	<div class="hero__share-list" aria-label="<?php esc_attr_e( 'Partage sur les réseaux', 'plaidact-campaign' ); ?>">
+		<?php foreach ( $share_links as $share ) : ?>
+			<a class="hero__share-link" href="<?php echo esc_url( $share['url'] ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php echo esc_attr( $share['label'] ); ?>">
+				<span aria-hidden="true"><?php echo esc_html( $share['icon'] ); ?></span>
+				<span class="hero__share-tooltip"><?php echo esc_html( $share['label'] ); ?></span>
+			</a>
+		<?php endforeach; ?>
+	</div>
 
 	<div class="hero__overlay"></div>
 	<div class="wrap hero__content">
@@ -45,7 +96,6 @@ $share_text    = rawurlencode( $hero_title );
 			<a class="plaidact-button" href="<?php echo $petition_url; ?>"><?php echo esc_html( $petition_text ); ?></a>
 			<a class="hero__link" href="<?php echo $learn_url; ?>"><?php echo esc_html( $learn_text ); ?> <span aria-hidden="true">→</span></a>
 		</div>
-		<div class="hero__mail-share"><?php echo do_shortcode( '[plaid_send_campaign]' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
 		<?php get_template_part( 'template-parts/sections/partners', null, array( 'in_hero' => true ) ); ?>
 	</div>
 </section>
@@ -56,22 +106,54 @@ $share_text    = rawurlencode( $hero_title );
 	</div>
 </section>
 
-<?php if ( plaidact_is_enabled( 'enable_petition', true ) ) : ?>
-	<?php get_template_part( 'template-parts/sections/petition' ); ?>
-<?php endif; ?>
+<?php
+$sections = array(
+	'petition' => static function (): void {
+		if ( plaidact_is_enabled( 'enable_petition', true ) ) {
+			get_template_part( 'template-parts/sections/petition' );
+		}
+	},
+	'breves' => static function (): void {
+		get_template_part( 'template-parts/sections/breves' );
+	},
+	'articles' => static function (): void {
+		if ( plaidact_is_enabled( 'enable_articles', true ) ) {
+			get_template_part( 'template-parts/sections/articles' );
+		}
+	},
+	'rapport' => static function (): void {
+		if ( plaidact_is_enabled( 'enable_report_highlight', false ) ) {
+			get_template_part( 'template-parts/sections/report-highlight' );
+		}
+	},
+	'social_wall' => static function (): void {
+		if ( plaidact_is_enabled( 'enable_socialwall', true ) ) {
+			get_template_part( 'template-parts/sections/social-wall' );
+		}
+	},
+	'send_mail' => static function (): void {
+		if ( plaidact_is_enabled( 'enable_send_campaign', true ) ) {
+			get_template_part( 'template-parts/sections/send-mail' );
+		}
+	},
+);
 
-<?php get_template_part( 'template-parts/sections/breves' ); ?>
+$order_string = (string) get_theme_mod( 'campaign_section_order', 'petition,breves,articles,rapport,social_wall,send_mail' );
+$order        = array_filter( array_map( 'trim', explode( ',', strtolower( $order_string ) ) ) );
+$already_done = array();
 
-<?php if ( plaidact_is_enabled( 'enable_articles', true ) ) : ?>
-	<?php get_template_part( 'template-parts/sections/articles' ); ?>
-<?php endif; ?>
+foreach ( $order as $section_key ) {
+	if ( isset( $sections[ $section_key ] ) && ! isset( $already_done[ $section_key ] ) ) {
+		$sections[ $section_key ]();
+		$already_done[ $section_key ] = true;
+	}
+}
 
-<?php if ( plaidact_is_enabled( 'enable_report_highlight', false ) ) : ?>
-	<?php get_template_part( 'template-parts/sections/report-highlight' ); ?>
-<?php endif; ?>
-
-<?php if ( plaidact_is_enabled( 'enable_socialwall', true ) ) : ?>
-	<?php get_template_part( 'template-parts/sections/social-wall' ); ?>
-<?php endif; ?>
+foreach ( $sections as $section_key => $renderer ) {
+	if ( ! isset( $already_done[ $section_key ] ) ) {
+		$renderer();
+	}
+}
+?>
 
 <?php get_footer(); ?>
