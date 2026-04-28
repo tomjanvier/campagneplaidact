@@ -75,6 +75,7 @@ final class Shortcodes {
 			'decision_mail_subject'     => sanitize_text_field( (string) ( $input['decision_mail_subject'] ?? '' ) ),
 			'decision_mail_placeholder' => sanitize_textarea_field( (string) ( $input['decision_mail_placeholder'] ?? '' ) ),
 			'decision_mail_button_label'=> sanitize_text_field( (string) ( $input['decision_mail_button_label'] ?? '' ) ),
+			'social_share_text'         => sanitize_textarea_field( (string) ( $input['social_share_text'] ?? '' ) ),
 		);
 	}
 
@@ -106,6 +107,7 @@ final class Shortcodes {
 
 Je vous écris pour...', 'plaidact-campaign-core' ),
 				'decision_mail_button_label'=> __( 'Envoyer au décideur', 'plaidact-campaign-core' ),
+				'social_share_text'         => __( 'Je soutiens cette campagne citoyenne. Rejoignez-nous !', 'plaidact-campaign-core' ),
 			)
 		);
 		?>
@@ -130,6 +132,7 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 					<tr><th scope="row"><?php esc_html_e( 'Email du décideur', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[decision_maker_email]" type="email" value="<?php echo esc_attr( (string) $settings['decision_maker_email'] ); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Sujet email décideur', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[decision_mail_subject]" type="text" value="<?php echo esc_attr( (string) $settings['decision_mail_subject'] ); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Texte pré-rempli email décideur', 'plaidact-campaign-core' ); ?></th><td><textarea name="plaidact_campaign_settings[decision_mail_placeholder]" class="large-text" rows="5"><?php echo esc_textarea( (string) $settings['decision_mail_placeholder'] ); ?></textarea></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Texte par défaut pour les partages sociaux', 'plaidact-campaign-core' ); ?></th><td><textarea name="plaidact_campaign_settings[social_share_text]" class="large-text" rows="4"><?php echo esc_textarea( (string) $settings['social_share_text'] ); ?></textarea></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Libellé bouton partage email', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[send_mail_button_label]" type="text" value="<?php echo esc_attr( (string) $settings['send_mail_button_label'] ); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Libellé bouton décideur', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[decision_mail_button_label]" type="text" value="<?php echo esc_attr( (string) $settings['decision_mail_button_label'] ); ?>" class="regular-text" /></td></tr>
 				</table>
