@@ -30,6 +30,8 @@ final class CPT {
 		add_action( 'add_meta_boxes', array( __CLASS__, 'register_social_embed_metabox' ) );
 		add_action( 'save_post_plaid_partner', array( __CLASS__, 'save_partner_url' ) );
 		add_action( 'save_post_plaid_social_embed', array( __CLASS__, 'save_social_embed_meta' ) );
+		add_filter( 'manage_plaid_signature_posts_columns', array( __CLASS__, 'filter_signature_columns' ) );
+		add_action( 'manage_plaid_signature_posts_custom_column', array( __CLASS__, 'render_signature_columns' ), 10, 2 );
 	}
 
 	/**
@@ -92,15 +94,19 @@ final class CPT {
 			'plaid_signature',
 			array(
 				'labels'       => array(
-					'name'          => __( 'Signatures pétition', 'plaidact-campaign-core' ),
-					'singular_name' => __( 'Signature', 'plaidact-campaign-core' ),
+					'name'               => __( 'Signatures pétition', 'plaidact-campaign-core' ),
+					'singular_name'      => __( 'Signature', 'plaidact-campaign-core' ),
+					'add_new_item'       => __( 'Ajouter une signature', 'plaidact-campaign-core' ),
+					'edit_item'          => __( 'Voir la signature', 'plaidact-campaign-core' ),
+					'not_found'          => __( 'Aucune signature trouvée', 'plaidact-campaign-core' ),
+					'not_found_in_trash' => __( 'Aucune signature dans la corbeille', 'plaidact-campaign-core' ),
 				),
 				'public'       => false,
 				'show_ui'      => true,
 				'show_in_rest' => false,
 				'menu_icon'    => 'dashicons-yes-alt',
 				'menu_position'=> 23,
-				'supports'     => array( 'title' ),
+				'supports'     => array( 'title', 'editor' ),
 			)
 		);
 
@@ -344,6 +350,36 @@ final class CPT {
 			} else {
 				delete_post_meta( $post_id, '_plaid_partner_url' );
 			}
+		}
+	}
+
+	/**
+	 * Adds custom columns for petition signatures.
+	 *
+	 * @param array<string, string> $columns Existing columns.
+	 * @return array<string, string>
+	 */
+	public static function filter_signature_columns( array $columns ): array {
+		$columns['signature_email'] = __( 'Email', 'plaidact-campaign-core' );
+		$columns['signature_optin'] = __( 'Opt-in newsletter', 'plaidact-campaign-core' );
+		return $columns;
+	}
+
+	/**
+	 * Renders custom signature columns.
+	 *
+	 * @param string $column Column identifier.
+	 * @param int    $post_id Signature post ID.
+	 * @return void
+	 */
+	public static function render_signature_columns( string $column, int $post_id ): void {
+		if ( 'signature_email' === $column ) {
+			echo esc_html( (string) get_post_meta( $post_id, '_plaid_signature_email', true ) );
+		}
+
+		if ( 'signature_optin' === $column ) {
+			$optin = (string) get_post_meta( $post_id, '_plaid_signature_optin', true );
+			echo esc_html( '1' === $optin ? __( 'Oui', 'plaidact-campaign-core' ) : __( 'Non', 'plaidact-campaign-core' ) );
 		}
 	}
 
