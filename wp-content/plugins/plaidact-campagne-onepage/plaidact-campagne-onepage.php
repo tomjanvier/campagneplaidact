@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PLAID·ACT Campagne Onepage
  * Description: Déclare une taxonomie campagne et génère automatiquement des pages one-page pilotées depuis un plugin.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Author: PLAID·ACT
  */
 
@@ -161,8 +161,24 @@ final class Plaidact_Campagne_Onepage {
 			'plaidact-campagne-onepage',
 			plugin_dir_url( __FILE__ ) . 'assets/campagne-onepage.css',
 			array(),
-			'0.1.0'
+			'0.2.0'
 		);
+
+		wp_enqueue_script(
+			'plaidact-campagne-onepage',
+			plugin_dir_url( __FILE__ ) . 'assets/campagne-onepage.js',
+			array(),
+			'0.2.0',
+			true
+		);
+	}
+
+	private function get_main_site_url(): string {
+		if ( is_multisite() ) {
+			return (string) get_site_url( 1, '/' );
+		}
+
+		return (string) home_url( '/' );
 	}
 
 	public function render_onepage_shortcode( $atts ) {
@@ -191,6 +207,20 @@ final class Plaidact_Campagne_Onepage {
 			return '';
 		}
 
+		$settings           = (array) get_option( 'plaidact_campaign_settings', array() );
+		$share_default_text = (string) ( $settings['social_share_text'] ?? __( 'Je soutiens cette campagne citoyenne. Rejoignez-nous !', 'plaidact-campagne-onepage' ) );
+		$share_page         = get_permalink( get_queried_object_id() ) ?: home_url( '/' );
+		$share_page_encoded = rawurlencode( $share_page );
+		$main_site_url      = $this->get_main_site_url();
+		$partners           = get_posts(
+			array(
+				'post_type'      => 'plaid_partner',
+				'post_status'    => 'publish',
+				'posts_per_page' => 12,
+				'orderby'        => array( 'menu_order' => 'ASC', 'date' => 'DESC' ),
+			)
+		);
+
 		$posts = get_posts(
 			array(
 				'post_type'      => 'post',
@@ -210,13 +240,45 @@ final class Plaidact_Campagne_Onepage {
 		?>
 		<section class="plaidact-campagne-hero">
 			<div class="plaidact-wrap">
+				<a class="plaidact-return-link" href="<?php echo esc_url( $main_site_url ); ?>"><?php esc_html_e( 'Revenir sur le site de PLAID·ACT', 'plaidact-campagne-onepage' ); ?></a>
 				<p class="plaidact-kicker"><?php esc_html_e( 'Campagne', 'plaidact-campagne-onepage' ); ?></p>
 				<h1><?php echo esc_html( $term->name ); ?></h1>
 				<?php if ( ! empty( $term->description ) ) : ?>
 					<p class="plaidact-lead"><?php echo esc_html( $term->description ); ?></p>
 				<?php endif; ?>
+				<div class="plaidact-share-box">
+					<label for="plaidact-share-text"><strong><?php esc_html_e( 'Texte du post à partager', 'plaidact-campagne-onepage' ); ?></strong></label>
+					<textarea id="plaidact-share-text" class="plaidact-share-box__input" rows="3"><?php echo esc_textarea( $share_default_text ); ?></textarea>
+					<div class="plaidact-share-links">
+						<a class="plaidact-share-link" data-share-target="whatsapp" href="<?php echo esc_url( 'https://api.whatsapp.com/send?text=' . rawurlencode( $share_default_text . ' ' . $share_page ) ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( 'Partager sur WhatsApp', 'plaidact-campagne-onepage' ); ?>">🟢 <span>WhatsApp</span></a>
+						<a class="plaidact-share-link" data-share-target="instagram" href="<?php echo esc_url( 'https://www.instagram.com/' ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( 'Partager sur Instagram', 'plaidact-campagne-onepage' ); ?>">📸 <span>Instagram</span></a>
+						<a class="plaidact-share-link" data-share-target="x" href="<?php echo esc_url( 'https://twitter.com/intent/tweet?url=' . $share_page_encoded . '&text=' . rawurlencode( $share_default_text ) ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( 'Partager sur X', 'plaidact-campagne-onepage' ); ?>">𝕏 <span>X</span></a>
+					</div>
+				</div>
 			</div>
 		</section>
+
+		<section class="plaidact-campagne-actions">
+			<div class="plaidact-wrap plaidact-grid plaidact-grid--actions">
+				<div><?php echo do_shortcode( '[petition_form]' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+				<div><?php echo do_shortcode( '[plaid_send_campaign]' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+			</div>
+		</section>
+
+		<?php if ( ! empty( $partners ) ) : ?>
+			<section class="plaidact-campagne-partners">
+				<div class="plaidact-wrap">
+					<h2><?php esc_html_e( 'Organisations de la campagne', 'plaidact-campagne-onepage' ); ?></h2>
+					<div class="plaidact-partners-grid">
+						<?php foreach ( $partners as $partner ) : ?>
+							<div class="plaidact-partner-card">
+								<?php echo get_the_post_thumbnail( $partner->ID, 'medium', array( 'loading' => 'lazy' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+							</div>
+						<?php endforeach; ?>
+					</div>
+				</div>
+			</section>
+		<?php endif; ?>
 
 		<section class="plaidact-campagne-content">
 			<div class="plaidact-wrap">
