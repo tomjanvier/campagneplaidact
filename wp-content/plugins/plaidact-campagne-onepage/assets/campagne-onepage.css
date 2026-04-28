@@ -1,0 +1,61 @@
+.plaidact-wrap {
+	margin: 0 auto;
+	max-width: 1100px;
+	padding: 0 1rem;
+}
+
+.plaidact-campagne-hero {
+	background: linear-gradient(130deg, #111827 0%, #1f2937 100%);
+	color: #fff;
+	padding: 5rem 0;
+}
+
+.plaidact-kicker {
+	font-size: 0.85rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	margin-bottom: 0.5rem;
+	text-transform: uppercase;
+}
+
+.plaidact-campagne-hero h1 {
+	font-size: clamp(2rem, 5vw, 3.25rem);
+	line-height: 1.1;
+	margin: 0;
+}
+
+.plaidact-lead {
+	font-size: 1.125rem;
+	margin-top: 1rem;
+	max-width: 56ch;
+	opacity: 0.9;
+}
+
+.plaidact-campagne-content {
+	padding: 3rem 0 4rem;
+}
+
+.plaidact-grid {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	margin-top: 1.25rem;
+}
+
+.plaidact-card {
+	background: #fff;
+	border: 1px solid #e5e7eb;
+	border-radius: 10px;
+	padding: 1rem;
+}
+
+.plaidact-card h3 {
+	font-size: 1.05rem;
+	margin: 0 0 0.65rem;
+}
+
+.plaidact-card p {
+	font-size: 0.95rem;
+	line-height: 1.45;
+	margin: 0;
+}
