@@ -549,3 +549,29 @@ body {
 		justify-content: flex-start;
 	}
 }
+
+.plaidact-petition-letter {
+	margin: 1rem 0;
+	padding: 0.9rem 1rem;
+	border: 1px solid #d8e3ef;
+	border-radius: 14px;
+	background: #f8fbff;
+}
+
+.plaidact-petition-letter summary {
+	cursor: pointer;
+	font-weight: 700;
+}
+
+.plaidact-petition-letter__body {
+	margin-top: 0.75rem;
+	padding-top: 0.75rem;
+	border-top: 1px solid #e5edf5;
+	color: #243244;
+}
+
+.plaidact-form-grid label {
+	display: flex;
+	gap: 0.5rem;
+	align-items: flex-start;
+}
