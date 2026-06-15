@@ -39,6 +39,7 @@ final class Shortcodes {
 
 	public static function register_options(): void {
 		add_option( 'plaidact_petition_signatures_count', 0 );
+		add_option( 'plaidact_petition_signed_emails', array() );
 	}
 
 	public static function register_settings_page(): void {
@@ -76,6 +77,9 @@ final class Shortcodes {
 			'decision_mail_placeholder' => sanitize_textarea_field( (string) ( $input['decision_mail_placeholder'] ?? '' ) ),
 			'decision_mail_button_label'=> sanitize_text_field( (string) ( $input['decision_mail_button_label'] ?? '' ) ),
 			'social_share_text'         => sanitize_textarea_field( (string) ( $input['social_share_text'] ?? '' ) ),
+			'brevo_doi_enabled'         => ! empty( $input['brevo_doi_enabled'] ) ? '1' : '0',
+			'brevo_doi_template_id'     => absint( $input['brevo_doi_template_id'] ?? 0 ),
+			'brevo_redirection_url'     => esc_url_raw( (string) ( $input['brevo_redirection_url'] ?? '' ) ),
 		);
 	}
 
@@ -108,6 +112,9 @@ final class Shortcodes {
 Je vous écris pour...', 'plaidact-campaign-core' ),
 				'decision_mail_button_label'=> __( 'Envoyer au décideur', 'plaidact-campaign-core' ),
 				'social_share_text'         => __( 'Je soutiens cette campagne citoyenne. Rejoignez-nous !', 'plaidact-campaign-core' ),
+				'brevo_doi_enabled'         => '0',
+				'brevo_doi_template_id'     => 0,
+				'brevo_redirection_url'     => '',
 			)
 		);
 		?>
@@ -121,6 +128,9 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 					<tr><th scope="row"><?php esc_html_e( 'Brevo API key', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[brevo_api_key]" type="text" value="<?php echo esc_attr( (string) $settings['brevo_api_key'] ); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'ID liste newsletter PLAID·ACT', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_plaidact]" type="number" value="<?php echo esc_attr( (string) $settings['brevo_list_plaidact'] ); ?>" class="small-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'ID liste newsletter campagne', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_campaign]" type="number" value="<?php echo esc_attr( (string) $settings['brevo_list_campaign'] ); ?>" class="small-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Double opt-in Brevo', 'plaidact-campaign-core' ); ?></th><td><label><input name="plaidact_campaign_settings[brevo_doi_enabled]" type="checkbox" value="1" <?php checked( (string) $settings['brevo_doi_enabled'], '1' ); ?> /> <?php esc_html_e( 'Utiliser /contacts/doubleOptinConfirmation au lieu de créer directement le contact.', 'plaidact-campaign-core' ); ?></label></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'ID template double opt-in', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[brevo_doi_template_id]" type="number" value="<?php echo esc_attr( (string) $settings['brevo_doi_template_id'] ); ?>" class="small-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'URL de retour double opt-in', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[brevo_redirection_url]" type="url" value="<?php echo esc_attr( (string) $settings['brevo_redirection_url'] ); ?>" class="regular-text" placeholder="https://example.org/merci" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Titre bloc pétition', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_title]" type="text" value="<?php echo esc_attr( (string) $settings['petition_title'] ); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Texte intro pétition', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_intro]" type="text" value="<?php echo esc_attr( (string) $settings['petition_intro'] ); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Libellé bouton pétition', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_button_label]" type="text" value="<?php echo esc_attr( (string) $settings['petition_button_label'] ); ?>" class="regular-text" /></td></tr>
@@ -157,14 +167,19 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 			<p><?php echo nl2br( esc_html( (string) ( $settings['petition_description'] ?? __( 'Expliquez ici les objectifs et revendications de la pétition.', 'plaidact-campaign-core' ) ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></p>
 			<?php if ( isset( $_GET['petition_signed'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['petition_signed'] ) ) ) : ?>
 				<p><strong><?php esc_html_e( 'Merci, votre signature a bien été enregistrée.', 'plaidact-campaign-core' ); ?></strong></p>
+			<?php elseif ( isset( $_GET['petition_signed'] ) && 'already' === sanitize_text_field( wp_unslash( $_GET['petition_signed'] ) ) ) : ?>
+				<p><strong><?php esc_html_e( 'Cette adresse email a déjà signé la pétition.', 'plaidact-campaign-core' ); ?></strong></p>
+			<?php elseif ( isset( $_GET['petition_signed'] ) && '0' === sanitize_text_field( wp_unslash( $_GET['petition_signed'] ) ) ) : ?>
+				<p><strong><?php esc_html_e( 'Signature impossible pour le moment. Réessayez plus tard.', 'plaidact-campaign-core' ); ?></strong></p>
 			<?php endif; ?>
 			<p class="plaidact-petition__count"><strong><?php echo esc_html( number_format_i18n( $count ) ); ?></strong> / <?php echo esc_html( number_format_i18n( $goal ) ); ?></p>
 			<div class="plaidact-progress"><span style="width:<?php echo esc_attr( (string) $progress ); ?>%;"></span></div>
 			<form method="post" action="<?php echo $action; ?>" class="plaidact-form-grid">
 				<input type="hidden" name="action" value="plaidact_petition_submit" />
 				<?php wp_nonce_field( 'plaidact_petition_submit_action', 'plaidact_petition_nonce' ); ?>
-				<input type="text" name="full_name" required placeholder="<?php esc_attr_e( 'Nom complet', 'plaidact-campaign-core' ); ?>" />
-				<input type="email" name="email" required placeholder="<?php esc_attr_e( 'Adresse email', 'plaidact-campaign-core' ); ?>" />
+				<input type="text" name="full_name" required autocomplete="name" placeholder="<?php esc_attr_e( 'Nom complet', 'plaidact-campaign-core' ); ?>" />
+				<input type="text" name="website" value="" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true" />
+				<input type="email" name="email" required autocomplete="email" placeholder="<?php esc_attr_e( 'Adresse email', 'plaidact-campaign-core' ); ?>" />
 				<label><input type="checkbox" name="newsletter_optin" value="1" checked /> <?php echo esc_html( (string) ( $settings['petition_optin_label'] ?? __( 'M’inscrire aux newsletters PLAID·ACT et de cette campagne', 'plaidact-campaign-core' ) ) ); ?></label>
 				<button class="plaidact-button" type="submit"><?php echo esc_html( (string) ( $settings['petition_button_label'] ?? __( 'Signer maintenant', 'plaidact-campaign-core' ) ) ); ?></button>
 			</form>
@@ -179,6 +194,11 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 			exit;
 		}
 
+		if ( ! empty( $_POST['website'] ) ) {
+			wp_safe_redirect( wp_get_referer() ?: home_url( '/' ) );
+			exit;
+		}
+
 		$email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
 		$name  = sanitize_text_field( wp_unslash( $_POST['full_name'] ?? '' ) );
 		if ( empty( $email ) || empty( $name ) ) {
@@ -186,8 +206,22 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 			exit;
 		}
 
-		$count = (int) get_option( 'plaidact_petition_signatures_count', 0 );
-		update_option( 'plaidact_petition_signatures_count', $count + 1 );
+		$email_key     = md5( strtolower( $email ) );
+		$signed_emails = (array) get_option( 'plaidact_petition_signed_emails', array() );
+		$existing      = get_posts(
+			array(
+				'post_type'      => 'plaid_signature',
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'meta_key'       => '_plaid_signature_email',
+				'meta_value'     => $email,
+			)
+		);
+		if ( isset( $signed_emails[ $email_key ] ) || ! empty( $existing ) ) {
+			wp_safe_redirect( add_query_arg( 'petition_signed', 'already', wp_get_referer() ?: home_url( '/' ) ) );
+			exit;
+		}
 
 		$signature_id = wp_insert_post(
 			array(
@@ -199,9 +233,19 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 		);
 
 		if ( ! is_wp_error( $signature_id ) && $signature_id > 0 ) {
+			$count = (int) get_option( 'plaidact_petition_signatures_count', 0 );
+			update_option( 'plaidact_petition_signatures_count', $count + 1 );
+			$signed_emails[ $email_key ] = time();
+			update_option( 'plaidact_petition_signed_emails', $signed_emails, false );
+
 			update_post_meta( $signature_id, '_plaid_signature_full_name', $name );
 			update_post_meta( $signature_id, '_plaid_signature_email', $email );
 			update_post_meta( $signature_id, '_plaid_signature_optin', isset( $_POST['newsletter_optin'] ) ? '1' : '0' );
+			update_post_meta( $signature_id, '_plaid_signature_signed_at', current_time( 'mysql' ) );
+			update_post_meta( $signature_id, '_plaid_signature_ip_hash', wp_hash( (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ) ) );
+		} else {
+			wp_safe_redirect( add_query_arg( 'petition_signed', '0', wp_get_referer() ?: home_url( '/' ) ) );
+			exit;
 		}
 
 		$settings = (array) get_option( 'plaidact_campaign_settings', array() );
@@ -214,7 +258,10 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 		}
 
 		if ( isset( $_POST['newsletter_optin'] ) ) {
-			self::subscribe_to_brevo_lists( $email, $name );
+			$brevo_result = self::subscribe_to_brevo_lists( $email, $name );
+			if ( ! is_wp_error( $brevo_result ) && ! is_wp_error( $signature_id ) && $signature_id > 0 ) {
+				update_post_meta( $signature_id, '_plaid_signature_brevo_status', $brevo_result );
+			}
 		}
 
 		wp_safe_redirect( add_query_arg( 'petition_signed', '1', wp_get_referer() ?: home_url( '/' ) ) );
@@ -227,7 +274,12 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 		?>
 		<div class="plaidact-card plaidact-card--newsletter" id="newsletter">
 			<h3><?php esc_html_e( 'Newsletter', 'plaidact-campaign-core' ); ?></h3>
-			<p><?php esc_html_e( 'Inscription automatique aux newsletters PLAID·ACT + campagne (Brevo).', 'plaidact-campaign-core' ); ?></p>
+			<p><?php esc_html_e( 'Inscription aux newsletters PLAID·ACT + campagne via Brevo.', 'plaidact-campaign-core' ); ?></p>
+			<?php if ( isset( $_GET['newsletter_subscribed'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['newsletter_subscribed'] ) ) ) : ?>
+				<p><strong><?php esc_html_e( 'Merci, votre inscription a bien été prise en compte.', 'plaidact-campaign-core' ); ?></strong></p>
+			<?php elseif ( isset( $_GET['newsletter_subscribed'] ) && '0' === sanitize_text_field( wp_unslash( $_GET['newsletter_subscribed'] ) ) ) : ?>
+				<p><strong><?php esc_html_e( 'Inscription impossible pour le moment. Réessayez plus tard.', 'plaidact-campaign-core' ); ?></strong></p>
+			<?php endif; ?>
 			<form method="post" action="<?php echo $action; ?>" style="display:grid;gap:.6rem;grid-template-columns:1fr auto;">
 				<input type="hidden" name="action" value="plaidact_newsletter_submit" />
 				<?php wp_nonce_field( 'plaidact_newsletter_submit_action', 'plaidact_newsletter_nonce' ); ?>
@@ -245,14 +297,15 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 			exit;
 		}
 		$email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
+		$status = '0';
 		if ( $email ) {
-			self::subscribe_to_brevo_lists( $email, '' );
+			$status = is_wp_error( self::subscribe_to_brevo_lists( $email, '' ) ) ? '0' : '1';
 		}
-		wp_safe_redirect( add_query_arg( 'newsletter_subscribed', '1', wp_get_referer() ?: home_url( '/' ) ) );
+		wp_safe_redirect( add_query_arg( 'newsletter_subscribed', $status, wp_get_referer() ?: home_url( '/' ) ) );
 		exit;
 	}
 
-	private static function subscribe_to_brevo_lists( string $email, string $name ): void {
+	private static function subscribe_to_brevo_lists( string $email, string $name ) {
 		$settings = (array) get_option( 'plaidact_campaign_settings', array() );
 		$api_key  = (string) ( $settings['brevo_api_key'] ?? '' );
 		$lists    = array_filter(
@@ -263,7 +316,7 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 		);
 
 		if ( empty( $api_key ) || empty( $lists ) ) {
-			return;
+			return new \WP_Error( 'plaidact_brevo_not_configured', __( 'Brevo n’est pas configuré.', 'plaidact-campaign-core' ) );
 		}
 
 		$attributes = array();
@@ -271,8 +324,27 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 			$attributes['FULLNAME'] = $name;
 		}
 
-		wp_remote_post(
-			'https://api.brevo.com/v3/contacts',
+		$payload = array(
+			'email'         => $email,
+			'attributes'    => (object) $attributes,
+			'listIds'       => array_values( $lists ),
+			'updateEnabled' => true,
+		);
+
+		$endpoint = 'https://api.brevo.com/v3/contacts';
+		if ( '1' === (string) ( $settings['brevo_doi_enabled'] ?? '0' ) && ! empty( $settings['brevo_doi_template_id'] ) ) {
+			$endpoint = 'https://api.brevo.com/v3/contacts/doubleOptinConfirmation';
+			$payload  = array(
+				'email'          => $email,
+				'attributes'     => (object) $attributes,
+				'includeListIds' => array_values( $lists ),
+				'templateId'     => absint( $settings['brevo_doi_template_id'] ),
+				'redirectionUrl' => esc_url_raw( (string) ( $settings['brevo_redirection_url'] ?: home_url( '/' ) ) ),
+			);
+		}
+
+		$response = wp_remote_post(
+			$endpoint,
 			array(
 				'timeout' => 15,
 				'headers' => array(
@@ -280,16 +352,20 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 					'accept'       => 'application/json',
 					'content-type' => 'application/json',
 				),
-				'body'    => wp_json_encode(
-					array(
-						'email'         => $email,
-						'attributes'    => $attributes,
-						'listIds'       => array_values( $lists ),
-						'updateEnabled' => true,
-					)
-				),
+				'body'    => wp_json_encode( $payload ),
 			)
 		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		if ( $status < 200 || $status >= 300 ) {
+			return new \WP_Error( 'plaidact_brevo_http_error', sprintf( 'Brevo HTTP %d: %s', $status, wp_remote_retrieve_body( $response ) ) );
+		}
+
+		return '1' === (string) ( $settings['brevo_doi_enabled'] ?? '0' ) ? 'double_optin_sent' : 'subscribed';
 	}
 
 	public static function render_send_campaign_form(): string {
