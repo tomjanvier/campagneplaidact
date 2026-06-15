@@ -71,6 +71,10 @@ final class Shortcodes {
 			'send_mail_intro'           => sanitize_text_field( (string) ( $input['send_mail_intro'] ?? '' ) ),
 			'send_mail_button_label'    => sanitize_text_field( (string) ( $input['send_mail_button_label'] ?? '' ) ),
 			'petition_description'      => sanitize_textarea_field( (string) ( $input['petition_description'] ?? '' ) ),
+			'petition_letter'           => sanitize_textarea_field( (string) ( $input['petition_letter'] ?? '' ) ),
+			'petition_terms_label'      => sanitize_text_field( (string) ( $input['petition_terms_label'] ?? '' ) ),
+			'petition_show_phone'       => ! empty( $input['petition_show_phone'] ) ? '1' : '0',
+			'petition_show_postcode'    => ! empty( $input['petition_show_postcode'] ) ? '1' : '0',
 			'decision_maker_name'       => sanitize_text_field( (string) ( $input['decision_maker_name'] ?? '' ) ),
 			'decision_maker_email'      => sanitize_email( $input['decision_maker_email'] ?? '' ),
 			'decision_mail_subject'     => sanitize_text_field( (string) ( $input['decision_mail_subject'] ?? '' ) ),
@@ -104,6 +108,10 @@ final class Shortcodes {
 				'send_mail_intro'           => __( 'Partagez la campagne à votre réseau en un clic.', 'plaidact-campaign-core' ),
 				'send_mail_button_label'    => __( 'Envoyer le message', 'plaidact-campaign-core' ),
 				'petition_description'      => __( 'Expliquez ici les objectifs et revendications de la pétition.', 'plaidact-campaign-core' ),
+				'petition_letter'           => __( 'Madame, Monsieur,\n\nNous vous demandons d’agir rapidement pour répondre aux revendications de cette campagne citoyenne.', 'plaidact-campaign-core' ),
+				'petition_terms_label'      => __( 'J’accepte que ma signature soit enregistrée pour cette pétition.', 'plaidact-campaign-core' ),
+				'petition_show_phone'       => '0',
+				'petition_show_postcode'    => '1',
 				'decision_maker_name'       => '',
 				'decision_maker_email'      => '',
 				'decision_mail_subject'     => __( 'Message citoyen depuis la campagne PLAID·ACT', 'plaidact-campaign-core' ),
@@ -138,6 +146,9 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 					<tr><th scope="row"><?php esc_html_e( 'Titre email de partage', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[campaign_share_mail_title]" type="text" value="<?php echo esc_attr( (string) $settings['campaign_share_mail_title'] ); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Texte bloc partage email', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[send_mail_intro]" type="text" value="<?php echo esc_attr( (string) $settings['send_mail_intro'] ); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Description pétition', 'plaidact-campaign-core' ); ?></th><td><textarea name="plaidact_campaign_settings[petition_description]" class="large-text" rows="4"><?php echo esc_textarea( (string) $settings['petition_description'] ); ?></textarea></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Lettre de pétition', 'plaidact-campaign-core' ); ?></th><td><textarea name="plaidact_campaign_settings[petition_letter]" class="large-text" rows="6"><?php echo esc_textarea( (string) $settings['petition_letter'] ); ?></textarea><p class="description"><?php esc_html_e( 'Texte affiché aux signataires et envoyé au décideur à chaque signature.', 'plaidact-campaign-core' ); ?></p></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Consentement signature', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_terms_label]" type="text" value="<?php echo esc_attr( (string) $settings['petition_terms_label'] ); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Champs complémentaires', 'plaidact-campaign-core' ); ?></th><td><label><input name="plaidact_campaign_settings[petition_show_postcode]" type="checkbox" value="1" <?php checked( (string) $settings['petition_show_postcode'], '1' ); ?> /> <?php esc_html_e( 'Afficher le code postal', 'plaidact-campaign-core' ); ?></label><br /><label><input name="plaidact_campaign_settings[petition_show_phone]" type="checkbox" value="1" <?php checked( (string) $settings['petition_show_phone'], '1' ); ?> /> <?php esc_html_e( 'Afficher le téléphone', 'plaidact-campaign-core' ); ?></label></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Nom du décideur', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[decision_maker_name]" type="text" value="<?php echo esc_attr( (string) $settings['decision_maker_name'] ); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Email du décideur', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[decision_maker_email]" type="email" value="<?php echo esc_attr( (string) $settings['decision_maker_email'] ); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Sujet email décideur', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[decision_mail_subject]" type="text" value="<?php echo esc_attr( (string) $settings['decision_mail_subject'] ); ?>" class="regular-text" /></td></tr>
@@ -165,6 +176,15 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 			<h3 class="plaidact-card__title"><?php echo esc_html( (string) ( $settings['petition_title'] ?? __( 'Signer la pétition', 'plaidact-campaign-core' ) ) ); ?></h3>
 			<p><?php echo esc_html( (string) ( $settings['petition_intro'] ?? __( 'Signez la pétition. Chaque signature fait monter le compteur en direct.', 'plaidact-campaign-core' ) ) ); ?></p>
 			<p><?php echo nl2br( esc_html( (string) ( $settings['petition_description'] ?? __( 'Expliquez ici les objectifs et revendications de la pétition.', 'plaidact-campaign-core' ) ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></p>
+			<?php if ( ! empty( $settings['petition_letter'] ) || ! empty( $settings['decision_maker_name'] ) ) : ?>
+				<details class="plaidact-petition-letter">
+					<summary><?php esc_html_e( 'Voir la lettre envoyée', 'plaidact-campaign-core' ); ?></summary>
+					<?php if ( ! empty( $settings['decision_maker_name'] ) ) : ?>
+						<p><strong><?php echo esc_html( sprintf( __( 'Destinataire : %s', 'plaidact-campaign-core' ), (string) $settings['decision_maker_name'] ) ); ?></strong></p>
+					<?php endif; ?>
+					<div class="plaidact-petition-letter__body"><?php echo nl2br( esc_html( (string) ( $settings['petition_letter'] ?? '' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+				</details>
+			<?php endif; ?>
 			<?php if ( isset( $_GET['petition_signed'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['petition_signed'] ) ) ) : ?>
 				<p><strong><?php esc_html_e( 'Merci, votre signature a bien été enregistrée.', 'plaidact-campaign-core' ); ?></strong></p>
 			<?php elseif ( isset( $_GET['petition_signed'] ) && 'already' === sanitize_text_field( wp_unslash( $_GET['petition_signed'] ) ) ) : ?>
@@ -180,6 +200,14 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 				<input type="text" name="full_name" required autocomplete="name" placeholder="<?php esc_attr_e( 'Nom complet', 'plaidact-campaign-core' ); ?>" />
 				<input type="text" name="website" value="" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true" />
 				<input type="email" name="email" required autocomplete="email" placeholder="<?php esc_attr_e( 'Adresse email', 'plaidact-campaign-core' ); ?>" />
+				<?php if ( '1' === (string) ( $settings['petition_show_postcode'] ?? '1' ) ) : ?>
+					<input type="text" name="postcode" autocomplete="postal-code" placeholder="<?php esc_attr_e( 'Code postal', 'plaidact-campaign-core' ); ?>" />
+				<?php endif; ?>
+				<?php if ( '1' === (string) ( $settings['petition_show_phone'] ?? '0' ) ) : ?>
+					<input type="tel" name="phone" autocomplete="tel" placeholder="<?php esc_attr_e( 'Téléphone', 'plaidact-campaign-core' ); ?>" />
+				<?php endif; ?>
+				<label><input type="checkbox" name="anonymous_signature" value="1" /> <?php esc_html_e( 'Afficher ma signature anonymement dans les exports publics.', 'plaidact-campaign-core' ); ?></label>
+				<label><input type="checkbox" name="petition_terms" value="1" required /> <?php echo esc_html( (string) ( $settings['petition_terms_label'] ?? __( 'J’accepte que ma signature soit enregistrée pour cette pétition.', 'plaidact-campaign-core' ) ) ); ?></label>
 				<label><input type="checkbox" name="newsletter_optin" value="1" checked /> <?php echo esc_html( (string) ( $settings['petition_optin_label'] ?? __( 'M’inscrire aux newsletters PLAID·ACT et de cette campagne', 'plaidact-campaign-core' ) ) ); ?></label>
 				<button class="plaidact-button" type="submit"><?php echo esc_html( (string) ( $settings['petition_button_label'] ?? __( 'Signer maintenant', 'plaidact-campaign-core' ) ) ); ?></button>
 			</form>
@@ -199,9 +227,11 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 			exit;
 		}
 
-		$email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
-		$name  = sanitize_text_field( wp_unslash( $_POST['full_name'] ?? '' ) );
-		if ( empty( $email ) || empty( $name ) ) {
+		$email    = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
+		$name     = sanitize_text_field( wp_unslash( $_POST['full_name'] ?? '' ) );
+		$postcode = sanitize_text_field( wp_unslash( $_POST['postcode'] ?? '' ) );
+		$phone    = sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) );
+		if ( empty( $email ) || empty( $name ) || empty( $_POST['petition_terms'] ) ) {
 			wp_safe_redirect( wp_get_referer() ?: home_url( '/' ) );
 			exit;
 		}
@@ -241,6 +271,9 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 			update_post_meta( $signature_id, '_plaid_signature_full_name', $name );
 			update_post_meta( $signature_id, '_plaid_signature_email', $email );
 			update_post_meta( $signature_id, '_plaid_signature_optin', isset( $_POST['newsletter_optin'] ) ? '1' : '0' );
+			update_post_meta( $signature_id, '_plaid_signature_anonymous', isset( $_POST['anonymous_signature'] ) ? '1' : '0' );
+			update_post_meta( $signature_id, '_plaid_signature_postcode', $postcode );
+			update_post_meta( $signature_id, '_plaid_signature_phone', $phone );
 			update_post_meta( $signature_id, '_plaid_signature_signed_at', current_time( 'mysql' ) );
 			update_post_meta( $signature_id, '_plaid_signature_ip_hash', wp_hash( (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ) ) );
 		} else {
@@ -253,7 +286,18 @@ Je vous écris pour...', 'plaidact-campaign-core' ),
 			wp_mail(
 				sanitize_email( (string) $settings['notification_email'] ),
 				__( 'Nouvelle signature pétition', 'plaidact-campaign-core' ),
-				sprintf( "Nom: %s\nEmail: %s\nCampagne: %s", $name, $email, home_url( '/' ) )
+				sprintf( "Nom: %s\nEmail: %s\nCode postal: %s\nTéléphone: %s\nCampagne: %s", $name, $email, $postcode, $phone, home_url( '/' ) )
+			);
+		}
+
+		$target_email = sanitize_email( (string) ( $settings['decision_maker_email'] ?? '' ) );
+		$letter       = (string) ( $settings['petition_letter'] ?? '' );
+		if ( $target_email && $letter ) {
+			wp_mail(
+				$target_email,
+				(string) ( $settings['decision_mail_subject'] ?? __( 'Nouvelle signature de pétition', 'plaidact-campaign-core' ) ),
+				sprintf( __( "%1$s\n\n---\nSignature : %2$s <%3$s>\nCode postal : %4$s\nCampagne : %5$s", 'plaidact-campaign-core' ), $letter, $name, $email, $postcode, home_url( '/' ) ),
+				array( 'Reply-To: ' . $name . ' <' . $email . '>' )
 			);
 		}
 
