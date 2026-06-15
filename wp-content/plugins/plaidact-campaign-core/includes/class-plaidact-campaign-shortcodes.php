@@ -7,517 +7,1363 @@
 
 namespace Plaidact\CampaignCore;
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+if (!defined("ABSPATH")) {
+    exit();
 }
 
 /**
  * Registers campaign shortcodes.
  */
-final class Shortcodes {
+final class Shortcodes
+{
+    /**
+     * Hooks WordPress actions.
+     *
+     * @return void
+     */
+    public static function boot(): void
+    {
+        add_shortcode("petition_form", [__CLASS__, "render_petition_form"]);
+        add_shortcode("plaid_social_wall", [__CLASS__, "render_social_wall"]);
+        add_shortcode("plaid_newsletter_form", [
+            __CLASS__,
+            "render_newsletter_form",
+        ]);
+        add_shortcode("plaid_send_campaign", [
+            __CLASS__,
+            "render_send_campaign_form",
+        ]);
+        add_action("init", [__CLASS__, "register_options"]);
+        add_action("admin_menu", [__CLASS__, "register_settings_page"]);
+        add_action("admin_init", [__CLASS__, "register_settings"]);
+        add_action("admin_post_nopriv_plaidact_petition_submit", [
+            __CLASS__,
+            "handle_petition_submit",
+        ]);
+        add_action("admin_post_plaidact_petition_submit", [
+            __CLASS__,
+            "handle_petition_submit",
+        ]);
+        add_action("admin_post_nopriv_plaidact_newsletter_submit", [
+            __CLASS__,
+            "handle_newsletter_submit",
+        ]);
+        add_action("admin_post_plaidact_newsletter_submit", [
+            __CLASS__,
+            "handle_newsletter_submit",
+        ]);
+        add_action("admin_post_nopriv_plaidact_send_campaign_mail", [
+            __CLASS__,
+            "handle_send_campaign_mail",
+        ]);
+        add_action("admin_post_plaidact_send_campaign_mail", [
+            __CLASS__,
+            "handle_send_campaign_mail",
+        ]);
+    }
 
-	/**
-	 * Hooks WordPress actions.
-	 *
-	 * @return void
-	 */
-	public static function boot(): void {
-		add_shortcode( 'petition_form', array( __CLASS__, 'render_petition_form' ) );
-		add_shortcode( 'plaid_social_wall', array( __CLASS__, 'render_social_wall' ) );
-		add_shortcode( 'plaid_newsletter_form', array( __CLASS__, 'render_newsletter_form' ) );
-		add_shortcode( 'plaid_send_campaign', array( __CLASS__, 'render_send_campaign_form' ) );
-		add_action( 'init', array( __CLASS__, 'register_options' ) );
-		add_action( 'admin_menu', array( __CLASS__, 'register_settings_page' ) );
-		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
-		add_action( 'admin_post_nopriv_plaidact_petition_submit', array( __CLASS__, 'handle_petition_submit' ) );
-		add_action( 'admin_post_plaidact_petition_submit', array( __CLASS__, 'handle_petition_submit' ) );
-		add_action( 'admin_post_nopriv_plaidact_newsletter_submit', array( __CLASS__, 'handle_newsletter_submit' ) );
-		add_action( 'admin_post_plaidact_newsletter_submit', array( __CLASS__, 'handle_newsletter_submit' ) );
-		add_action( 'admin_post_nopriv_plaidact_send_campaign_mail', array( __CLASS__, 'handle_send_campaign_mail' ) );
-		add_action( 'admin_post_plaidact_send_campaign_mail', array( __CLASS__, 'handle_send_campaign_mail' ) );
-	}
+    public static function register_options(): void
+    {
+        add_option("plaidact_petition_signatures_count", 0);
+        add_option("plaidact_petition_signed_emails", []);
+    }
 
-	public static function register_options(): void {
-		add_option( 'plaidact_petition_signatures_count', 0 );
-		add_option( 'plaidact_petition_signed_emails', array() );
-	}
+    public static function register_settings_page(): void
+    {
+        add_options_page(
+            __("PLAID·ACT Campagne", "plaidact-campaign-core"),
+            __("PLAID·ACT Campagne", "plaidact-campaign-core"),
+            "manage_options",
+            "plaidact-campaign-settings",
+            [__CLASS__, "render_settings_page"]
+        );
+    }
 
-	public static function register_settings_page(): void {
-		add_options_page(
-			__( 'PLAID·ACT Campagne', 'plaidact-campaign-core' ),
-			__( 'PLAID·ACT Campagne', 'plaidact-campaign-core' ),
-			'manage_options',
-			'plaidact-campaign-settings',
-			array( __CLASS__, 'render_settings_page' )
-		);
-	}
+    public static function register_settings(): void
+    {
+        register_setting(
+            "plaidact_campaign_settings",
+            "plaidact_campaign_settings",
+            [__CLASS__, "sanitize_settings"]
+        );
+    }
 
-	public static function register_settings(): void {
-		register_setting( 'plaidact_campaign_settings', 'plaidact_campaign_settings', array( __CLASS__, 'sanitize_settings' ) );
-	}
+    public static function get_default_settings(): array
+    {
+        return [
+            "petition_goal" => 10000,
+            "petition_form_id" => 0,
+            "notification_email" => get_option("admin_email"),
+            "brevo_api_key" => "",
+            "brevo_list_plaidact" => 0,
+            "brevo_list_campaign" => 0,
+            "petition_intro" => __(
+                "Signez pour soutenir la campagne.",
+                "plaidact-campaign-core"
+            ),
+            "campaign_share_mail_title" => __(
+                "Découvre cette campagne PLAID·ACT",
+                "plaidact-campaign-core"
+            ),
+            "petition_title" => __(
+                "Signer la pétition",
+                "plaidact-campaign-core"
+            ),
+            "petition_button_label" => __(
+                "Signer maintenant",
+                "plaidact-campaign-core"
+            ),
+            "petition_optin_label" => __(
+                "M’inscrire aux newsletters PLAID·ACT et de cette campagne",
+                "plaidact-campaign-core"
+            ),
+            "send_mail_intro" => __(
+                "Partagez la campagne à votre réseau en un clic.",
+                "plaidact-campaign-core"
+            ),
+            "send_mail_button_label" => __(
+                "Envoyer le message",
+                "plaidact-campaign-core"
+            ),
+            "petition_description" => __(
+                "Expliquez ici les objectifs et revendications de la pétition.",
+                "plaidact-campaign-core"
+            ),
+            "petition_letter" => __(
+                'Madame, Monsieur,\n\nNous vous demandons d’agir rapidement pour répondre aux revendications de cette campagne citoyenne.',
+                "plaidact-campaign-core"
+            ),
+            "petition_terms_label" => __(
+                "J’accepte que ma signature soit enregistrée pour cette pétition.",
+                "plaidact-campaign-core"
+            ),
+            "petition_show_phone" => "0",
+            "petition_show_postcode" => "1",
+            "decision_maker_name" => "",
+            "decision_maker_email" => "",
+            "decision_mail_subject" => __(
+                "Message citoyen depuis la campagne PLAID·ACT",
+                "plaidact-campaign-core"
+            ),
+            "decision_mail_placeholder" => __(
+                "Madame, Monsieur,\n\nJe vous écris pour...",
+                "plaidact-campaign-core"
+            ),
+            "decision_mail_button_label" => __(
+                "Envoyer au décideur",
+                "plaidact-campaign-core"
+            ),
+            "social_share_text" => __(
+                "Je soutiens cette campagne citoyenne. Rejoignez-nous !",
+                "plaidact-campaign-core"
+            ),
+            "newsletter_title" => __("Newsletter", "plaidact-campaign-core"),
+            "newsletter_intro" => __(
+                "Inscription aux newsletters PLAID·ACT + campagne via Brevo.",
+                "plaidact-campaign-core"
+            ),
+            "newsletter_button_label" => __(
+                "S’inscrire",
+                "plaidact-campaign-core"
+            ),
+            "brevo_doi_enabled" => "0",
+            "brevo_doi_template_id" => 0,
+            "brevo_redirection_url" => "",
+        ];
+    }
 
-	public static function sanitize_settings( array $input ): array {
-		return array(
-			'petition_goal'             => absint( $input['petition_goal'] ?? 10000 ),
-			'notification_email'        => sanitize_email( $input['notification_email'] ?? get_option( 'admin_email' ) ),
-			'brevo_api_key'             => sanitize_text_field( (string) ( $input['brevo_api_key'] ?? '' ) ),
-			'brevo_list_plaidact'       => absint( $input['brevo_list_plaidact'] ?? 0 ),
-			'brevo_list_campaign'       => absint( $input['brevo_list_campaign'] ?? 0 ),
-			'petition_intro'            => sanitize_text_field( (string) ( $input['petition_intro'] ?? '' ) ),
-			'campaign_share_mail_title' => sanitize_text_field( (string) ( $input['campaign_share_mail_title'] ?? '' ) ),
-			'petition_title'            => sanitize_text_field( (string) ( $input['petition_title'] ?? '' ) ),
-			'petition_button_label'     => sanitize_text_field( (string) ( $input['petition_button_label'] ?? '' ) ),
-			'petition_optin_label'      => sanitize_text_field( (string) ( $input['petition_optin_label'] ?? '' ) ),
-			'send_mail_intro'           => sanitize_text_field( (string) ( $input['send_mail_intro'] ?? '' ) ),
-			'send_mail_button_label'    => sanitize_text_field( (string) ( $input['send_mail_button_label'] ?? '' ) ),
-			'petition_description'      => sanitize_textarea_field( (string) ( $input['petition_description'] ?? '' ) ),
-			'petition_letter'           => sanitize_textarea_field( (string) ( $input['petition_letter'] ?? '' ) ),
-			'petition_terms_label'      => sanitize_text_field( (string) ( $input['petition_terms_label'] ?? '' ) ),
-			'petition_show_phone'       => ! empty( $input['petition_show_phone'] ) ? '1' : '0',
-			'petition_show_postcode'    => ! empty( $input['petition_show_postcode'] ) ? '1' : '0',
-			'decision_maker_name'       => sanitize_text_field( (string) ( $input['decision_maker_name'] ?? '' ) ),
-			'decision_maker_email'      => sanitize_email( $input['decision_maker_email'] ?? '' ),
-			'decision_mail_subject'     => sanitize_text_field( (string) ( $input['decision_mail_subject'] ?? '' ) ),
-			'decision_mail_placeholder' => sanitize_textarea_field( (string) ( $input['decision_mail_placeholder'] ?? '' ) ),
-			'decision_mail_button_label'=> sanitize_text_field( (string) ( $input['decision_mail_button_label'] ?? '' ) ),
-			'social_share_text'         => sanitize_textarea_field( (string) ( $input['social_share_text'] ?? '' ) ),
-			'brevo_doi_enabled'         => ! empty( $input['brevo_doi_enabled'] ) ? '1' : '0',
-			'brevo_doi_template_id'     => absint( $input['brevo_doi_template_id'] ?? 0 ),
-			'brevo_redirection_url'     => esc_url_raw( (string) ( $input['brevo_redirection_url'] ?? '' ) ),
-		);
-	}
+    public static function get_translatable_setting_keys(): array
+    {
+        return [
+            "petition_intro",
+            "campaign_share_mail_title",
+            "petition_title",
+            "petition_button_label",
+            "petition_optin_label",
+            "send_mail_intro",
+            "send_mail_button_label",
+            "petition_description",
+            "petition_letter",
+            "petition_terms_label",
+            "decision_mail_subject",
+            "decision_mail_placeholder",
+            "decision_mail_button_label",
+            "social_share_text",
+            "newsletter_title",
+            "newsletter_intro",
+            "newsletter_button_label",
+        ];
+    }
 
-	public static function render_settings_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return;
-		}
+    public static function get_settings(
+        bool $translate = true,
+        ?string $language = null
+    ): array {
+        static $settings_cache = [];
 
-		$settings = wp_parse_args(
-			(array) get_option( 'plaidact_campaign_settings', array() ),
-			array(
-				'petition_goal'             => 10000,
-				'notification_email'        => get_option( 'admin_email' ),
-				'brevo_api_key'             => '',
-				'brevo_list_plaidact'       => 0,
-				'brevo_list_campaign'       => 0,
-				'petition_intro'            => __( 'Signez pour soutenir la campagne.', 'plaidact-campaign-core' ),
-				'campaign_share_mail_title' => __( 'Découvre cette campagne PLAID·ACT', 'plaidact-campaign-core' ),
-				'petition_title'            => __( 'Signer la pétition', 'plaidact-campaign-core' ),
-				'petition_button_label'     => __( 'Signer maintenant', 'plaidact-campaign-core' ),
-				'petition_optin_label'      => __( 'M’inscrire aux newsletters PLAID·ACT et de cette campagne', 'plaidact-campaign-core' ),
-				'send_mail_intro'           => __( 'Partagez la campagne à votre réseau en un clic.', 'plaidact-campaign-core' ),
-				'send_mail_button_label'    => __( 'Envoyer le message', 'plaidact-campaign-core' ),
-				'petition_description'      => __( 'Expliquez ici les objectifs et revendications de la pétition.', 'plaidact-campaign-core' ),
-				'petition_letter'           => __( 'Madame, Monsieur,\n\nNous vous demandons d’agir rapidement pour répondre aux revendications de cette campagne citoyenne.', 'plaidact-campaign-core' ),
-				'petition_terms_label'      => __( 'J’accepte que ma signature soit enregistrée pour cette pétition.', 'plaidact-campaign-core' ),
-				'petition_show_phone'       => '0',
-				'petition_show_postcode'    => '1',
-				'decision_maker_name'       => '',
-				'decision_maker_email'      => '',
-				'decision_mail_subject'     => __( 'Message citoyen depuis la campagne PLAID·ACT', 'plaidact-campaign-core' ),
-				'decision_mail_placeholder' => __( 'Madame, Monsieur,
+        $cache_key = ($translate ? "1" : "0") . "|" . ($language ?? "");
 
-Je vous écris pour...', 'plaidact-campaign-core' ),
-				'decision_mail_button_label'=> __( 'Envoyer au décideur', 'plaidact-campaign-core' ),
-				'social_share_text'         => __( 'Je soutiens cette campagne citoyenne. Rejoignez-nous !', 'plaidact-campaign-core' ),
-				'brevo_doi_enabled'         => '0',
-				'brevo_doi_template_id'     => 0,
-				'brevo_redirection_url'     => '',
-			)
-		);
-		?>
+        if (isset($settings_cache[$cache_key])) {
+            return $settings_cache[$cache_key];
+        }
+
+        $settings = wp_parse_args(
+            (array) get_option("plaidact_campaign_settings", []),
+            self::get_default_settings()
+        );
+
+        if (!$translate) {
+            $settings_cache[$cache_key] = $settings;
+
+            return $settings;
+        }
+
+        foreach (self::get_translatable_setting_keys() as $key) {
+            if (isset($settings[$key])) {
+                $settings[$key] = Polylang::translate_string(
+                    (string) $settings[$key],
+                    $language
+                );
+            }
+        }
+
+        $settings_cache[$cache_key] = $settings;
+
+        return $settings;
+    }
+
+    private static function get_current_language(): ?string
+    {
+        return Polylang::current_language();
+    }
+
+    private static function get_request_language(): ?string
+    {
+        $language = sanitize_key(wp_unslash($_POST["plaidact_language"] ?? ""));
+
+        return "" !== $language ? $language : null;
+    }
+
+    private static function get_redirect_url(?string $language = null): string
+    {
+        return Petition_Workflows::get_redirect_url($language);
+    }
+
+    private static function redirect_with_status(
+        string $query_key,
+        string $query_value,
+        ?string $language = null
+    ): void {
+        wp_safe_redirect(
+            add_query_arg(
+                $query_key,
+                $query_value,
+                self::get_redirect_url($language)
+            )
+        );
+        exit();
+    }
+
+    private static function maybe_render_petitioner_form(
+        array $settings,
+        ?string $language = null
+    ): string {
+        if (!shortcode_exists("petitioner-form")) {
+            return "";
+        }
+
+        $form_id = self::resolve_petitioner_form_id($settings, $language);
+        if ($form_id <= 0) {
+            return "";
+        }
+
+        return trim(
+            (string) do_shortcode(
+                sprintf('[petitioner-form id="%d"]', $form_id)
+            )
+        );
+    }
+
+    /**
+     * Resolves the Petitioner form ID to render for the current campaign.
+     *
+     * @param array       $settings Campaign settings.
+     * @param string|null $language Optional language slug.
+     * @return int
+     */
+    private static function resolve_petitioner_form_id(
+        array $settings,
+        ?string $language = null
+    ): int {
+        $form_id = absint($settings["petition_form_id"] ?? 0);
+
+        if ($form_id > 0) {
+            return Polylang::resolve_post_translation($form_id, $language);
+        }
+
+        $candidate_ids = get_posts([
+            "post_type" => "petitioner-petition",
+            "post_status" => "publish",
+            "posts_per_page" => 5,
+            "fields" => "ids",
+            "orderby" => "date",
+            "order" => "DESC",
+        ]);
+
+        if (empty($candidate_ids)) {
+            return 0;
+        }
+
+        if ($language && function_exists("pll_get_post_language")) {
+            $language_matches = [];
+            $untranslated_matches = [];
+
+            foreach ($candidate_ids as $candidate_id) {
+                $candidate_id = (int) $candidate_id;
+                $candidate_language = Polylang::post_language(
+                    $candidate_id,
+                    false
+                );
+
+                if ($candidate_language === $language) {
+                    $language_matches[] = $candidate_id;
+                    continue;
+                }
+
+                if (null === $candidate_language) {
+                    $untranslated_matches[] = $candidate_id;
+                }
+            }
+
+            if (1 === count($language_matches)) {
+                return (int) $language_matches[0];
+            }
+
+            if (!empty($language_matches)) {
+                return 0;
+            }
+
+            if (1 === count($untranslated_matches)) {
+                return (int) $untranslated_matches[0];
+            }
+
+            return 0;
+        }
+
+        return 1 === count($candidate_ids) ? (int) $candidate_ids[0] : 0;
+    }
+
+    public static function sanitize_settings(array $input): array
+    {
+        return [
+            "petition_goal" => absint($input["petition_goal"] ?? 10000),
+            "petition_form_id" => absint($input["petition_form_id"] ?? 0),
+            "notification_email" => sanitize_email(
+                $input["notification_email"] ?? get_option("admin_email")
+            ),
+            "brevo_api_key" => sanitize_text_field(
+                (string) ($input["brevo_api_key"] ?? "")
+            ),
+            "brevo_list_plaidact" => absint($input["brevo_list_plaidact"] ?? 0),
+            "brevo_list_campaign" => absint($input["brevo_list_campaign"] ?? 0),
+            "petition_intro" => sanitize_text_field(
+                (string) ($input["petition_intro"] ?? "")
+            ),
+            "campaign_share_mail_title" => sanitize_text_field(
+                (string) ($input["campaign_share_mail_title"] ?? "")
+            ),
+            "petition_title" => sanitize_text_field(
+                (string) ($input["petition_title"] ?? "")
+            ),
+            "petition_button_label" => sanitize_text_field(
+                (string) ($input["petition_button_label"] ?? "")
+            ),
+            "petition_optin_label" => sanitize_text_field(
+                (string) ($input["petition_optin_label"] ?? "")
+            ),
+            "send_mail_intro" => sanitize_text_field(
+                (string) ($input["send_mail_intro"] ?? "")
+            ),
+            "send_mail_button_label" => sanitize_text_field(
+                (string) ($input["send_mail_button_label"] ?? "")
+            ),
+            "petition_description" => sanitize_textarea_field(
+                (string) ($input["petition_description"] ?? "")
+            ),
+            "petition_letter" => sanitize_textarea_field(
+                (string) ($input["petition_letter"] ?? "")
+            ),
+            "petition_terms_label" => sanitize_text_field(
+                (string) ($input["petition_terms_label"] ?? "")
+            ),
+            "petition_show_phone" => !empty($input["petition_show_phone"])
+                ? "1"
+                : "0",
+            "petition_show_postcode" => !empty($input["petition_show_postcode"])
+                ? "1"
+                : "0",
+            "decision_maker_name" => sanitize_text_field(
+                (string) ($input["decision_maker_name"] ?? "")
+            ),
+            "decision_maker_email" => sanitize_email(
+                $input["decision_maker_email"] ?? ""
+            ),
+            "decision_mail_subject" => sanitize_text_field(
+                (string) ($input["decision_mail_subject"] ?? "")
+            ),
+            "decision_mail_placeholder" => sanitize_textarea_field(
+                (string) ($input["decision_mail_placeholder"] ?? "")
+            ),
+            "decision_mail_button_label" => sanitize_text_field(
+                (string) ($input["decision_mail_button_label"] ?? "")
+            ),
+            "social_share_text" => sanitize_textarea_field(
+                (string) ($input["social_share_text"] ?? "")
+            ),
+            "newsletter_title" => sanitize_text_field(
+                (string) ($input["newsletter_title"] ?? "")
+            ),
+            "newsletter_intro" => sanitize_text_field(
+                (string) ($input["newsletter_intro"] ?? "")
+            ),
+            "newsletter_button_label" => sanitize_text_field(
+                (string) ($input["newsletter_button_label"] ?? "")
+            ),
+            "brevo_doi_enabled" => !empty($input["brevo_doi_enabled"])
+                ? "1"
+                : "0",
+            "brevo_doi_template_id" => absint(
+                $input["brevo_doi_template_id"] ?? 0
+            ),
+            "brevo_redirection_url" => esc_url_raw(
+                (string) ($input["brevo_redirection_url"] ?? "")
+            ),
+        ];
+    }
+
+    public static function render_settings_page(): void
+    {
+        if (!current_user_can("manage_options")) {
+            return;
+        }
+
+        $settings = self::get_settings(false);
+        ?>
 		<div class="wrap">
-			<h1><?php esc_html_e( 'Réglages campagne', 'plaidact-campaign-core' ); ?></h1>
+			<h1><?php esc_html_e("Réglages campagne", "plaidact-campaign-core"); ?></h1>
 			<form method="post" action="options.php">
-				<?php settings_fields( 'plaidact_campaign_settings' ); ?>
-				<table class="form-table" role="presentation">
-					<tr><th scope="row"><?php esc_html_e( 'Objectif signatures', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_goal]" type="number" value="<?php echo esc_attr( (string) $settings['petition_goal'] ); ?>" class="small-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Email notification', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[notification_email]" type="email" value="<?php echo esc_attr( (string) $settings['notification_email'] ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Brevo API key', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[brevo_api_key]" type="text" value="<?php echo esc_attr( (string) $settings['brevo_api_key'] ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'ID liste newsletter PLAID·ACT', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_plaidact]" type="number" value="<?php echo esc_attr( (string) $settings['brevo_list_plaidact'] ); ?>" class="small-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'ID liste newsletter campagne', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_campaign]" type="number" value="<?php echo esc_attr( (string) $settings['brevo_list_campaign'] ); ?>" class="small-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Double opt-in Brevo', 'plaidact-campaign-core' ); ?></th><td><label><input name="plaidact_campaign_settings[brevo_doi_enabled]" type="checkbox" value="1" <?php checked( (string) $settings['brevo_doi_enabled'], '1' ); ?> /> <?php esc_html_e( 'Utiliser /contacts/doubleOptinConfirmation au lieu de créer directement le contact.', 'plaidact-campaign-core' ); ?></label></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'ID template double opt-in', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[brevo_doi_template_id]" type="number" value="<?php echo esc_attr( (string) $settings['brevo_doi_template_id'] ); ?>" class="small-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'URL de retour double opt-in', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[brevo_redirection_url]" type="url" value="<?php echo esc_attr( (string) $settings['brevo_redirection_url'] ); ?>" class="regular-text" placeholder="https://example.org/merci" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Titre bloc pétition', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_title]" type="text" value="<?php echo esc_attr( (string) $settings['petition_title'] ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Texte intro pétition', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_intro]" type="text" value="<?php echo esc_attr( (string) $settings['petition_intro'] ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Libellé bouton pétition', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_button_label]" type="text" value="<?php echo esc_attr( (string) $settings['petition_button_label'] ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Texte consentement newsletter', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_optin_label]" type="text" value="<?php echo esc_attr( (string) $settings['petition_optin_label'] ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Titre email de partage', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[campaign_share_mail_title]" type="text" value="<?php echo esc_attr( (string) $settings['campaign_share_mail_title'] ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Texte bloc partage email', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[send_mail_intro]" type="text" value="<?php echo esc_attr( (string) $settings['send_mail_intro'] ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Description pétition', 'plaidact-campaign-core' ); ?></th><td><textarea name="plaidact_campaign_settings[petition_description]" class="large-text" rows="4"><?php echo esc_textarea( (string) $settings['petition_description'] ); ?></textarea></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Lettre de pétition', 'plaidact-campaign-core' ); ?></th><td><textarea name="plaidact_campaign_settings[petition_letter]" class="large-text" rows="6"><?php echo esc_textarea( (string) $settings['petition_letter'] ); ?></textarea><p class="description"><?php esc_html_e( 'Texte affiché aux signataires et envoyé au décideur à chaque signature.', 'plaidact-campaign-core' ); ?></p></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Consentement signature', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[petition_terms_label]" type="text" value="<?php echo esc_attr( (string) $settings['petition_terms_label'] ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Champs complémentaires', 'plaidact-campaign-core' ); ?></th><td><label><input name="plaidact_campaign_settings[petition_show_postcode]" type="checkbox" value="1" <?php checked( (string) $settings['petition_show_postcode'], '1' ); ?> /> <?php esc_html_e( 'Afficher le code postal', 'plaidact-campaign-core' ); ?></label><br /><label><input name="plaidact_campaign_settings[petition_show_phone]" type="checkbox" value="1" <?php checked( (string) $settings['petition_show_phone'], '1' ); ?> /> <?php esc_html_e( 'Afficher le téléphone', 'plaidact-campaign-core' ); ?></label></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Nom du décideur', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[decision_maker_name]" type="text" value="<?php echo esc_attr( (string) $settings['decision_maker_name'] ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Email du décideur', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[decision_maker_email]" type="email" value="<?php echo esc_attr( (string) $settings['decision_maker_email'] ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Sujet email décideur', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[decision_mail_subject]" type="text" value="<?php echo esc_attr( (string) $settings['decision_mail_subject'] ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Texte pré-rempli email décideur', 'plaidact-campaign-core' ); ?></th><td><textarea name="plaidact_campaign_settings[decision_mail_placeholder]" class="large-text" rows="5"><?php echo esc_textarea( (string) $settings['decision_mail_placeholder'] ); ?></textarea></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Texte par défaut pour les partages sociaux', 'plaidact-campaign-core' ); ?></th><td><textarea name="plaidact_campaign_settings[social_share_text]" class="large-text" rows="4"><?php echo esc_textarea( (string) $settings['social_share_text'] ); ?></textarea></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Libellé bouton partage email', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[send_mail_button_label]" type="text" value="<?php echo esc_attr( (string) $settings['send_mail_button_label'] ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e( 'Libellé bouton décideur', 'plaidact-campaign-core' ); ?></th><td><input name="plaidact_campaign_settings[decision_mail_button_label]" type="text" value="<?php echo esc_attr( (string) $settings['decision_mail_button_label'] ); ?>" class="regular-text" /></td></tr>
-				</table>
-				<?php submit_button(); ?>
-			</form>
+				<?php settings_fields("plaidact_campaign_settings"); ?>
+					<table class="form-table" role="presentation">
+						<tr><th scope="row"><?php esc_html_e(
+          "Objectif signatures",
+          "plaidact-campaign-core"
+      ); ?></th><td><input name="plaidact_campaign_settings[petition_goal]" type="number" value="<?php echo esc_attr(
+    (string) $settings["petition_goal"]
+); ?>" class="small-text" /></td></tr>
+						<tr><th scope="row"><?php esc_html_e(
+          "ID formulaire Petitioner",
+          "plaidact-campaign-core"
+      ); ?></th><td><input name="plaidact_campaign_settings[petition_form_id]" type="number" value="<?php echo esc_attr(
+    (string) $settings["petition_form_id"]
+); ?>" class="small-text" /><p class="description"><?php esc_html_e(
+    "Le module Petitioner embarqué prendra en charge la pétition. Avec Polylang, sa traduction sera résolue automatiquement.",
+    "plaidact-campaign-core"
+); ?></p></td></tr>
+						<tr><th scope="row"><?php esc_html_e(
+          "Email notification",
+          "plaidact-campaign-core"
+      ); ?></th><td><input name="plaidact_campaign_settings[notification_email]" type="email" value="<?php echo esc_attr(
+    (string) $settings["notification_email"]
+); ?>" class="regular-text" /></td></tr>
+						<tr><th scope="row"><?php esc_html_e(
+          "Brevo API key",
+          "plaidact-campaign-core"
+      ); ?></th><td><input name="plaidact_campaign_settings[brevo_api_key]" type="text" value="<?php echo esc_attr(
+    (string) $settings["brevo_api_key"]
+); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "ID liste newsletter PLAID·ACT",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_plaidact]" type="number" value="<?php echo esc_attr(
+    (string) $settings["brevo_list_plaidact"]
+); ?>" class="small-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "ID liste newsletter campagne",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_campaign]" type="number" value="<?php echo esc_attr(
+    (string) $settings["brevo_list_campaign"]
+); ?>" class="small-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Double opt-in Brevo",
+         "plaidact-campaign-core"
+     ); ?></th><td><label><input name="plaidact_campaign_settings[brevo_doi_enabled]" type="checkbox" value="1" <?php checked(
+    (string) $settings["brevo_doi_enabled"],
+    "1"
+); ?> /> <?php esc_html_e(
+     "Utiliser /contacts/doubleOptinConfirmation au lieu de créer directement le contact.",
+     "plaidact-campaign-core"
+ ); ?></label></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "ID template double opt-in",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[brevo_doi_template_id]" type="number" value="<?php echo esc_attr(
+    (string) $settings["brevo_doi_template_id"]
+); ?>" class="small-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "URL de retour double opt-in",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[brevo_redirection_url]" type="url" value="<?php echo esc_attr(
+    (string) $settings["brevo_redirection_url"]
+); ?>" class="regular-text" placeholder="https://example.org/merci" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Titre bloc pétition",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[petition_title]" type="text" value="<?php echo esc_attr(
+    (string) $settings["petition_title"]
+); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Texte intro pétition",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[petition_intro]" type="text" value="<?php echo esc_attr(
+    (string) $settings["petition_intro"]
+); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Libellé bouton pétition",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[petition_button_label]" type="text" value="<?php echo esc_attr(
+    (string) $settings["petition_button_label"]
+); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Texte consentement newsletter",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[petition_optin_label]" type="text" value="<?php echo esc_attr(
+    (string) $settings["petition_optin_label"]
+); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Titre email de partage",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[campaign_share_mail_title]" type="text" value="<?php echo esc_attr(
+    (string) $settings["campaign_share_mail_title"]
+); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Texte bloc partage email",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[send_mail_intro]" type="text" value="<?php echo esc_attr(
+    (string) $settings["send_mail_intro"]
+); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Description pétition",
+         "plaidact-campaign-core"
+     ); ?></th><td><textarea name="plaidact_campaign_settings[petition_description]" class="large-text" rows="4"><?php echo esc_textarea(
+    (string) $settings["petition_description"]
+); ?></textarea></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Lettre de pétition",
+         "plaidact-campaign-core"
+     ); ?></th><td><textarea name="plaidact_campaign_settings[petition_letter]" class="large-text" rows="6"><?php echo esc_textarea(
+    (string) $settings["petition_letter"]
+); ?></textarea><p class="description"><?php esc_html_e(
+    "Texte affiché aux signataires et envoyé au décideur à chaque signature.",
+    "plaidact-campaign-core"
+); ?></p></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Consentement signature",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[petition_terms_label]" type="text" value="<?php echo esc_attr(
+    (string) $settings["petition_terms_label"]
+); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Champs complémentaires",
+         "plaidact-campaign-core"
+     ); ?></th><td><label><input name="plaidact_campaign_settings[petition_show_postcode]" type="checkbox" value="1" <?php checked(
+    (string) $settings["petition_show_postcode"],
+    "1"
+); ?> /> <?php esc_html_e(
+     "Afficher le code postal",
+     "plaidact-campaign-core"
+ ); ?></label><br /><label><input name="plaidact_campaign_settings[petition_show_phone]" type="checkbox" value="1" <?php checked(
+    (string) $settings["petition_show_phone"],
+    "1"
+); ?> /> <?php esc_html_e(
+     "Afficher le téléphone",
+     "plaidact-campaign-core"
+ ); ?></label></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Nom du décideur",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[decision_maker_name]" type="text" value="<?php echo esc_attr(
+    (string) $settings["decision_maker_name"]
+); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Email du décideur",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[decision_maker_email]" type="email" value="<?php echo esc_attr(
+    (string) $settings["decision_maker_email"]
+); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Sujet email décideur",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[decision_mail_subject]" type="text" value="<?php echo esc_attr(
+    (string) $settings["decision_mail_subject"]
+); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Texte pré-rempli email décideur",
+         "plaidact-campaign-core"
+     ); ?></th><td><textarea name="plaidact_campaign_settings[decision_mail_placeholder]" class="large-text" rows="5"><?php echo esc_textarea(
+    (string) $settings["decision_mail_placeholder"]
+); ?></textarea></td></tr>
+						<tr><th scope="row"><?php esc_html_e(
+          "Texte par défaut pour les partages sociaux",
+          "plaidact-campaign-core"
+      ); ?></th><td><textarea name="plaidact_campaign_settings[social_share_text]" class="large-text" rows="4"><?php echo esc_textarea(
+    (string) $settings["social_share_text"]
+); ?></textarea></td></tr>
+						<tr><th scope="row"><?php esc_html_e(
+          "Titre bloc newsletter",
+          "plaidact-campaign-core"
+      ); ?></th><td><input name="plaidact_campaign_settings[newsletter_title]" type="text" value="<?php echo esc_attr(
+    (string) $settings["newsletter_title"]
+); ?>" class="regular-text" /></td></tr>
+						<tr><th scope="row"><?php esc_html_e(
+          "Texte bloc newsletter",
+          "plaidact-campaign-core"
+      ); ?></th><td><input name="plaidact_campaign_settings[newsletter_intro]" type="text" value="<?php echo esc_attr(
+    (string) $settings["newsletter_intro"]
+); ?>" class="regular-text" /></td></tr>
+						<tr><th scope="row"><?php esc_html_e(
+          "Libellé bouton newsletter",
+          "plaidact-campaign-core"
+      ); ?></th><td><input name="plaidact_campaign_settings[newsletter_button_label]" type="text" value="<?php echo esc_attr(
+    (string) $settings["newsletter_button_label"]
+); ?>" class="regular-text" /></td></tr>
+						<tr><th scope="row"><?php esc_html_e(
+          "Libellé bouton partage email",
+          "plaidact-campaign-core"
+      ); ?></th><td><input name="plaidact_campaign_settings[send_mail_button_label]" type="text" value="<?php echo esc_attr(
+    (string) $settings["send_mail_button_label"]
+); ?>" class="regular-text" /></td></tr>
+						<tr><th scope="row"><?php esc_html_e(
+          "Libellé bouton décideur",
+          "plaidact-campaign-core"
+      ); ?></th><td><input name="plaidact_campaign_settings[decision_mail_button_label]" type="text" value="<?php echo esc_attr(
+    (string) $settings["decision_mail_button_label"]
+); ?>" class="regular-text" /></td></tr>
+					</table>
+					<p class="description"><?php esc_html_e(
+         "Quand Polylang est actif, les champs textuels ci-dessus sont enregistrés comme chaînes traduisibles dans Polylang > Traductions des chaînes.",
+         "plaidact-campaign-core"
+     ); ?></p>
+					<?php submit_button(); ?>
+				</form>
 		</div>
 		<?php
-	}
+    }
 
-	public static function render_petition_form( array $atts = array() ): string {
-		$settings = (array) get_option( 'plaidact_campaign_settings', array() );
-		$count    = (int) get_option( 'plaidact_petition_signatures_count', 0 );
-		$goal     = max( 1, (int) ( $settings['petition_goal'] ?? 10000 ) );
-		$progress = min( 100, (int) round( ( $count / $goal ) * 100 ) );
-		$action   = esc_url( admin_url( 'admin-post.php' ) );
+    public static function render_petition_form(array $atts = []): string
+    {
+        $language = self::get_current_language();
+        $settings = self::get_settings(true, $language);
+        $petitioner_output = self::maybe_render_petitioner_form(
+            $settings,
+            $language
+        );
 
-		ob_start();
-		?>
+        if ("" !== $petitioner_output) {
+            return $petitioner_output;
+        }
+
+        $count = (int) get_option("plaidact_petition_signatures_count", 0);
+        $goal = max(1, (int) ($settings["petition_goal"] ?? 10000));
+        $progress = min(100, (int) round(($count / $goal) * 100));
+        $action = esc_url(admin_url("admin-post.php"));
+
+        ob_start();
+        ?>
 		<div class="plaidact-card plaidact-card--petition">
-			<h3 class="plaidact-card__title"><?php echo esc_html( (string) ( $settings['petition_title'] ?? __( 'Signer la pétition', 'plaidact-campaign-core' ) ) ); ?></h3>
-			<p><?php echo esc_html( (string) ( $settings['petition_intro'] ?? __( 'Signez la pétition. Chaque signature fait monter le compteur en direct.', 'plaidact-campaign-core' ) ) ); ?></p>
-			<p><?php echo nl2br( esc_html( (string) ( $settings['petition_description'] ?? __( 'Expliquez ici les objectifs et revendications de la pétition.', 'plaidact-campaign-core' ) ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></p>
-			<?php if ( ! empty( $settings['petition_letter'] ) || ! empty( $settings['decision_maker_name'] ) ) : ?>
+			<h3 class="plaidact-card__title"><?php echo esc_html(
+       (string) ($settings["petition_title"] ??
+           __("Signer la pétition", "plaidact-campaign-core"))
+   ); ?></h3>
+			<p><?php echo esc_html(
+       (string) ($settings["petition_intro"] ??
+           __(
+               "Signez la pétition. Chaque signature fait monter le compteur en direct.",
+               "plaidact-campaign-core"
+           ))
+   ); ?></p>
+			<p><?php echo nl2br(
+       esc_html(
+           (string) ($settings["petition_description"] ??
+               __(
+                   "Expliquez ici les objectifs et revendications de la pétition.",
+                   "plaidact-campaign-core"
+               ))
+       )
+   );// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        ?></p>
+			<?php if (
+       !empty($settings["petition_letter"]) ||
+       !empty($settings["decision_maker_name"])
+   ): ?>
 				<details class="plaidact-petition-letter">
-					<summary><?php esc_html_e( 'Voir la lettre envoyée', 'plaidact-campaign-core' ); ?></summary>
-					<?php if ( ! empty( $settings['decision_maker_name'] ) ) : ?>
-						<p><strong><?php echo esc_html( sprintf( __( 'Destinataire : %s', 'plaidact-campaign-core' ), (string) $settings['decision_maker_name'] ) ); ?></strong></p>
+					<summary><?php esc_html_e(
+         "Voir la lettre envoyée",
+         "plaidact-campaign-core"
+     ); ?></summary>
+					<?php if (!empty($settings["decision_maker_name"])): ?>
+						<p><strong><?php echo esc_html(
+          sprintf(
+              __("Destinataire : %s", "plaidact-campaign-core"),
+              (string) $settings["decision_maker_name"]
+          )
+      ); ?></strong></p>
 					<?php endif; ?>
-					<div class="plaidact-petition-letter__body"><?php echo nl2br( esc_html( (string) ( $settings['petition_letter'] ?? '' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+					<div class="plaidact-petition-letter__body"><?php echo nl2br(
+         esc_html((string) ($settings["petition_letter"] ?? ""))
+     );
+       // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+       ?></div>
 				</details>
 			<?php endif; ?>
-			<?php if ( isset( $_GET['petition_signed'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['petition_signed'] ) ) ) : ?>
-				<p><strong><?php esc_html_e( 'Merci, votre signature a bien été enregistrée.', 'plaidact-campaign-core' ); ?></strong></p>
-			<?php elseif ( isset( $_GET['petition_signed'] ) && 'already' === sanitize_text_field( wp_unslash( $_GET['petition_signed'] ) ) ) : ?>
-				<p><strong><?php esc_html_e( 'Cette adresse email a déjà signé la pétition.', 'plaidact-campaign-core' ); ?></strong></p>
-			<?php elseif ( isset( $_GET['petition_signed'] ) && '0' === sanitize_text_field( wp_unslash( $_GET['petition_signed'] ) ) ) : ?>
-				<p><strong><?php esc_html_e( 'Signature impossible pour le moment. Réessayez plus tard.', 'plaidact-campaign-core' ); ?></strong></p>
+			<?php if (
+       isset($_GET["petition_signed"]) &&
+       "1" === sanitize_text_field(wp_unslash($_GET["petition_signed"]))
+   ): ?>
+				<p><strong><?php esc_html_e(
+        "Merci, votre signature a bien été enregistrée.",
+        "plaidact-campaign-core"
+    ); ?></strong></p>
+			<?php elseif (
+       isset($_GET["petition_signed"]) &&
+       "already" === sanitize_text_field(wp_unslash($_GET["petition_signed"]))
+   ): ?>
+				<p><strong><?php esc_html_e(
+        "Cette adresse email a déjà signé la pétition.",
+        "plaidact-campaign-core"
+    ); ?></strong></p>
+			<?php elseif (
+       isset($_GET["petition_signed"]) &&
+       "0" === sanitize_text_field(wp_unslash($_GET["petition_signed"]))
+   ): ?>
+				<p><strong><?php esc_html_e(
+        "Signature impossible pour le moment. Réessayez plus tard.",
+        "plaidact-campaign-core"
+    ); ?></strong></p>
 			<?php endif; ?>
-			<p class="plaidact-petition__count"><strong><?php echo esc_html( number_format_i18n( $count ) ); ?></strong> / <?php echo esc_html( number_format_i18n( $goal ) ); ?></p>
-			<div class="plaidact-progress"><span style="width:<?php echo esc_attr( (string) $progress ); ?>%;"></span></div>
+			<p class="plaidact-petition__count"><strong><?php echo esc_html(
+       number_format_i18n($count)
+   ); ?></strong> / <?php echo esc_html(number_format_i18n($goal)); ?></p>
+			<div class="plaidact-progress"><span style="width:<?php echo esc_attr(
+       (string) $progress
+   ); ?>%;"></span></div>
 			<form method="post" action="<?php echo $action; ?>" class="plaidact-form-grid">
 				<input type="hidden" name="action" value="plaidact_petition_submit" />
-				<?php wp_nonce_field( 'plaidact_petition_submit_action', 'plaidact_petition_nonce' ); ?>
-				<input type="text" name="full_name" required autocomplete="name" placeholder="<?php esc_attr_e( 'Nom complet', 'plaidact-campaign-core' ); ?>" />
+				<input type="hidden" name="plaidact_language" value="<?php echo esc_attr(
+        (string) $language
+    ); ?>" />
+				<?php wp_nonce_field(
+        "plaidact_petition_submit_action",
+        "plaidact_petition_nonce"
+    ); ?>
+				<input type="text" name="full_name" required autocomplete="name" placeholder="<?php esc_attr_e(
+        "Nom complet",
+        "plaidact-campaign-core"
+    ); ?>" />
 				<input type="text" name="website" value="" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true" />
-				<input type="email" name="email" required autocomplete="email" placeholder="<?php esc_attr_e( 'Adresse email', 'plaidact-campaign-core' ); ?>" />
-				<?php if ( '1' === (string) ( $settings['petition_show_postcode'] ?? '1' ) ) : ?>
-					<input type="text" name="postcode" autocomplete="postal-code" placeholder="<?php esc_attr_e( 'Code postal', 'plaidact-campaign-core' ); ?>" />
+				<input type="email" name="email" required autocomplete="email" placeholder="<?php esc_attr_e(
+        "Adresse email",
+        "plaidact-campaign-core"
+    ); ?>" />
+				<?php if ("1" === (string) ($settings["petition_show_postcode"] ?? "1")): ?>
+					<input type="text" name="postcode" autocomplete="postal-code" placeholder="<?php esc_attr_e(
+         "Code postal",
+         "plaidact-campaign-core"
+     ); ?>" />
 				<?php endif; ?>
-				<?php if ( '1' === (string) ( $settings['petition_show_phone'] ?? '0' ) ) : ?>
-					<input type="tel" name="phone" autocomplete="tel" placeholder="<?php esc_attr_e( 'Téléphone', 'plaidact-campaign-core' ); ?>" />
+				<?php if ("1" === (string) ($settings["petition_show_phone"] ?? "0")): ?>
+					<input type="tel" name="phone" autocomplete="tel" placeholder="<?php esc_attr_e(
+         "Téléphone",
+         "plaidact-campaign-core"
+     ); ?>" />
 				<?php endif; ?>
-				<label><input type="checkbox" name="anonymous_signature" value="1" /> <?php esc_html_e( 'Afficher ma signature anonymement dans les exports publics.', 'plaidact-campaign-core' ); ?></label>
-				<label><input type="checkbox" name="petition_terms" value="1" required /> <?php echo esc_html( (string) ( $settings['petition_terms_label'] ?? __( 'J’accepte que ma signature soit enregistrée pour cette pétition.', 'plaidact-campaign-core' ) ) ); ?></label>
-				<label><input type="checkbox" name="newsletter_optin" value="1" checked /> <?php echo esc_html( (string) ( $settings['petition_optin_label'] ?? __( 'M’inscrire aux newsletters PLAID·ACT et de cette campagne', 'plaidact-campaign-core' ) ) ); ?></label>
-				<button class="plaidact-button" type="submit"><?php echo esc_html( (string) ( $settings['petition_button_label'] ?? __( 'Signer maintenant', 'plaidact-campaign-core' ) ) ); ?></button>
+				<label><input type="checkbox" name="anonymous_signature" value="1" /> <?php esc_html_e(
+        "Afficher ma signature anonymement dans les exports publics.",
+        "plaidact-campaign-core"
+    ); ?></label>
+				<label><input type="checkbox" name="petition_terms" value="1" required /> <?php echo esc_html(
+        (string) ($settings["petition_terms_label"] ??
+            __(
+                "J’accepte que ma signature soit enregistrée pour cette pétition.",
+                "plaidact-campaign-core"
+            ))
+    ); ?></label>
+				<label><input type="checkbox" name="newsletter_optin" value="1" checked /> <?php echo esc_html(
+        (string) ($settings["petition_optin_label"] ??
+            __(
+                "M’inscrire aux newsletters PLAID·ACT et de cette campagne",
+                "plaidact-campaign-core"
+            ))
+    ); ?></label>
+				<button class="plaidact-button" type="submit"><?php echo esc_html(
+        (string) ($settings["petition_button_label"] ??
+            __("Signer maintenant", "plaidact-campaign-core"))
+    ); ?></button>
 			</form>
 		</div>
-		<?php
-		return (string) ob_get_clean();
-	}
+		<?php return (string) ob_get_clean();
+    }
 
-	public static function handle_petition_submit(): void {
-		if ( ! isset( $_POST['plaidact_petition_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['plaidact_petition_nonce'] ) ), 'plaidact_petition_submit_action' ) ) {
-			wp_safe_redirect( wp_get_referer() ?: home_url( '/' ) );
-			exit;
-		}
+    public static function handle_petition_submit(): void
+    {
+        $language = self::get_request_language();
 
-		if ( ! empty( $_POST['website'] ) ) {
-			wp_safe_redirect( wp_get_referer() ?: home_url( '/' ) );
-			exit;
-		}
+        if (
+            !isset($_POST["plaidact_petition_nonce"]) ||
+            !wp_verify_nonce(
+                sanitize_text_field(
+                    wp_unslash($_POST["plaidact_petition_nonce"])
+                ),
+                "plaidact_petition_submit_action"
+            )
+        ) {
+            wp_safe_redirect(self::get_redirect_url($language));
+            exit();
+        }
 
-		$email    = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
-		$name     = sanitize_text_field( wp_unslash( $_POST['full_name'] ?? '' ) );
-		$postcode = sanitize_text_field( wp_unslash( $_POST['postcode'] ?? '' ) );
-		$phone    = sanitize_text_field( wp_unslash( $_POST['phone'] ?? '' ) );
-		if ( empty( $email ) || empty( $name ) || empty( $_POST['petition_terms'] ) ) {
-			wp_safe_redirect( wp_get_referer() ?: home_url( '/' ) );
-			exit;
-		}
+        if (!empty($_POST["website"])) {
+            wp_safe_redirect(self::get_redirect_url($language));
+            exit();
+        }
 
-		$email_key     = md5( strtolower( $email ) );
-		$signed_emails = (array) get_option( 'plaidact_petition_signed_emails', array() );
-		$existing      = get_posts(
-			array(
-				'post_type'      => 'plaid_signature',
-				'post_status'    => 'publish',
-				'posts_per_page' => 1,
-				'fields'         => 'ids',
-				'meta_key'       => '_plaid_signature_email',
-				'meta_value'     => $email,
-			)
-		);
-		if ( isset( $signed_emails[ $email_key ] ) || ! empty( $existing ) ) {
-			wp_safe_redirect( add_query_arg( 'petition_signed', 'already', wp_get_referer() ?: home_url( '/' ) ) );
-			exit;
-		}
+        $email = sanitize_email(wp_unslash($_POST["email"] ?? ""));
+        $name = sanitize_text_field(wp_unslash($_POST["full_name"] ?? ""));
+        $postcode = sanitize_text_field(wp_unslash($_POST["postcode"] ?? ""));
+        $phone = sanitize_text_field(wp_unslash($_POST["phone"] ?? ""));
+        if (empty($email) || empty($name) || empty($_POST["petition_terms"])) {
+            wp_safe_redirect(self::get_redirect_url($language));
+            exit();
+        }
 
-		$signature_id = wp_insert_post(
-			array(
-				'post_type'    => 'plaid_signature',
-				'post_status'  => 'publish',
-				'post_title'   => $name,
-				'post_content' => sprintf( __( 'Signature de %1$s (%2$s) sur %3$s.', 'plaidact-campaign-core' ), $name, $email, wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) ) ),
-			)
-		);
+        $email_key = md5(strtolower($email));
+        $signed_emails = (array) get_option(
+            "plaidact_petition_signed_emails",
+            []
+        );
+        $existing = get_posts([
+            "post_type" => "plaid_signature",
+            "post_status" => "publish",
+            "posts_per_page" => 1,
+            "fields" => "ids",
+            "meta_key" => "_plaid_signature_email",
+            "meta_value" => $email,
+        ]);
+        if (isset($signed_emails[$email_key]) || !empty($existing)) {
+            self::redirect_with_status("petition_signed", "already", $language);
+        }
 
-		if ( ! is_wp_error( $signature_id ) && $signature_id > 0 ) {
-			$count = (int) get_option( 'plaidact_petition_signatures_count', 0 );
-			update_option( 'plaidact_petition_signatures_count', $count + 1 );
-			$signed_emails[ $email_key ] = time();
-			update_option( 'plaidact_petition_signed_emails', $signed_emails, false );
+        $signature_id = wp_insert_post([
+            "post_type" => "plaid_signature",
+            "post_status" => "publish",
+            "post_title" => $name,
+            "post_content" => sprintf(
+                __(
+                    'Signature de %1$s (%2$s) sur %3$s.',
+                    "plaidact-campaign-core"
+                ),
+                $name,
+                $email,
+                wp_date(
+                    get_option("date_format") . " " . get_option("time_format")
+                )
+            ),
+        ]);
 
-			update_post_meta( $signature_id, '_plaid_signature_full_name', $name );
-			update_post_meta( $signature_id, '_plaid_signature_email', $email );
-			update_post_meta( $signature_id, '_plaid_signature_optin', isset( $_POST['newsletter_optin'] ) ? '1' : '0' );
-			update_post_meta( $signature_id, '_plaid_signature_anonymous', isset( $_POST['anonymous_signature'] ) ? '1' : '0' );
-			update_post_meta( $signature_id, '_plaid_signature_postcode', $postcode );
-			update_post_meta( $signature_id, '_plaid_signature_phone', $phone );
-			update_post_meta( $signature_id, '_plaid_signature_signed_at', current_time( 'mysql' ) );
-			update_post_meta( $signature_id, '_plaid_signature_ip_hash', wp_hash( (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ) ) );
-		} else {
-			wp_safe_redirect( add_query_arg( 'petition_signed', '0', wp_get_referer() ?: home_url( '/' ) ) );
-			exit;
-		}
+        if (!is_wp_error($signature_id) && $signature_id > 0) {
+            $count = (int) get_option("plaidact_petition_signatures_count", 0);
+            update_option("plaidact_petition_signatures_count", $count + 1);
+            $signed_emails[$email_key] = time();
+            update_option(
+                "plaidact_petition_signed_emails",
+                $signed_emails,
+                false
+            );
 
-		$settings = (array) get_option( 'plaidact_campaign_settings', array() );
-		if ( ! empty( $settings['notification_email'] ) ) {
-			wp_mail(
-				sanitize_email( (string) $settings['notification_email'] ),
-				__( 'Nouvelle signature pétition', 'plaidact-campaign-core' ),
-				sprintf( "Nom: %s\nEmail: %s\nCode postal: %s\nTéléphone: %s\nCampagne: %s", $name, $email, $postcode, $phone, home_url( '/' ) )
-			);
-		}
+            update_post_meta(
+                $signature_id,
+                "_plaid_signature_full_name",
+                $name
+            );
+            update_post_meta($signature_id, "_plaid_signature_email", $email);
+            update_post_meta(
+                $signature_id,
+                "_plaid_signature_optin",
+                isset($_POST["newsletter_optin"]) ? "1" : "0"
+            );
+            update_post_meta(
+                $signature_id,
+                "_plaid_signature_anonymous",
+                isset($_POST["anonymous_signature"]) ? "1" : "0"
+            );
+            update_post_meta(
+                $signature_id,
+                "_plaid_signature_postcode",
+                $postcode
+            );
+            update_post_meta($signature_id, "_plaid_signature_phone", $phone);
+            update_post_meta(
+                $signature_id,
+                "_plaid_signature_signed_at",
+                current_time("mysql")
+            );
+            update_post_meta(
+                $signature_id,
+                "_plaid_signature_ip_hash",
+                wp_hash((string) ($_SERVER["REMOTE_ADDR"] ?? ""))
+            );
+            if ($language) {
+                update_post_meta(
+                    $signature_id,
+                    "_plaid_signature_language",
+                    $language
+                );
+            }
+        } else {
+            self::redirect_with_status("petition_signed", "0", $language);
+        }
 
-		$target_email = sanitize_email( (string) ( $settings['decision_maker_email'] ?? '' ) );
-		$letter       = (string) ( $settings['petition_letter'] ?? '' );
-		if ( $target_email && $letter ) {
-			wp_mail(
-				$target_email,
-				(string) ( $settings['decision_mail_subject'] ?? __( 'Nouvelle signature de pétition', 'plaidact-campaign-core' ) ),
-				sprintf( __( "%1$s\n\n---\nSignature : %2$s <%3$s>\nCode postal : %4$s\nCampagne : %5$s", 'plaidact-campaign-core' ), $letter, $name, $email, $postcode, home_url( '/' ) ),
-				array( 'Reply-To: ' . $name . ' <' . $email . '>' )
-			);
-		}
+        $settings = self::get_settings(true, $language);
+        Petition_Workflows::maybe_notify_admin(
+            $settings,
+            $name,
+            $email,
+            $postcode,
+            $phone,
+            $language
+        );
+        Petition_Workflows::maybe_send_decision_maker_email(
+            $settings,
+            $name,
+            $email,
+            $postcode,
+            $language
+        );
 
-		if ( isset( $_POST['newsletter_optin'] ) ) {
-			$brevo_result = self::subscribe_to_brevo_lists( $email, $name );
-			if ( ! is_wp_error( $brevo_result ) && ! is_wp_error( $signature_id ) && $signature_id > 0 ) {
-				update_post_meta( $signature_id, '_plaid_signature_brevo_status', $brevo_result );
-			}
-		}
+        if (isset($_POST["newsletter_optin"])) {
+            $brevo_result = self::subscribe_to_brevo_lists(
+                $email,
+                $name,
+                $language
+            );
+            if (
+                !is_wp_error($brevo_result) &&
+                !is_wp_error($signature_id) &&
+                $signature_id > 0
+            ) {
+                update_post_meta(
+                    $signature_id,
+                    "_plaid_signature_brevo_status",
+                    $brevo_result
+                );
+            }
+        }
 
-		wp_safe_redirect( add_query_arg( 'petition_signed', '1', wp_get_referer() ?: home_url( '/' ) ) );
-		exit;
-	}
+        self::redirect_with_status("petition_signed", "1", $language);
+    }
 
-	public static function render_newsletter_form(): string {
-		$action = esc_url( admin_url( 'admin-post.php' ) );
-		ob_start();
-		?>
+    public static function render_newsletter_form(): string
+    {
+        $language = self::get_current_language();
+        $settings = self::get_settings(true, $language);
+        $action = esc_url(admin_url("admin-post.php"));
+        ob_start();
+        ?>
 		<div class="plaidact-card plaidact-card--newsletter" id="newsletter">
-			<h3><?php esc_html_e( 'Newsletter', 'plaidact-campaign-core' ); ?></h3>
-			<p><?php esc_html_e( 'Inscription aux newsletters PLAID·ACT + campagne via Brevo.', 'plaidact-campaign-core' ); ?></p>
-			<?php if ( isset( $_GET['newsletter_subscribed'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['newsletter_subscribed'] ) ) ) : ?>
-				<p><strong><?php esc_html_e( 'Merci, votre inscription a bien été prise en compte.', 'plaidact-campaign-core' ); ?></strong></p>
-			<?php elseif ( isset( $_GET['newsletter_subscribed'] ) && '0' === sanitize_text_field( wp_unslash( $_GET['newsletter_subscribed'] ) ) ) : ?>
-				<p><strong><?php esc_html_e( 'Inscription impossible pour le moment. Réessayez plus tard.', 'plaidact-campaign-core' ); ?></strong></p>
+			<h3><?php echo esc_html(
+       (string) ($settings["newsletter_title"] ??
+           __("Newsletter", "plaidact-campaign-core"))
+   ); ?></h3>
+			<p><?php echo esc_html(
+       (string) ($settings["newsletter_intro"] ??
+           __(
+               "Inscription aux newsletters PLAID·ACT + campagne via Brevo.",
+               "plaidact-campaign-core"
+           ))
+   ); ?></p>
+			<?php if (
+       isset($_GET["newsletter_subscribed"]) &&
+       "1" === sanitize_text_field(wp_unslash($_GET["newsletter_subscribed"]))
+   ): ?>
+				<p><strong><?php esc_html_e(
+        "Merci, votre inscription a bien été prise en compte.",
+        "plaidact-campaign-core"
+    ); ?></strong></p>
+			<?php elseif (
+       isset($_GET["newsletter_subscribed"]) &&
+       "0" === sanitize_text_field(wp_unslash($_GET["newsletter_subscribed"]))
+   ): ?>
+				<p><strong><?php esc_html_e(
+        "Inscription impossible pour le moment. Réessayez plus tard.",
+        "plaidact-campaign-core"
+    ); ?></strong></p>
 			<?php endif; ?>
 			<form method="post" action="<?php echo $action; ?>" style="display:grid;gap:.6rem;grid-template-columns:1fr auto;">
 				<input type="hidden" name="action" value="plaidact_newsletter_submit" />
-				<?php wp_nonce_field( 'plaidact_newsletter_submit_action', 'plaidact_newsletter_nonce' ); ?>
-				<input type="email" name="email" required placeholder="<?php esc_attr_e( 'Votre email', 'plaidact-campaign-core' ); ?>" />
-				<button class="plaidact-button" type="submit"><?php esc_html_e( 'S’inscrire', 'plaidact-campaign-core' ); ?></button>
+				<input type="hidden" name="plaidact_language" value="<?php echo esc_attr(
+        (string) $language
+    ); ?>" />
+				<?php wp_nonce_field(
+        "plaidact_newsletter_submit_action",
+        "plaidact_newsletter_nonce"
+    ); ?>
+				<input type="email" name="email" required placeholder="<?php esc_attr_e(
+        "Votre email",
+        "plaidact-campaign-core"
+    ); ?>" />
+				<button class="plaidact-button" type="submit"><?php echo esc_html(
+        (string) ($settings["newsletter_button_label"] ??
+            __("S’inscrire", "plaidact-campaign-core"))
+    ); ?></button>
 			</form>
 		</div>
-		<?php
-		return (string) ob_get_clean();
-	}
+		<?php return (string) ob_get_clean();
+    }
 
-	public static function handle_newsletter_submit(): void {
-		if ( ! isset( $_POST['plaidact_newsletter_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['plaidact_newsletter_nonce'] ) ), 'plaidact_newsletter_submit_action' ) ) {
-			wp_safe_redirect( wp_get_referer() ?: home_url( '/' ) );
-			exit;
-		}
-		$email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
-		$status = '0';
-		if ( $email ) {
-			$status = is_wp_error( self::subscribe_to_brevo_lists( $email, '' ) ) ? '0' : '1';
-		}
-		wp_safe_redirect( add_query_arg( 'newsletter_subscribed', $status, wp_get_referer() ?: home_url( '/' ) ) );
-		exit;
-	}
+    public static function handle_newsletter_submit(): void
+    {
+        $language = self::get_request_language();
 
-	private static function subscribe_to_brevo_lists( string $email, string $name ) {
-		$settings = (array) get_option( 'plaidact_campaign_settings', array() );
-		$api_key  = (string) ( $settings['brevo_api_key'] ?? '' );
-		$lists    = array_filter(
-			array(
-				absint( $settings['brevo_list_plaidact'] ?? 0 ),
-				absint( $settings['brevo_list_campaign'] ?? 0 ),
-			)
-		);
+        if (
+            !isset($_POST["plaidact_newsletter_nonce"]) ||
+            !wp_verify_nonce(
+                sanitize_text_field(
+                    wp_unslash($_POST["plaidact_newsletter_nonce"])
+                ),
+                "plaidact_newsletter_submit_action"
+            )
+        ) {
+            wp_safe_redirect(self::get_redirect_url($language));
+            exit();
+        }
+        $email = sanitize_email(wp_unslash($_POST["email"] ?? ""));
+        $status = "0";
+        if ($email) {
+            $status = is_wp_error(
+                self::subscribe_to_brevo_lists($email, "", $language)
+            )
+                ? "0"
+                : "1";
+        }
+        self::redirect_with_status("newsletter_subscribed", $status, $language);
+    }
 
-		if ( empty( $api_key ) || empty( $lists ) ) {
-			return new \WP_Error( 'plaidact_brevo_not_configured', __( 'Brevo n’est pas configuré.', 'plaidact-campaign-core' ) );
-		}
+    public static function subscribe_to_brevo_lists(
+        string $email,
+        string $name,
+        ?string $language = null
+    ) {
+        $email = sanitize_email($email);
+        $name = sanitize_text_field($name);
 
-		$attributes = array();
-		if ( $name ) {
-			$attributes['FULLNAME'] = $name;
-		}
+        if (!$email) {
+            return new \WP_Error(
+                "plaidact_invalid_email",
+                __("Adresse email invalide.", "plaidact-campaign-core")
+            );
+        }
 
-		$payload = array(
-			'email'         => $email,
-			'attributes'    => (object) $attributes,
-			'listIds'       => array_values( $lists ),
-			'updateEnabled' => true,
-		);
+        $settings = self::get_settings(true, $language);
+        $api_key = (string) ($settings["brevo_api_key"] ?? "");
+        $lists = array_filter([
+            absint($settings["brevo_list_plaidact"] ?? 0),
+            absint($settings["brevo_list_campaign"] ?? 0),
+        ]);
+        $lists = array_values(
+            array_unique(
+                array_map(
+                    "absint",
+                    (array) apply_filters(
+                        "plaidact_campaign_brevo_lists",
+                        $lists,
+                        $language,
+                        $settings,
+                        $email,
+                        $name
+                    )
+                )
+            )
+        );
 
-		$endpoint = 'https://api.brevo.com/v3/contacts';
-		if ( '1' === (string) ( $settings['brevo_doi_enabled'] ?? '0' ) && ! empty( $settings['brevo_doi_template_id'] ) ) {
-			$endpoint = 'https://api.brevo.com/v3/contacts/doubleOptinConfirmation';
-			$payload  = array(
-				'email'          => $email,
-				'attributes'     => (object) $attributes,
-				'includeListIds' => array_values( $lists ),
-				'templateId'     => absint( $settings['brevo_doi_template_id'] ),
-				'redirectionUrl' => esc_url_raw( (string) ( $settings['brevo_redirection_url'] ?: home_url( '/' ) ) ),
-			);
-		}
+        if (empty($api_key) || empty($lists)) {
+            return new \WP_Error(
+                "plaidact_brevo_not_configured",
+                __("Brevo n’est pas configuré.", "plaidact-campaign-core")
+            );
+        }
 
-		$response = wp_remote_post(
-			$endpoint,
-			array(
-				'timeout' => 15,
-				'headers' => array(
-					'api-key'      => $api_key,
-					'accept'       => 'application/json',
-					'content-type' => 'application/json',
-				),
-				'body'    => wp_json_encode( $payload ),
-			)
-		);
+        $attributes = [];
+        if ($name) {
+            $attributes["FULLNAME"] = $name;
+        }
+        if ($language) {
+            $attributes["LANGUAGE"] = $language;
+        }
+        $attributes = (array) apply_filters(
+            "plaidact_campaign_brevo_attributes",
+            $attributes,
+            $language,
+            $settings,
+            $email,
+            $name
+        );
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
+        $payload = [
+            "email" => $email,
+            "attributes" => (object) $attributes,
+            "listIds" => array_values($lists),
+            "updateEnabled" => true,
+        ];
 
-		$status = (int) wp_remote_retrieve_response_code( $response );
-		if ( $status < 200 || $status >= 300 ) {
-			return new \WP_Error( 'plaidact_brevo_http_error', sprintf( 'Brevo HTTP %d: %s', $status, wp_remote_retrieve_body( $response ) ) );
-		}
+        $endpoint = "https://api.brevo.com/v3/contacts";
+        if (
+            "1" === (string) ($settings["brevo_doi_enabled"] ?? "0") &&
+            !empty($settings["brevo_doi_template_id"])
+        ) {
+            $endpoint =
+                "https://api.brevo.com/v3/contacts/doubleOptinConfirmation";
+            $payload = [
+                "email" => $email,
+                "attributes" => (object) $attributes,
+                "includeListIds" => array_values($lists),
+                "templateId" => absint($settings["brevo_doi_template_id"]),
+                "redirectionUrl" => esc_url_raw(
+                    (string) ($settings["brevo_redirection_url"] ?:
+                    Polylang::home_url($language))
+                ),
+            ];
+        }
 
-		return '1' === (string) ( $settings['brevo_doi_enabled'] ?? '0' ) ? 'double_optin_sent' : 'subscribed';
-	}
+        $response = wp_remote_post($endpoint, [
+            "timeout" => 15,
+            "headers" => [
+                "api-key" => $api_key,
+                "accept" => "application/json",
+                "content-type" => "application/json",
+            ],
+            "body" => wp_json_encode($payload),
+        ]);
 
-	public static function render_send_campaign_form(): string {
-		$action   = esc_url( admin_url( 'admin-post.php' ) );
-		$settings = (array) get_option( 'plaidact_campaign_settings', array() );
-		$target   = sanitize_email( (string) ( $settings['decision_maker_email'] ?? '' ) );
-		$name     = (string) ( $settings['decision_maker_name'] ?? '' );
+        if (is_wp_error($response)) {
+            return $response;
+        }
 
-		ob_start();
-		?>
+        $status = (int) wp_remote_retrieve_response_code($response);
+        if ($status < 200 || $status >= 300) {
+            return new \WP_Error(
+                "plaidact_brevo_http_error",
+                sprintf(
+                    "Brevo HTTP %d: %s",
+                    $status,
+                    wp_remote_retrieve_body($response)
+                )
+            );
+        }
+
+        return "1" === (string) ($settings["brevo_doi_enabled"] ?? "0")
+            ? "double_optin_sent"
+            : "subscribed";
+    }
+
+    public static function render_send_campaign_form(): string
+    {
+        $language = self::get_current_language();
+        $action = esc_url(admin_url("admin-post.php"));
+        $settings = self::get_settings(true, $language);
+        $target = sanitize_email(
+            (string) ($settings["decision_maker_email"] ?? "")
+        );
+        $name = (string) ($settings["decision_maker_name"] ?? "");
+
+        ob_start();
+        ?>
 		<div class="plaidact-card plaidact-card--send-mail">
-			<h3 class="plaidact-card__title"><?php echo esc_html( (string) ( $settings['campaign_share_mail_title'] ?? __( 'Écrire au décideur', 'plaidact-campaign-core' ) ) ); ?></h3>
-			<p><?php echo esc_html( (string) ( $settings['send_mail_intro'] ?? __( 'Utilisez ce formulaire pour envoyer directement votre message au décideur.', 'plaidact-campaign-core' ) ) ); ?></p>
-			<?php if ( isset( $_GET['campaign_sent'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['campaign_sent'] ) ) ) : ?>
-				<p><strong><?php esc_html_e( 'Votre message a été envoyé au décideur.', 'plaidact-campaign-core' ); ?></strong></p>
-			<?php elseif ( isset( $_GET['campaign_sent'] ) && '0' === sanitize_text_field( wp_unslash( $_GET['campaign_sent'] ) ) ) : ?>
-				<p><strong><?php esc_html_e( 'Envoi impossible : vérifiez les informations du formulaire.', 'plaidact-campaign-core' ); ?></strong></p>
+			<h3 class="plaidact-card__title"><?php echo esc_html(
+       (string) ($settings["campaign_share_mail_title"] ??
+           __("Écrire au décideur", "plaidact-campaign-core"))
+   ); ?></h3>
+			<p><?php echo esc_html(
+       (string) ($settings["send_mail_intro"] ??
+           __(
+               "Utilisez ce formulaire pour envoyer directement votre message au décideur.",
+               "plaidact-campaign-core"
+           ))
+   ); ?></p>
+			<?php if (
+       isset($_GET["campaign_sent"]) &&
+       "1" === sanitize_text_field(wp_unslash($_GET["campaign_sent"]))
+   ): ?>
+				<p><strong><?php esc_html_e(
+        "Votre message a été envoyé au décideur.",
+        "plaidact-campaign-core"
+    ); ?></strong></p>
+			<?php elseif (
+       isset($_GET["campaign_sent"]) &&
+       "0" === sanitize_text_field(wp_unslash($_GET["campaign_sent"]))
+   ): ?>
+				<p><strong><?php esc_html_e(
+        "Envoi impossible : vérifiez les informations du formulaire.",
+        "plaidact-campaign-core"
+    ); ?></strong></p>
 			<?php endif; ?>
-			<?php if ( $name ) : ?>
-				<p><strong><?php echo esc_html( sprintf( __( 'Destinataire : %s', 'plaidact-campaign-core' ), $name ) ); ?></strong></p>
+			<?php if ($name): ?>
+				<p><strong><?php echo esc_html(
+        sprintf(__("Destinataire : %s", "plaidact-campaign-core"), $name)
+    ); ?></strong></p>
 			<?php endif; ?>
-			<?php if ( $target ) : ?>
-				<form method="post" action="<?php echo $action; ?>" class="plaidact-form-grid">
-					<input type="hidden" name="action" value="plaidact_send_campaign_mail" />
-					<?php wp_nonce_field( 'plaidact_send_campaign_mail_action', 'plaidact_send_campaign_mail_nonce' ); ?>
-					<input type="text" name="sender_name" required placeholder="<?php esc_attr_e( 'Votre nom', 'plaidact-campaign-core' ); ?>" />
-					<input type="email" name="sender_email" required placeholder="<?php esc_attr_e( 'Votre email', 'plaidact-campaign-core' ); ?>" />
-					<textarea name="mail_body" rows="6" required placeholder="<?php echo esc_attr( (string) ( $settings['decision_mail_placeholder'] ?? __( 'Madame, Monsieur,\n\nJe vous écris pour...', 'plaidact-campaign-core' ) ) ); ?>"></textarea>
-					<button class="plaidact-button" type="submit"><?php echo esc_html( (string) ( $settings['decision_mail_button_label'] ?? __( 'Envoyer au décideur', 'plaidact-campaign-core' ) ) ); ?></button>
+				<?php if ($target): ?>
+					<form method="post" action="<?php echo $action; ?>" class="plaidact-form-grid">
+						<input type="hidden" name="action" value="plaidact_send_campaign_mail" />
+						<input type="hidden" name="plaidact_language" value="<?php echo esc_attr(
+          (string) $language
+      ); ?>" />
+						<?php wp_nonce_field(
+          "plaidact_send_campaign_mail_action",
+          "plaidact_send_campaign_mail_nonce"
+      ); ?>
+						<input type="text" name="sender_name" required placeholder="<?php esc_attr_e(
+          "Votre nom",
+          "plaidact-campaign-core"
+      ); ?>" />
+					<input type="email" name="sender_email" required placeholder="<?php esc_attr_e(
+         "Votre email",
+         "plaidact-campaign-core"
+     ); ?>" />
+					<textarea name="mail_body" rows="6" required placeholder="<?php echo esc_attr(
+         (string) ($settings["decision_mail_placeholder"] ??
+             __(
+                 'Madame, Monsieur,\n\nJe vous écris pour...',
+                 "plaidact-campaign-core"
+             ))
+     ); ?>"></textarea>
+					<button class="plaidact-button" type="submit"><?php echo esc_html(
+         (string) ($settings["decision_mail_button_label"] ??
+             __("Envoyer au décideur", "plaidact-campaign-core"))
+     ); ?></button>
 				</form>
-			<?php else : ?>
-				<p><?php esc_html_e( 'Le formulaire est indisponible : ajoutez l’email du décideur dans Réglages > PLAID·ACT Campagne.', 'plaidact-campaign-core' ); ?></p>
+			<?php else: ?>
+				<p><?php esc_html_e(
+        "Le formulaire est indisponible : ajoutez l’email du décideur dans Réglages > PLAID·ACT Campagne.",
+        "plaidact-campaign-core"
+    ); ?></p>
 			<?php endif; ?>
 		</div>
-		<?php
-		return (string) ob_get_clean();
-	}
+		<?php return (string) ob_get_clean();
+    }
 
-	public static function handle_send_campaign_mail(): void {
-		if ( ! isset( $_POST['plaidact_send_campaign_mail_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['plaidact_send_campaign_mail_nonce'] ) ), 'plaidact_send_campaign_mail_action' ) ) {
-			wp_safe_redirect( wp_get_referer() ?: home_url( '/' ) );
-			exit;
-		}
+    public static function handle_send_campaign_mail(): void
+    {
+        $language = self::get_request_language();
 
-		$settings     = (array) get_option( 'plaidact_campaign_settings', array() );
-		$target_email = sanitize_email( (string) ( $settings['decision_maker_email'] ?? '' ) );
-		$sender_email = sanitize_email( wp_unslash( $_POST['sender_email'] ?? '' ) );
-		$sender_name  = sanitize_text_field( wp_unslash( $_POST['sender_name'] ?? '' ) );
-		$mail_body    = sanitize_textarea_field( wp_unslash( $_POST['mail_body'] ?? '' ) );
+        if (
+            !isset($_POST["plaidact_send_campaign_mail_nonce"]) ||
+            !wp_verify_nonce(
+                sanitize_text_field(
+                    wp_unslash($_POST["plaidact_send_campaign_mail_nonce"])
+                ),
+                "plaidact_send_campaign_mail_action"
+            )
+        ) {
+            wp_safe_redirect(self::get_redirect_url($language));
+            exit();
+        }
 
-		if ( ! $target_email || ! $sender_email || ! $sender_name || ! $mail_body ) {
-			wp_safe_redirect( add_query_arg( 'campaign_sent', '0', wp_get_referer() ?: home_url( '/' ) ) );
-			exit;
-		}
+        $settings = self::get_settings(true, $language);
+        $target_email = sanitize_email(
+            (string) ($settings["decision_maker_email"] ?? "")
+        );
+        $sender_email = sanitize_email(
+            wp_unslash($_POST["sender_email"] ?? "")
+        );
+        $sender_name = sanitize_text_field(
+            wp_unslash($_POST["sender_name"] ?? "")
+        );
+        $mail_body = sanitize_textarea_field(
+            wp_unslash($_POST["mail_body"] ?? "")
+        );
 
-		$subject = (string) ( $settings['decision_mail_subject'] ?? __( 'Message citoyen depuis la campagne PLAID·ACT', 'plaidact-campaign-core' ) );
-		$body    = sprintf(
-			__( "Message envoyé depuis le site %1$s\n\nNom: %2$s\nEmail: %3$s\n\n%4$s", 'plaidact-campaign-core' ),
-			home_url( '/' ),
-			$sender_name,
-			$sender_email,
-			$mail_body
-		);
+        if (!$target_email || !$sender_email || !$sender_name || !$mail_body) {
+            self::redirect_with_status("campaign_sent", "0", $language);
+        }
 
-		wp_mail(
-			$target_email,
-			$subject,
-			$body,
-			array( 'Reply-To: ' . $sender_name . ' <' . $sender_email . '>' )
-		);
+        $subject =
+            (string) ($settings["decision_mail_subject"] ??
+                __(
+                    "Message citoyen depuis la campagne PLAID·ACT",
+                    "plaidact-campaign-core"
+                ));
+        $body = sprintf(
+            __(
+                "Message envoyé depuis le site %1$s\n\nNom: %2$s\nEmail: %3$s\n\n%4$s",
+                "plaidact-campaign-core"
+            ),
+            Polylang::home_url($language),
+            $sender_name,
+            $sender_email,
+            $mail_body
+        );
 
-		wp_safe_redirect( add_query_arg( 'campaign_sent', '1', wp_get_referer() ?: home_url( '/' ) ) );
-		exit;
-	}
+        wp_mail($target_email, $subject, $body, [
+            "Reply-To: " . $sender_name . " <" . $sender_email . ">",
+        ]);
 
-	public static function render_social_wall( array $atts = array() ): string {
-		$embeds = get_posts(
-			array(
-				'post_type'      => 'plaid_social_embed',
-				'post_status'    => 'publish',
-				'posts_per_page' => 18,
-				'orderby'        => array( 'menu_order' => 'ASC', 'date' => 'DESC' ),
-				'meta_key'       => '_plaid_social_enabled',
-				'meta_value'     => '1',
-			)
-		);
+        self::redirect_with_status("campaign_sent", "1", $language);
+    }
 
-		ob_start();
-		?>
+    public static function render_social_wall(array $atts = []): string
+    {
+        $embeds = get_posts([
+            "post_type" => "plaid_social_embed",
+            "post_status" => "publish",
+            "posts_per_page" => 18,
+            "orderby" => ["menu_order" => "ASC", "date" => "DESC"],
+            "meta_key" => "_plaid_social_enabled",
+            "meta_value" => "1",
+        ]);
+
+        ob_start();
+        ?>
 		<div class="plaidact-card plaidact-card--social">
-			<?php if ( ! empty( $embeds ) ) : ?>
+			<?php if (!empty($embeds)): ?>
 				<div class="plaidact-social-grid">
-					<?php foreach ( $embeds as $embed ) : ?>
+					<?php foreach ($embeds as $embed): ?>
 						<?php
-						$platform = (string) get_post_meta( $embed->ID, '_plaid_social_platform', true );
-						$code     = (string) get_post_meta( $embed->ID, '_plaid_social_embed_code', true );
-						?>
+      $platform = (string) get_post_meta(
+          $embed->ID,
+          "_plaid_social_platform",
+          true
+      );
+      $code = (string) get_post_meta(
+          $embed->ID,
+          "_plaid_social_embed_code",
+          true
+      );
+      ?>
 						<article class="plaidact-social-card">
-							<p class="plaidact-social-card__platform"><?php echo esc_html( $platform ?: __( 'Réseau social', 'plaidact-campaign-core' ) ); ?></p>
-							<div class="plaidact-social-card__embed"><?php echo wp_kses_post( $code ); ?></div>
+							<p class="plaidact-social-card__platform"><?php echo esc_html(
+           $platform ?: __("Réseau social", "plaidact-campaign-core")
+       ); ?></p>
+							<div class="plaidact-social-card__embed"><?php echo wp_kses_post(
+           $code
+       ); ?></div>
 						</article>
 					<?php endforeach; ?>
 				</div>
-			<?php else : ?>
-				<p><?php esc_html_e( 'Ajoutez des posts dans "Social wall embeds" puis activez-les pour les afficher ici.', 'plaidact-campaign-core' ); ?></p>
+			<?php else: ?>
+				<p><?php esc_html_e(
+        'Ajoutez des posts dans "Social wall embeds" puis activez-les pour les afficher ici.',
+        "plaidact-campaign-core"
+    ); ?></p>
 			<?php endif; ?>
 		</div>
-		<?php
-		return (string) ob_get_clean();
-	}
+		<?php return (string) ob_get_clean();
+    }
 }

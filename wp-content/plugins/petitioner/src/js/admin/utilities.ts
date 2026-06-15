@@ -1,0 +1,70 @@
+import type { FieldType } from '@admin/sections/EditFields/FormBuilder/consts';
+import DOMPurify from 'dompurify';
+
+const fieldTypeToGroup = {
+	text: 'input',
+	email: 'input',
+	tel: 'input',
+	select: 'select',
+	checkbox: 'checkbox',
+	wysiwyg: 'wysiwyg',
+	submit: 'submit',
+	comments: 'textarea',
+	textarea: 'textarea',
+	date: 'date',
+};
+
+export type FieldGroup = (typeof fieldTypeToGroup)[FieldType];
+
+export const getFieldTypeGroup = (type: FieldType): FieldGroup => {
+	return fieldTypeToGroup[type];
+};
+
+export const isNonEmptyObject = <T extends object = Record<string, unknown>>(
+	value: unknown
+): value is T => {
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		!Array.isArray(value) &&
+		Object.keys(value).length > 0
+	);
+};
+
+export const updateSearchParams = (key: string, value?: string) => {
+	const currentURL = new URL(window.location.href);
+
+	if (!value) {
+		currentURL.searchParams.delete(key);
+	} else {
+		currentURL.searchParams.set(key, value);
+	}
+
+	window.history.replaceState({}, '', currentURL.toString());
+};
+
+export const updateActiveTabURL = (newTab: string, tabKeys: string[]) => {
+	if (tabKeys.indexOf(newTab) == -1 || tabKeys[0] == newTab) {
+		updateSearchParams('ptr_active_tab');
+		return;
+	}
+
+	updateSearchParams('ptr_active_tab', newTab);
+};
+
+export const sanitizeField = (html: string) => {
+	return DOMPurify.sanitize(html);
+};
+
+export const getAjaxNonce = () => {
+	const petitionerNonce = String(window.petitionerData.ajax_nonce);
+
+	if (petitionerNonce?.length === 0) {
+		console.warn('Petitioner error: ajax nonce not showing up');
+	}
+
+	return petitionerNonce;
+};
+
+export const generateId = () =>
+	`${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;

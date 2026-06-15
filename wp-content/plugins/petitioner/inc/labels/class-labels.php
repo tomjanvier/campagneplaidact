@@ -1,0 +1,203 @@
+<?php
+
+if (! defined('ABSPATH')) {
+    exit; // Exit if accessed directly.
+}
+
+/**
+ * Stores all of the static labels of the plugin
+ * and provides filters to override them
+ */
+class AV_Petitioner_Labels
+{
+    private static $core_labels_cache = null;
+    private static $field_labels_cache = null;
+
+    /**
+     * Get a label by key
+     *
+     * @param string $key The key of the label to retrieve
+     * @param int|null $form_id Optional form ID for form-specific labels
+     * @param bool $include_fields Whether to include field labels in lookup
+     * @return string The label text
+     */
+    public static function get($key, $form_id = null, $include_fields = false)
+    {
+        if (empty($key)) {
+            av_ptr_error_log('AV_Petitioner_Labels::get called with empty key');
+            return '';
+        }
+
+        if ($form_id !== null) {
+            return self::get_form_label($key, $form_id);
+        }
+
+        // Get labels based on whether fields are needed
+        $labels = $include_fields
+            ? self::get_all_with_fields()
+            : self::get_core_labels();
+
+        return isset($labels[$key]) ? $labels[$key] : '';
+    }
+
+    /**
+     * Get core labels only (cached)
+     * 
+     * @return array Core labels with filters applied
+     */
+    public static function get_core_labels()
+    {
+        if (self::$core_labels_cache !== null) {
+            return self::$core_labels_cache;
+        }
+
+        $labels = self::get_all();
+
+        /**
+         * Filter to modify the default labels for the plugin.
+         *
+         * @param array $labels Array of default labels.
+         * @return array Modified default labels.
+         */
+        self::$core_labels_cache = apply_filters('av_petitioner_labels_defaults', $labels);
+
+        return self::$core_labels_cache;
+    }
+
+    /**
+     * Get all labels including field labels (cached)
+     * 
+     * @return array All labels including field labels
+     */
+    public static function get_all_with_fields()
+    {
+        if (self::$field_labels_cache !== null) {
+            return self::$field_labels_cache;
+        }
+
+        $labels = array_merge(
+            self::get_all(),
+            self::get_field_labels()
+        );
+
+        self::$field_labels_cache = apply_filters('av_petitioner_labels_defaults', $labels);
+
+        return self::$field_labels_cache;
+    }
+
+    /**
+     * Get core labels (without field labels)
+     *
+     * @return array An array of core labels
+     */
+    public static function get_all()
+    {
+        return [
+            // Error messages
+            'could_not_submit'               => __('Could not submit the form.', 'petitioner'),
+            'error_generic'                  => __('Something went wrong. Please try again.', 'petitioner'),
+            'error_required'                 => __('This field is required.', 'petitioner'),
+            'invalid_nonce'                  => __('Invalid nonce.', 'petitioner'),
+            'invalid_form_id'                => __('Invalid form ID.', 'petitioner'),
+            'flagged_as_spam'                => __('Your submission has been flagged as spam.', 'petitioner'),
+            'already_signed'                 => __('Looks like you\'ve already signed this petition!', 'petitioner'),
+            'missing_permissions'            => __('Missing permissions', 'petitioner'),
+            'missing_fields'                 => __('Missing required fields', 'petitioner'),
+            'already_confirmed'              => __('Submission already confirmed or not found.', 'petitioner'),
+            'confirm_email'                  => __('Confirm your email.', 'petitioner'),
+            'missing_confirmation_token'     => __('Missing confirmation token', 'petitioner'),
+            'no_submissions_to_export'       => __('No submissions available to export.', 'petitioner'),
+
+            // Email labels
+            'email_confirmed_success'        => __('Thank you for confirming your email!', 'petitioner'),
+            'email_confirmed_error'          => __('We couldn\'t confirm your email address. It may have already been confirmed, or the link has expired.', 'petitioner'),
+            'ty_email_subject'               => AV_Petitioner_Email_Template::get_default_ty_subject(),
+            'ty_email'                       => AV_Petitioner_Email_Template::get_default_ty_email(),
+            'ty_email_subject_confirm'       => AV_Petitioner_Email_Template::get_default_ty_subject(true),
+            'ty_email_confirm'               => AV_Petitioner_Email_Template::get_default_ty_email(true),
+            'from_field'                     => AV_Petitioner_Email_Template::get_default_from_field(),
+            'from_name'                      => AV_Petitioner_Email_Template::get_default_from_name(),
+            'confirmation_resent'            => __('Confirmation email resent.', 'petitioner'),
+
+            // UI labels
+            'success_message_title'          => __('Thank you!', 'petitioner'),
+            'success_message'                => __('Your submission has been received.', 'petitioner'),
+            'success_generic'                => __('Success!', 'petitioner'),
+            'your_name_here'                 => __('{Your name will be here}', 'petitioner'),
+            'view_the_letter'                => __('View the letter', 'petitioner'),
+            'close_modal'                    => __('Close modal', 'petitioner'),
+            'signatures'                     => __('Signatures', 'petitioner'),
+            'goal'                           => __('Goal', 'petitioner'),
+            'id'                             => __('ID', 'petitioner'),
+            'created_at'                     => __('Submission date', 'petitioner'),
+            'name'                           => __('Name', 'petitioner'),
+            'anonymous'                      => __('Anonymous', 'petitioner'),
+        ];
+    }
+
+    /**
+     * Get form field labels (separate from core labels)
+     *
+     * @return array An array of field labels
+     */
+    public static function get_field_labels()
+    {
+        return [
+            'form_id'                        => __('Form ID', 'petitioner'),
+            'fname'                          => __('First name', 'petitioner'),
+            'fname_placeholder'              => __('John', 'petitioner'),
+            'lname'                          => __('Last name', 'petitioner'),
+            'lname_placeholder'              => __('Smith', 'petitioner'),
+            'email'                          => __('Your email', 'petitioner'),
+            'email_placeholder'              => __('smith@example.com', 'petitioner'),
+            'country'                        => __('Country', 'petitioner'),
+            'salutation'                     => __('Salutation', 'petitioner'),
+            'date_of_birth'                  => __('Date of birth', 'petitioner'),
+            'date_of_birth_desc'             => __('Allows users to enter their date of birth using a date picker.', 'petitioner'),
+            'phone'                          => __('Phone #', 'petitioner'),
+            'phone_desc'                     => __('Allows users to enter their phone number. The pattern is set to allow only digits.', 'petitioner'),
+            'street_address'                 => __('Street address', 'petitioner'),
+            'city'                           => __('City', 'petitioner'),
+            'postal_code'                    => __('Postal code', 'petitioner'),
+            'comments'                       => __('Comments', 'petitioner'),
+            'bcc_yourself'                   => __('BCC me on the email', 'petitioner'),
+            'bcc_yourself_checkbox'          => __('BCC checkbox', 'petitioner'),
+            'bcc_yourself_desc'              => __('Allows users to opt-in to send a copy of the petition to the email address entered in this form. Only works if you send emails to the representative.', 'petitioner'),
+            'newsletter'                     => __('Subscribe to newsletter', 'petitioner'),
+            'newsletter_checkbox'            => __('Newsletter opt-in checkbox', 'petitioner'),
+            'newsletter_desc'                => __('Allows users to opt-in to receive newsletter updates.', 'petitioner'),
+            'hide_name'                      => __('Keep my name anonymous', 'petitioner'),
+            'hide_name_checkbox'             => __('Keep me anonymous checkbox', 'petitioner'),
+            'hide_name_desc'                 => __('Allows users to opt-in to keep their name anonymous in public signature lists.', 'petitioner'),
+            'accept_tos'                     => __('By submitting this form, I agree to the terms of service', 'petitioner'),
+            'accept_tos_checkbox'            => __('Terms of service checkbox', 'petitioner'),
+            'approval_status'                => __('Approval status', 'petitioner'),
+            'confirmation_token'             => __('Confirmation token', 'petitioner'),
+            'submit_button'                  => __('Submit button', 'petitioner'),
+            'submit_button_label'            => __('Sign this petition', 'petitioner'),
+            'legal_text'                     => __('Legal text', 'petitioner'),
+            'legal_default_val'              => __('By submitting, you agree to our terms.', 'petitioner'),
+        ];
+    }
+
+    /**
+     * Get a label for a specific form
+     *
+     * @param string $key The key of the label to retrieve
+     * @param int $form_id The ID of the form
+     * @return string The label text
+     */
+    public static function get_form_label($key, $form_id)
+    {
+        return get_post_meta('' . $form_id, '_petitioner_' . $key, true) ?: self::get($key, null, true);
+    }
+
+    /**
+     * Clear the internal cache.
+     */
+    public static function clear_cache()
+    {
+        self::$core_labels_cache = null;
+        self::$field_labels_cache = null;
+    }
+}

@@ -21,8 +21,15 @@ Ce repository permet de créer rapidement des sites de campagnes homogènes, tou
    │     ├─ plaidact-campaign-core.php
    │     └─ includes/
    │        ├─ class-plaidact-campaign-cpt.php
+   │        ├─ class-plaidact-campaign-polylang.php
+   │        ├─ class-plaidact-campaign-petition-workflows.php
+   │        ├─ class-plaidact-campaign-petitioner-integration.php
    │        ├─ class-plaidact-campaign-shortcodes.php
    │        └─ class-plaidact-campaign-demo.php
+   │  └─ petitioner/
+   │     ├─ petitioner.php
+   │     ├─ dist/
+   │     └─ dist-gutenberg/
    └─ themes/
       └─ plaidact-campaign/
          ├─ style.css
@@ -49,6 +56,7 @@ Ce repository permet de créer rapidement des sites de campagnes homogènes, tou
 
 - CPT `plaid_breve` pour les actualités courtes de campagne.
 - CPT `plaid_partner` pour les organisations partenaires (avec ordre manuel).
+- Module `Petitioner` embarqué et chargé automatiquement par le core pour les formulaires avancés de pétition.
 - Taxonomies :
   - `plaid_breve_topic` (thématiques des brèves)
   - `plaid_partner_type` (classification partenaires)
@@ -56,13 +64,22 @@ Ce repository permet de créer rapidement des sites de campagnes homogènes, tou
 - Shortcodes de base :
   - `[petition_form]`
   - `[plaid_social_wall]`
+- Compatibilité Polylang :
+  - chaînes des formulaires enregistrées dans Polylang > Traductions des chaînes,
+  - résolution automatique du bon formulaire `Petitioner` traduit si un `petition_form_id` est configuré,
+  - langue transmise aux formulaires pétition / newsletter et à la synchro Brevo.
+- Fusion métier pétition :
+  - la logique de notification / email décideur / redirection est centralisée dans le core,
+  - les signatures `Petitioner` réutilisent la synchro newsletter Brevo du core,
+  - les notifications campagne et l’email au décideur restent pilotés depuis `PLAID·ACT Campagne`.
 - Outil **Outils → PLAID·ACT Démo** pour :
   - exporter un **ZIP de démo** prêt à partager (`plaidact-demo.json` + README),
   - importer ce ZIP sur un autre site en quelques clics.
 
 ### Activation
 
-- Activer le plugin en **network activation** sur le multisite.
+- Activer uniquement `plaidact-campaign-core` en **network activation** sur le multisite.
+- Le dossier `petitioner/` reste embarqué dans le repo mais n’a plus vocation à être activé séparément.
 
 ## Côté thème : `plaidact-campaign`
 
@@ -90,6 +107,7 @@ Le thème peut fonctionner seul visuellement, mais les sections **Brèves**, **P
    - Menu one-page
    - Hero dans le Customizer
    - Section “Rapport PDF mis en avant” dans le Customizer
+   - Réglages > `PLAID·ACT Campagne` pour renseigner l’ID du formulaire `Petitioner`, ou laisser vide si un seul formulaire `petitioner-petition` existe
    - Contenus (Brèves, Partenaires, Articles)
 5. Ajuster les shortcodes/embeds selon les outils réels de pétition et de social wall.
 
