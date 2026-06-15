@@ -190,6 +190,15 @@ final class Plaidact_Campagne_Onepage {
 		return $default;
 	}
 
+
+	private function render_shortcode_or_notice( string $tag, string $notice ): string {
+		if ( shortcode_exists( $tag ) ) {
+			return do_shortcode( '[' . $tag . ']' );
+		}
+
+		return '<div class="plaidact-card"><p>' . esc_html( $notice ) . '</p></div>';
+	}
+
 	public function render_onepage_shortcode( $atts ) {
 		$atts = shortcode_atts(
 			array(
@@ -269,14 +278,14 @@ final class Plaidact_Campagne_Onepage {
 
 			<section class="plaidact-campagne-actions">
 				<div class="plaidact-wrap plaidact-grid plaidact-grid--actions">
-					<div><?php echo do_shortcode( '[petition_form]' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
-					<div><?php echo do_shortcode( '[plaid_send_campaign]' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+					<div><?php echo $this->render_shortcode_or_notice( 'petition_form', __( 'Activez le plugin PLAID·ACT Campaign Core pour afficher le formulaire de pétition.', 'plaidact-campagne-onepage' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+					<div><?php echo $this->render_shortcode_or_notice( 'plaid_send_campaign', __( 'Activez le plugin PLAID·ACT Campaign Core pour afficher le formulaire d’envoi au décideur.', 'plaidact-campagne-onepage' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
 				</div>
 			</section>
 
 			<section class="plaidact-campagne-actions">
 				<div class="plaidact-wrap">
-					<?php echo do_shortcode( '[plaid_newsletter_form]' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+					<?php echo $this->render_shortcode_or_notice( 'plaid_newsletter_form', __( 'Activez le plugin PLAID·ACT Campaign Core pour afficher l’inscription newsletter.', 'plaidact-campagne-onepage' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				</div>
 			</section>
 
@@ -300,7 +309,7 @@ final class Plaidact_Campagne_Onepage {
 					<div class="plaidact-wrap">
 						<h2><?php echo esc_html( (string) get_theme_mod( 'social_wall_title', __( 'Social Wall', 'plaidact-campagne-onepage' ) ) ); ?></h2>
 						<p><?php echo esc_html( (string) get_theme_mod( 'social_wall_description', __( 'Suivez ici les publications liées à la campagne.', 'plaidact-campagne-onepage' ) ) ); ?></p>
-						<?php echo do_shortcode( '[plaid_social_wall]' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+						<?php echo $this->render_shortcode_or_notice( 'plaid_social_wall', __( 'Activez le plugin PLAID·ACT Campaign Core pour afficher le social wall.', 'plaidact-campagne-onepage' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 					</div>
 				</section>
 			<?php endif; ?>
