@@ -1,0 +1,292 @@
+<?php
+
+if (!defined('ABSPATH')) {
+    exit; // Exit if accessed directly
+}
+
+class AV_Petitioner_Mailer
+{
+    public $target_email;
+    public $target_cc_emails;
+    public $user_email;
+    public $user_name;
+    public $user_country;
+    public $subject;
+    public $letter;
+    public $bcc                     = true;
+    public $send_to_representative  = true;
+    public $send_ty_email           = true;
+    public $confirm_emails          = false;
+    public $headers                 = array();
+    public $form_id                 = '';
+    public $submission_id           = false;
+    public $from_field              = false;
+    public $from_name               = false;
+    public $final_from_field;
+
+    public function __construct($settings)
+    {
+        $this->target_email             = $settings['target_email'];
+        $this->target_cc_emails         = $settings['target_cc_emails'];
+        $this->user_email               = $settings['user_email'];
+        $this->user_name                = $settings['user_name'];
+        $this->user_country             = $settings['user_country'];
+        $this->letter                   = wpautop(wp_kses_post($settings['letter']));
+        $this->subject                  = $settings['subject'];
+        $this->bcc                      = $settings['bcc'];
+        $this->send_to_representative   = $settings['send_to_representative'];
+        $this->confirm_emails           = $settings['confirm_emails'];
+        $this->send_ty_email            = $settings['send_ty_email'] ?? true;
+        $this->form_id                  = $settings['form_id'];
+        $this->submission_id            = $settings['submission_id'];
+        $this->from_field               = $settings['from_field'] ?? '';
+        $this->from_name                = $settings['from_name'] ?? '';
+
+        $sanitized_from_field = sanitize_email($this->from_field);
+
+        if (empty($sanitized_from_field) || !is_email($sanitized_from_field)) {
+            $sanitized_from_field = sanitize_email(AV_Petitioner_Email_Template::get_default_from_field());
+        }
+
+        $this->from_field = $sanitized_from_field;
+
+        $sanitized_from_name = sanitize_text_field($this->from_name);
+
+        if (empty($sanitized_from_name)) {
+            $sanitized_from_name = sanitize_text_field(AV_Petitioner_Email_Template::get_default_from_name());
+        }
+
+        $this->from_name = $sanitized_from_name;
+
+        $this->final_from_field = sprintf('%s <%s>', $this->from_name, $this->from_field);
+    }
+
+    /**
+     * Sends the petition emails
+     * @return bool
+     */
+    public function send_emails()
+    {
+        $success                = true;
+        $conf_result            = false;
+        $filter_args            = [
+            'form_id'       => $this->form_id,
+            'submission_id' => $this->submission_id,
+            'user_name'     => $this->user_name,
+        ]; // what data to pass to the filter
+
+        $submission     = !empty($this->submission_id) ? AV_Petitioner_Submissions_Model::get_submission_by_id($this->submission_id) : null;
+        $status         = self::get_status($submission);
+
+        $rep_email_sent = !empty($status['rep_email_sent']);
+        $ty_email_sent  = !empty($status['ty_email_sent']);
+
+        /**
+         * petitioner_send_ty_email
+         * 
+         * Decided if the thank you email should be sent.
+         *
+         * @since 0.2.7
+         *
+         * @param bool  $should_send_ty_email Whether to send the thank you email.
+         * @param array $filter_args The arguments passed to the filter.
+         */
+        $should_send_ty_email   = apply_filters('petitioner_send_ty_email', $this->send_ty_email, $filter_args);
+
+        /**
+         * petitioner_send_ty_email
+         * 
+         * Decided if the rep email should be sent.
+         *
+         * @since 0.2.7
+         *
+         * @param bool  $should_send_to_rep Whether to send the rep you email.
+         * @param array $filter_args The arguments passed to the filter.
+         */
+        $is_confirmed = !$submission || !isset($submission->approval_status) || $submission->approval_status === 'Confirmed';
+        $should_send_to_rep     = $is_confirmed && apply_filters('petitioner_send_to_representative', $this->send_to_representative, $filter_args);
+        $conf_result            = false;
+        $rep_result             = false;
+
+        if ($should_send_ty_email && !$ty_email_sent) {
+            $conf_result = $this->ty_email();
+            $success = $success && $conf_result;
+
+            if ($conf_result && $submission) {
+                $status['ty_email_sent'] = true;
+            }
+        }
+
+        if ($should_send_to_rep && !$rep_email_sent) {
+            $rep_result = $this->representative_email();
+
+            $success = $success && $rep_result;
+
+            if ($rep_result && $submission) {
+                $status['rep_email_sent'] = true;
+            }
+        }
+
+        if ($submission && ($conf_result || $rep_result)) {
+            AV_Petitioner_Submissions_Model::update_submission($this->submission_id, [
+                'email_status' => wp_json_encode($status)
+            ]);
+        }
+
+        return $success;
+    }
+
+    /**
+     * Sends the petition details to the user
+     * @return bool
+     */
+    public function ty_email()
+    {
+        $subject            = AV_Petitioner_Email_Template::get_default_ty_subject($this->confirm_emails);
+        $message            = AV_Petitioner_Email_Template::get_default_ty_email($this->confirm_emails, $this->user_name, $this->letter);
+        $headers            = AV_Petitioner_Email_Controller::build_headers($this->final_from_field);
+        $override_ty_email  = get_post_meta($this->form_id, '_petitioner_override_ty_email', true);
+        if ($override_ty_email) {
+            $custom_subject = get_post_meta($this->form_id, '_petitioner_ty_email_subject', true);
+            $custom_message = get_post_meta($this->form_id, '_petitioner_ty_email', true);
+
+            $subject = $custom_subject ? $custom_subject : $subject;
+            $message = $custom_message ? $custom_message : $message;
+        } else {
+            // // Add the letter if the emails are being sent to rep
+            if ($this->send_to_representative) {
+                $message .=  '<p>' . __('Below is a copy of your letter:', 'petitioner') . '</p>';
+                $message .=  '<hr/>';
+                $message .= $this->letter;
+
+                // Translators: %s is the user's name
+                $message .=  '<p>' . sprintf(__('Sincerely, %s'), $this->user_name) . '</p>';
+            }
+        }
+
+        $message = $this->convert_email_variables($message);
+
+        return AV_Petitioner_Email_Controller::send(
+            $this->user_email,
+            $subject,
+            $message,
+            $headers
+        );
+    }
+
+    /**
+     * Sends the petition details to the admin or representative
+     * @return bool
+     */
+    public function representative_email()
+    {
+        $subject = $this->subject;
+        $message =  $this->letter;
+
+        // Translators: %s is the user's name
+        $message .=  '<p>' . sprintf(__('Sincerely, %s'), $this->user_name) . '</p>';
+
+        $headers = AV_Petitioner_Email_Controller::build_headers($this->final_from_field, $this->target_cc_emails, ($this->bcc ? $this->user_email : ''));
+
+        // Send the email
+        $the_args = [
+            'target_email'  => $this->target_email,
+            'subject'       => $subject,
+            'message'       => $message,
+            'headers'       => $headers
+        ];
+
+        /**
+         * petitioner_before_send_rep_email
+         * 
+         * Fires an action before sending a representative email.
+         *
+         * This hook allows developers to perform custom actions or modify data
+         * before the email to the representative is sent.
+         *
+         * @since 0.2.7
+         * 
+         * @param array $the_args An array of arguments related to the email being sent.
+         */
+        do_action('petitioner_before_send_rep_email', $the_args);
+
+
+        return AV_Petitioner_Email_Controller::send($this->target_email, $subject, $message, $headers);
+    }
+
+    public function convert_email_variables($message)
+    {
+        $confirmation_link = '';
+
+        if ($this->confirm_emails) {
+            $confirmation_link = add_query_arg(
+                array(
+                    'petitioner_confirm' => 1,
+                    'token'              => AV_Email_Confirmations::get_confirmation_token($this->submission_id),
+                    'sid'                => $this->submission_id,
+                ),
+                get_site_url()
+            );
+
+            $confirmation_link = '<a href="' . esc_url($confirmation_link) . '">' . esc_html(AV_Petitioner_Labels::get('confirm_email')) . '</a>';
+        }
+
+        $variables = [
+            'user_name'         => $this->user_name,
+            'petition_letter'   => $this->letter,
+            'petition_goal'     => AV_Petitioner_Goal_Milestones::get_active_goal($this->form_id),
+            'confirmation_link' => $confirmation_link
+        ];
+
+        foreach ($variables as $key => $value) {
+            $pattern = '/{{\s*' . preg_quote($key, '/') . '\s*}}/';
+            $sanitized_value = '';
+
+            switch ($key) {
+                case 'petition_letter':
+                    $sanitized_value = wp_kses_post($value);
+                    break;
+                case 'confirmation_link':
+                    $sanitized_value = wp_kses_post($value);
+                    break;
+                default:
+                    $sanitized_value = sanitize_text_field($value);
+                    break;
+            }
+
+            $message = preg_replace($pattern, $sanitized_value, $message);
+        }
+
+        return $message;
+    }
+
+    /**
+     * Get email status from submission safely
+     *
+     * @since 0.8.2
+     *
+     * @param WP_Post|null $submission Submission
+     * @return array
+     */
+    public static function get_status($submission)
+    {
+        $status = ($submission && !empty($submission->email_status)) ? json_decode($submission->email_status, true) : [];
+        /**
+         * av_petitioner_submission_status
+         * 
+         * Filters the email status of a submission.
+         *
+         * @since 0.8.2
+         * 
+         * @param array $status The email status.
+         * @param WP_Post|null $submission The submission.
+         */
+        $status = apply_filters('av_petitioner_submission_status', $status, $submission);
+
+        if (!is_array($status)) {
+            $status = [];
+        }
+
+        return $status;
+    }
+}

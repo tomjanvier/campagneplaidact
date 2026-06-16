@@ -1,0 +1,373 @@
+<?php
+
+/**
+ * A list of useful utility functions for the plugin.
+ */
+
+/**
+ * returns an array of countries
+ * @return array
+ */
+function av_petitioner_get_countries(): array
+{
+    return [
+        __("Afghanistan", "petitioner"),
+        __("Albania", "petitioner"),
+        __("Algeria", "petitioner"),
+        __("Andorra", "petitioner"),
+        __("Angola", "petitioner"),
+        __("Antigua & Deps", "petitioner"),
+        __("Argentina", "petitioner"),
+        __("Armenia", "petitioner"),
+        __("Australia", "petitioner"),
+        __("Austria", "petitioner"),
+        __("Azerbaijan", "petitioner"),
+        __("Bahamas", "petitioner"),
+        __("Bahrain", "petitioner"),
+        __("Bangladesh", "petitioner"),
+        __("Barbados", "petitioner"),
+        __("Belarus", "petitioner"),
+        __("Belgium", "petitioner"),
+        __("Belize", "petitioner"),
+        __("Benin", "petitioner"),
+        __("Bhutan", "petitioner"),
+        __("Bolivia", "petitioner"),
+        __("Bosnia Herzegovina", "petitioner"),
+        __("Botswana", "petitioner"),
+        __("Brazil", "petitioner"),
+        __("Brunei", "petitioner"),
+        __("Bulgaria", "petitioner"),
+        __("Burkina", "petitioner"),
+        __("Burundi", "petitioner"),
+        __("Cambodia", "petitioner"),
+        __("Cameroon", "petitioner"),
+        __("Canada", "petitioner"),
+        __("Cape Verde", "petitioner"),
+        __("Central African Rep", "petitioner"),
+        __("Chad", "petitioner"),
+        __("Chile", "petitioner"),
+        __("China", "petitioner"),
+        __("Colombia", "petitioner"),
+        __("Comoros", "petitioner"),
+        __("Congo", "petitioner"),
+        __("Congo {Democratic Rep}", "petitioner"),
+        __("Costa Rica", "petitioner"),
+        __("Croatia", "petitioner"),
+        __("Cuba", "petitioner"),
+        __("Cyprus", "petitioner"),
+        __("Czech Republic", "petitioner"),
+        __("Denmark", "petitioner"),
+        __("Djibouti", "petitioner"),
+        __("Dominica", "petitioner"),
+        __("Dominican Republic", "petitioner"),
+        __("East Timor", "petitioner"),
+        __("Ecuador", "petitioner"),
+        __("Egypt", "petitioner"),
+        __("El Salvador", "petitioner"),
+        __("Equatorial Guinea", "petitioner"),
+        __("Eritrea", "petitioner"),
+        __("Estonia", "petitioner"),
+        __("Ethiopia", "petitioner"),
+        __("Fiji", "petitioner"),
+        __("Finland", "petitioner"),
+        __("France", "petitioner"),
+        __("Gabon", "petitioner"),
+        __("Gambia", "petitioner"),
+        __("Georgia", "petitioner"),
+        __("Germany", "petitioner"),
+        __("Ghana", "petitioner"),
+        __("Greece", "petitioner"),
+        __("Grenada", "petitioner"),
+        __("Guatemala", "petitioner"),
+        __("Guinea", "petitioner"),
+        __("Guinea-Bissau", "petitioner"),
+        __("Guyana", "petitioner"),
+        __("Haiti", "petitioner"),
+        __("Honduras", "petitioner"),
+        __("Hungary", "petitioner"),
+        __("Iceland", "petitioner"),
+        __("India", "petitioner"),
+        __("Indonesia", "petitioner"),
+        __("Iran", "petitioner"),
+        __("Iraq", "petitioner"),
+        __("Ireland {Republic}", "petitioner"),
+        __("Israel", "petitioner"),
+        __("Italy", "petitioner"),
+        __("Ivory Coast", "petitioner"),
+        __("Jamaica", "petitioner"),
+        __("Japan", "petitioner"),
+        __("Jordan", "petitioner"),
+        __("Kazakhstan", "petitioner"),
+        __("Kenya", "petitioner"),
+        __("Kiribati", "petitioner"),
+        __("Korea North", "petitioner"),
+        __("Korea South", "petitioner"),
+        __("Kosovo", "petitioner"),
+        __("Kuwait", "petitioner"),
+        __("Kyrgyzstan", "petitioner"),
+        __("Laos", "petitioner"),
+        __("Latvia", "petitioner"),
+        __("Lebanon", "petitioner"),
+        __("Lesotho", "petitioner"),
+        __("Liberia", "petitioner"),
+        __("Libya", "petitioner"),
+        __("Liechtenstein", "petitioner"),
+        __("Lithuania", "petitioner"),
+        __("Luxembourg", "petitioner"),
+        __("Macedonia", "petitioner"),
+        __("Madagascar", "petitioner"),
+        __("Malawi", "petitioner"),
+        __("Malaysia", "petitioner"),
+        __("Maldives", "petitioner"),
+        __("Mali", "petitioner"),
+        __("Malta", "petitioner"),
+        __("Marshall Islands", "petitioner"),
+        __("Mauritania", "petitioner"),
+        __("Mauritius", "petitioner"),
+        __("Mexico", "petitioner"),
+        __("Micronesia", "petitioner"),
+        __("Moldova", "petitioner"),
+        __("Monaco", "petitioner"),
+        __("Mongolia", "petitioner"),
+        __("Montenegro", "petitioner"),
+        __("Morocco", "petitioner"),
+        __("Mozambique", "petitioner"),
+        __("Myanmar, {Burma}", "petitioner"),
+        __("Namibia", "petitioner"),
+        __("Nauru", "petitioner"),
+        __("Nepal", "petitioner"),
+        __("Netherlands", "petitioner"),
+        __("New Zealand", "petitioner"),
+        __("Nicaragua", "petitioner"),
+        __("Niger", "petitioner"),
+        __("Nigeria", "petitioner"),
+        __("Norway", "petitioner"),
+        __("Oman", "petitioner"),
+        __("Pakistan", "petitioner"),
+        __("Palau", "petitioner"),
+        __("Panama", "petitioner"),
+        __("Papua New Guinea", "petitioner"),
+        __("Paraguay", "petitioner"),
+        __("Peru", "petitioner"),
+        __("Philippines", "petitioner"),
+        __("Poland", "petitioner"),
+        __("Portugal", "petitioner"),
+        __("Qatar", "petitioner"),
+        __("Romania", "petitioner"),
+        __("Russian Federation", "petitioner"),
+        __("Rwanda", "petitioner"),
+        __("St Kitts & Nevis", "petitioner"),
+        __("St Lucia", "petitioner"),
+        __("Saint Vincent & the Grenadines", "petitioner"),
+        __("Samoa", "petitioner"),
+        __("San Marino", "petitioner"),
+        __("Sao Tome & Principe", "petitioner"),
+        __("Saudi Arabia", "petitioner"),
+        __("Senegal", "petitioner"),
+        __("Serbia", "petitioner"),
+        __("Seychelles", "petitioner"),
+        __("Sierra Leone", "petitioner"),
+        __("Singapore", "petitioner"),
+        __("Slovakia", "petitioner"),
+        __("Slovenia", "petitioner"),
+        __("Solomon Islands", "petitioner"),
+        __("Somalia", "petitioner"),
+        __("South Africa", "petitioner"),
+        __("South Sudan", "petitioner"),
+        __("Spain", "petitioner"),
+        __("Sri Lanka", "petitioner"),
+        __("Sudan", "petitioner"),
+        __("Suriname", "petitioner"),
+        __("Swaziland", "petitioner"),
+        __("Sweden", "petitioner"),
+        __("Switzerland", "petitioner"),
+        __("Syria", "petitioner"),
+        __("Taiwan", "petitioner"),
+        __("Tajikistan", "petitioner"),
+        __("Tanzania", "petitioner"),
+        __("Thailand", "petitioner"),
+        __("Togo", "petitioner"),
+        __("Tonga", "petitioner"),
+        __("Trinidad & Tobago", "petitioner"),
+        __("Tunisia", "petitioner"),
+        __("Turkey", "petitioner"),
+        __("Turkmenistan", "petitioner"),
+        __("Tuvalu", "petitioner"),
+        __("Uganda", "petitioner"),
+        __("Ukraine", "petitioner"),
+        __("United Arab Emirates", "petitioner"),
+        __("United Kingdom", "petitioner"),
+        __("United States", "petitioner"),
+        __("Uruguay", "petitioner"),
+        __("Uzbekistan", "petitioner"),
+        __("Vanuatu", "petitioner"),
+        __("Vatican City", "petitioner"),
+        __("Venezuela", "petitioner"),
+        __("Vietnam", "petitioner"),
+        __("Yemen", "petitioner"),
+        __("Zambia", "petitioner"),
+        __("Zimbabwe", "petitioner")
+    ];
+}
+
+/**
+ * Returns an associative array of fields and their user edited labels for the specific form
+ */
+function av_petitioner_get_form_labels($form_id = '', $label_ids = []): array
+{
+    $final_labels = [
+        'name'          => AV_Petitioner_Labels::get('name')
+    ];
+
+    $form_fields = get_post_meta($form_id, '_petitioner_form_fields', true);
+
+    $fields_parsed = json_decode($form_fields, true);
+
+    if (!is_array($fields_parsed)) {
+        av_ptr_error_log('Could not extract labels for the form # ' . $form_id);
+        return [];
+    }
+
+    foreach ($label_ids as $id) {
+        if (!empty($fields_parsed[$id]) && !empty($fields_parsed[$id]['label'])) {
+            $final_labels[$id] = $fields_parsed[$id]['label'];
+        }
+    }
+
+    $final_labels['submitted_at'] = AV_Petitioner_Labels::get('created_at');
+
+    /**
+     * Filter the form labels to add custom property labels
+     *
+     * @param array $labels - the labels array that is being returned from the get_form_labels method
+     * @param int $form_id - the form id
+     * @param array $label_ids - the label ids
+     * @param array $fields_parsed - the JSON encoded fields parsed
+     * @return array - the modified labels array with custom property labels appended
+     */
+    $final_labels = apply_filters('av_petitioner_get_form_labels', $final_labels, $form_id, $label_ids, $fields_parsed);
+
+    return $final_labels;
+}
+
+/**
+ * Parse conditional logic from raw JSON string
+ * 
+ * @param string|null $raw_json Raw JSON string from POST data
+ * @return array|null Parsed conditional logic or null if invalid
+ */
+function av_petitioner_parse_conditional_logic($raw_json)
+{
+    if (empty($raw_json)) {
+        return null;
+    }
+
+    $conditional_logic = json_decode($raw_json, true);
+
+    // Validate JSON parsing
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        av_ptr_error_log('Petitioner CSV Export: Invalid JSON in conditional_logic - ' . json_last_error_msg());
+        return null;
+    }
+
+    if (!is_array($conditional_logic) || !isset($conditional_logic['conditions'])) {
+        av_ptr_error_log('Petitioner CSV Export: Invalid conditional_logic structure');
+        return null;
+    }
+
+    return $conditional_logic;
+}
+
+/**
+ * Convert conditional logic to model query array
+ * Supports: equals, not_equals, is_empty, is_not_empty, contains, does_not_contain
+ * 
+ * @param array|null $conditional_logic Parsed conditional logic
+ * @return array Query array for model in format: [['field' => 'x', 'operator' => 'y', 'value' => 'z'], ...]
+ */
+function av_petitioner_build_model_query($conditional_logic)
+{
+    $query = [];
+
+    if (!$conditional_logic || empty($conditional_logic['conditions'])) {
+        return $query;
+    }
+
+    $supported_operators = ['equals', 'not_equals', 'is_empty', 'is_not_empty', 'contains', 'does_not_contain'];
+    $ignored_operators = [];
+
+    foreach ($conditional_logic['conditions'] as $condition) {
+        if (
+            !isset($condition['field']) ||
+            !isset($condition['operator']) ||
+            empty($condition['field'])
+        ) {
+            continue;
+        }
+
+        $operator = $condition['operator'];
+        $field = $condition['field'];
+        $value = isset($condition['value']) ? $condition['value'] : null;
+
+        // Process supported operators
+        $value_required_operators = ['equals', 'not_equals', 'contains', 'does_not_contain'];
+
+        if (in_array($operator, $value_required_operators, true)) {
+            if ($value !== '' && $value !== null) {
+                $query[] = ['field' => $field, 'operator' => $operator, 'value' => $value];
+            }
+        } else if ($operator === 'is_empty' || $operator === 'is_not_empty') {
+            $query[] = ['field' => $field, 'operator' => $operator, 'value' => null];
+        } else if (!in_array($operator, $supported_operators) && !in_array($operator, $ignored_operators)) {
+            // Track ignored operators for logging
+            $ignored_operators[] = $operator;
+        }
+    }
+
+    // Log ignored operators for debugging
+    if (!empty($ignored_operators)) {
+        av_ptr_error_log('Petitioner CSV Export: Ignoring unsupported operators: ' . implode(', ', $ignored_operators));
+    }
+
+    return $query;
+}
+
+/**
+ * Returns the remote IP address of the client safely
+ * @since 0.7.2
+ * @return string
+ */
+function av_petitioner_get_remote_ip()
+{
+    return isset($_SERVER['REMOTE_ADDR'])
+        ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR']))
+        : '';
+}
+
+/**
+ * Validates a redirect URL, enforcing a same-origin policy by default.
+ * External redirects are stripped unless explicitly allowed via the
+ * `petitioner_allow_external_redirects` filter for the given form.
+ *
+ * @param string $url     The URL to validate.
+ * @param int    $form_id The ID of the form to pass to the filter.
+ * @return string The validated URL, or an empty string if it fails validation.
+ * 
+ * @since 0.8.1
+ */
+function av_petitioner_get_validated_redirect_url($url, $form_id)
+{
+    if (empty($url)) {
+        return '';
+    }
+
+    $allow_external = apply_filters('petitioner_allow_external_redirects', false, $form_id);
+    
+    $url = wp_sanitize_redirect($url);
+
+    if (!$allow_external) {
+        $url = wp_validate_redirect($url, '');
+    }
+
+    return $url;
+}

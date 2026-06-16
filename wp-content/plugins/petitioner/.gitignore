@@ -1,0 +1,18 @@
+/wp-*.php
+/xmlrpc.php
+
+# Log files
+*.log
+node_modules
+.DS_Store
+/docs/specs/**-ai.md
+
+# Build directories
+dist
+dist-gutenberg
+/vendor/
+
+# Test directories & unwanted files
+/wordpress/
+/coverage-php/
+.phpunit.result.cache

@@ -1,0 +1,890 @@
+<?php
+
+if (!defined('ABSPATH')) {
+    exit; // Exit if accessed directly
+}
+
+class AV_Petitioner_Submissions_Controller
+{
+
+    /**
+     * Static function used for the API on the frontend
+     * @return void
+     */
+    public static function api_handle_form_submit()
+    {
+        if (!check_ajax_referer(AV_Petitioner_Setup::$FRONTEND_FORM_NONCE_LABEL, 'petitioner_nonce', false)) {
+            wp_send_json_error([
+                'title'     => AV_Petitioner_Labels::get('could_not_submit'),
+                'message'   => AV_Petitioner_Labels::get('invalid_nonce'),
+            ]);
+            wp_die();
+        }
+
+        if (!empty($_POST['ptr_info'])) {
+            wp_send_json_error([
+                'title'     => AV_Petitioner_Labels::get('could_not_submit'),
+                'message'   => AV_Petitioner_Labels::get('error_generic'),
+            ]);
+            wp_die();
+        }
+
+        $email                      = isset($_POST['petitioner_email']) ? sanitize_email(wp_unslash($_POST['petitioner_email'])) : '';
+        $form_id                    = isset($_POST['form_id']) ? sanitize_text_field(wp_unslash($_POST['form_id'])) : '';
+        $fname                      = isset($_POST['petitioner_fname']) ? sanitize_text_field(wp_unslash($_POST['petitioner_fname'])) : '';
+        $lname                      = isset($_POST['petitioner_lname']) ? sanitize_text_field(wp_unslash($_POST['petitioner_lname'])) : '';
+        $date_of_birth              = isset($_POST['petitioner_date_of_birth']) ? sanitize_text_field(wp_unslash($_POST['petitioner_date_of_birth'])) : '';
+        $country                    = isset($_POST['petitioner_country']) ? sanitize_text_field(wp_unslash($_POST['petitioner_country'])) : '';
+        $phone                      = isset($_POST['petitioner_phone']) ? sanitize_text_field(wp_unslash($_POST['petitioner_phone'])) : '';
+        $street_address             = isset($_POST['petitioner_street_address']) ? sanitize_text_field(wp_unslash($_POST['petitioner_street_address'])) : '';
+        $city                       = isset($_POST['petitioner_city']) ? sanitize_text_field(wp_unslash($_POST['petitioner_city'])) : '';
+        $postal_code                = isset($_POST['petitioner_postal_code']) ? sanitize_text_field(wp_unslash($_POST['petitioner_postal_code'])) : '';
+        $comments                   = isset($_POST['petitioner_comments']) ? sanitize_text_field(wp_unslash($_POST['petitioner_comments'])) : '';
+        $bcc                        = !empty($_POST['petitioner_bcc']) && sanitize_text_field(wp_unslash($_POST['petitioner_bcc'])) === 'on';
+        $hide_name                  = !empty($_POST['petitioner_hide_name']) && sanitize_text_field(wp_unslash($_POST['petitioner_hide_name'])) === 'on';
+        $newsletter                 = !empty($_POST['petitioner_newsletter']) && sanitize_text_field(wp_unslash($_POST['petitioner_newsletter'])) === 'on';
+        $require_approval           = get_post_meta($form_id, '_petitioner_require_approval', true);
+        $default_approval_status    = get_post_meta($form_id, '_petitioner_approval_state', true); // Kept for confirm_emails below
+        $approval_status            = self::get_default_status($require_approval, $default_approval_status);
+        $accept_tos                 = !empty($_POST['petitioner_accept_tos']) && sanitize_text_field(wp_unslash($_POST['petitioner_accept_tos'])) === 'on';
+
+        // handle captcha
+        AV_Petitioner_Captcha::validate_captcha($form_id);
+
+        // akismet
+        $akismet_is_spam = AV_Petitioner_Akismet::check_with_akismet(
+            $email,
+            $fname,
+            $lname,
+            $country,
+            $form_id
+        );
+
+        if ($akismet_is_spam) {
+            wp_send_json_error([
+                'title'     => AV_Petitioner_Labels::get('could_not_submit'),
+                'message'   => AV_Petitioner_Labels::get('flagged_as_spam'),
+            ]);
+        }
+
+        // Insert into the custom table
+
+        $email_exists = AV_Petitioner_Submissions_Model::check_duplicate_email($email, $form_id);
+
+        if ($email_exists) {
+            wp_send_json_error([
+                'title'     => AV_Petitioner_Labels::get('could_not_submit'),
+                'message'   => AV_Petitioner_Labels::get('already_signed'),
+            ]);
+        }
+
+        $confirmation_token = null;
+
+        if ($require_approval && $default_approval_status === 'Email') {
+            $confirmation_token = AV_Email_Confirmations::generate_confirmation_token();
+        }
+
+        $data = array(
+            'form_id'           => $form_id,
+            'email'             => $email,
+            'fname'             => $fname,
+            'lname'             => $lname,
+            'country'           => $country,
+            'phone'             => $phone,
+            'street_address'    => $street_address,
+            'city'              => $city,
+            'postal_code'       => $postal_code,
+            'comments'          => $comments,
+            'bcc_yourself'      => $bcc ? 1 : 0,
+            'newsletter'        => $newsletter ? 1 : 0,
+            'hide_name'         => $hide_name ? 1 : 0,
+            'accept_tos'        => $accept_tos ? 1 : 0,
+            'submitted_at'      => current_time('mysql'),
+            'approval_status'   => $approval_status,
+        );
+
+        // Add date_of_birth if it's provided
+        if (!empty($date_of_birth)) {
+            $data['date_of_birth'] = $date_of_birth;
+        }
+
+        if ($confirmation_token) {
+            $data['confirmation_token'] = $confirmation_token;
+        }
+
+        /**
+         * Filter the form submission data before it is saved.
+         *
+         * This allows modification of the submission data (e.g. sanitization, additional metadata)
+         * before the submission is created and stored.
+         *
+         * @param array $data Associative array of submission data (field values and metadata).
+         * @param array $post_data Associative array of post data. Added in 0.8.0.
+         * @return array Modified submission data.
+         */
+        $data = apply_filters('av_petitioner_submission_data_pre_save', $data, $_POST);
+
+        $submission_id = AV_Petitioner_Submissions_Model::create_submission($data);
+
+        /**
+         * petitioner_after_submission
+         * 
+         * Fires an action after a submission is processed.
+         *
+         * This hook allows developers to perform custom actions or extend functionality
+         * after a submission has been successfully handled.
+         *
+         * @since 0.2.7
+         * 
+         * @param int $submission_id The ID of the processed submission.
+         * @param int $form_id The ID of the form associated with the submission.
+         */
+        do_action('petitioner_after_submission', $submission_id, $form_id);
+
+        if ($submission_id !== false) {
+            // Only finalize if the starting state is fully confirmed (bypasses manual moderation and emails)
+            if (isset($data['approval_status']) && $data['approval_status'] === 'Confirmed') {
+                self::trigger_finalized_hook($submission_id);
+            }
+        }
+
+        $mailer_settings = array(
+            'target_email'              => get_post_meta($form_id, '_petitioner_email', true),
+            'target_cc_emails'          => get_post_meta($form_id, '_petitioner_cc_emails', true),
+            'user_email'                => $email,
+            'user_name'                 => $fname . ' ' . $lname,
+            'user_country'              => $country,
+            'letter'                    => get_post_meta($form_id, '_petitioner_letter', true),
+            'subject'                   => get_post_meta($form_id, '_petitioner_subject', true),
+            'bcc'                       => $bcc,
+            'send_to_representative'    => get_post_meta($form_id, '_petitioner_send_to_representative', true),
+            'form_id'                   => $form_id,
+            'confirm_emails'            => $default_approval_status === 'Email',
+            'submission_id'             => $submission_id,
+            'from_field'                => get_post_meta($form_id, '_petitioner_from_field', true),
+            'from_name'                 => get_post_meta($form_id, '_petitioner_from_name', true),
+        );
+
+        /**
+         * Filter the mailer settings before sending emails.
+         *
+         * This allows modification of the mailer settings (e.g. adding/removing recipients)
+         * before the emails are sent.
+         *
+         * @param array $mailer_settings Associative array of mailer settings.
+         * @param array $submission_data Associative array of submission data.
+         * @return array Modified mailer settings.
+         */
+        $mailer_settings = apply_filters('av_petitioner_mailer_settings', $mailer_settings, $data);
+
+        $mailer = new AV_Petitioner_Mailer($mailer_settings);
+
+        $send_emails = $mailer->send_emails();
+
+        // Check if the insert was successful
+        if ($submission_id === false) {
+            wp_send_json_error([
+                'title'   => AV_Petitioner_Labels::get('could_not_submit'),
+                'message' => AV_Petitioner_Labels::get('error_generic'),
+            ]);
+
+            av_ptr_error_log(
+                'Petitioner submission error: Failed to save submission.'
+            );
+        } else {
+            if ($send_emails === false) {
+                av_ptr_error_log(
+                    'Petitioner submission warning: Failed to send emails for submission ID ' . $submission_id . '.'
+                );
+            }
+            wp_send_json_success([
+                'title'     => AV_Petitioner_Labels::get('success_message_title', $form_id),
+                'message'   => AV_Petitioner_Labels::get('success_message', $form_id),
+            ]);
+        }
+
+        wp_die();
+    }
+
+    /**
+     * Fetch form submissions for the API - admin only
+     */
+    public static function api_fetch_form_submissions()
+    {
+        self::check_admin_request(AV_Petitioner_Admin_Edit_UI::$ADMIN_EDIT_NONCE_LABEL);
+
+        // Get the form ID and pagination info from the request
+        $page           = isset($_GET['page']) ? intval($_GET['page']) : 1;
+        $per_page       = isset($_GET['per_page']) ? intval($_GET['per_page']) : 1000;
+        $offset         = ($page - 1) * $per_page;
+        $form_id        = isset($_GET['form_id']) ? intval($_GET['form_id']) : 0;
+        $order          = isset($_GET['order']) ? ($_GET['order'] === 'desc' ? 'desc' : 'asc') : null;
+        $orderby        = isset($_GET['orderby']) ? $_GET['orderby'] : '';
+
+        // Check if form_id is valid
+        if (!$form_id) {
+            wp_send_json_error('Invalid form ID.');
+            wp_die();
+        }
+
+        // Fetch submissions and total count using the new method
+        $fetch_settings = [
+            'per_page'       => $per_page,
+            'offset'         => $offset,
+            'featured_first' => true,
+        ];
+
+        if ($order) {
+            $fetch_settings['order'] = $order;
+        }
+
+        $allowed_fields = AV_Petitioner_Submissions_Model::$ALLOWED_FIELDS;
+
+        if ($orderby && in_array($orderby, $allowed_fields, true)) {
+            $fetch_settings['orderby']  = $orderby;
+        }
+
+
+        $result = AV_Petitioner_Submissions_Model::get_form_submissions($form_id, $fetch_settings);
+
+        // Calculate the total number of pages
+        $total_pages = ceil($result['total'] / $per_page);
+
+        // Return the results as a JSON response
+        wp_send_json_success(array(
+            'submissions' => $result['submissions'],
+            'total' => $result['total'],
+            'total_pages' => $total_pages,
+            'current_page' => $page,
+            'per_page' => $per_page,
+        ));
+
+        wp_die();
+    }
+
+    /**
+     * Fetch form submissions for the API
+     * 
+     * This function is used for non-logged-in users to fetch form submissions.
+     * It retrieves the form ID and pagination information from the request,
+     * validates the form ID, and then fetches the submissions using the
+     * AV_Petitioner_Submissions_Model::get_form_submissions method.
+     */
+    public static function api_get_form_submissions()
+    {
+        // Get the form ID and pagination info from the request
+        $page       = isset($_GET['page']) ? intval($_GET['page']) : 1;
+        $per_page   = isset($_GET['per_page']) ? intval($_GET['per_page']) : 1000;
+        $offset     = ($page - 1) * $per_page;
+        $form_id    = isset($_GET['form_id']) ? intval($_GET['form_id']) : 0;
+        $order      = isset($_GET['order']) ? ($_GET['order'] === 'desc' ? 'desc' : 'asc') : null;
+        $orderby    = isset($_GET['orderby']) ? $_GET['orderby'] : '';
+
+        // Check if form_id is valid
+        if (!$form_id) {
+            wp_send_json_error('Invalid form ID.');
+            wp_die();
+        }
+
+        $hide_last_name = get_post_meta($form_id, '_petitioner_hide_last_names', true);
+
+        // Fetch submissions and total count using the new method
+        $public_fields = self::get_public_fields();
+
+        $public_fields = array_values(array_unique($public_fields));
+
+        // even though you cant query some of these fields, we still need to include them in the fetch settings
+        // we later clean up the submission object to remove everything unwanted and merge lname with fname
+        $fields = array_merge($public_fields, AV_Petitioner_Submissions_Model::$INTERNAL_FIELDS);
+
+        $fetch_settings = [
+            'per_page'          => $per_page,
+            'offset'            => $offset,
+            'fields'            => $fields,
+            'featured_first'    => true,
+            'query'             => [
+                [
+                    'field'     => 'approval_status',
+                    'operator'  => 'equals',
+                    'value'     => 'Confirmed',
+                ]
+            ],
+        ];
+
+        if ($order) {
+            $fetch_settings['order'] = $order;
+        }
+
+        if ($orderby && in_array($orderby, $fields, true)) {
+            $fetch_settings['orderby'] = $orderby;
+        }
+
+        $result = AV_Petitioner_Submissions_Model::get_form_submissions($form_id, $fetch_settings);
+
+        // Calculate the total number of pages
+        $total_pages = ceil($result['total'] / $per_page);
+
+        // Merge the required UI fields with the public fields and remove duplicates
+        $label_fields = array_values(array_unique(array_merge(
+            ['name', 'submitted_at'],
+            $public_fields
+        )));
+
+        $labels = av_petitioner_get_form_labels($form_id, $label_fields);
+
+        $final_submissions = array_map(function ($submission) use ($hide_last_name, $labels) {
+            $submission = self::maybe_make_names_private($submission, $hide_last_name);
+
+            $modified_submission = [
+                'name'          => $submission->name,
+                'is_featured'   => !empty($submission->is_featured) && $submission->is_featured === '1' ? '1' : '0',
+            ];
+
+            foreach ($labels as $k => $v) {
+                if ($k === 'name') {
+                    continue;
+                }
+
+                $modified_submission[$k] = property_exists($submission, $k) ? $submission->{$k} : '';
+            }
+
+            return $modified_submission;
+        }, $result['submissions']);
+
+        // Return the results as a JSON response
+        wp_send_json_success([
+            'labels'        => $labels,
+            'submissions'   => $final_submissions,
+            'total'         => $result['total'],
+            'total_pages'   => $total_pages,
+            'current_page'  => $page,
+            'per_page'      => $per_page,
+        ]);
+
+        wp_die();
+    }
+
+    /**
+     * Update form submissions
+     * 
+     * @since 0.6.0
+     */
+    public static function api_update_form_submission()
+    {
+        self::check_admin_request(AV_Petitioner_Admin_Edit_UI::$ADMIN_EDIT_NONCE_LABEL);
+        $id = isset($_POST['id']) ? absint($_POST['id']) : null;
+
+        if (empty($id)) {
+            wp_send_json_error([
+                'message'   => AV_Petitioner_Labels::get('missing_fields'),
+            ]);
+            return;
+        }
+
+        $submission = [];
+
+        // Use the model's allowed fields to dynamically build the submission array
+        foreach (AV_Petitioner_Submissions_Model::$ALLOWED_FIELDS as $field) {
+            if (isset($_POST[$field])) {
+                switch ($field) {
+                    case 'id':
+                        break;
+                    case 'form_id':
+                        break;
+                    case 'email':
+                        $submission[$field] = sanitize_email(wp_unslash($_POST[$field]));
+                        break;
+                    case 'comments':
+                        $submission[$field] = sanitize_textarea_field(wp_unslash($_POST[$field]));
+                        break;
+                    case 'salutation':
+                    case 'confirmation_token':
+                        // Handle nullable fields
+                        $value = $_POST[$field];
+                        $submission[$field] = ($value !== '' && $value !== null) ? sanitize_text_field(wp_unslash($value)) : null;
+                        break;
+                    case 'is_featured':
+                        $submission[$field] = filter_var(wp_unslash($_POST[$field]), FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+                        break;
+                    default:
+                        // Default sanitization for text fields
+                        $submission[$field] = sanitize_text_field(wp_unslash($_POST[$field]));
+                        break;
+                }
+            }
+        }
+
+        /**
+         * Filter the submission data before it is updated
+         *
+         * @param array $fields - the submission data array that is being updated
+         * @param array $_POST - the $_POST data passed to the form submission
+         * @return array - the modified submission data array
+         */
+        $submission = apply_filters('av_petitioner_submission_data_pre_update', $submission, $_POST);
+
+        $old_submission = AV_Petitioner_Submissions_Model::get_submission_by_id($id);
+
+        if (!$old_submission) {
+            wp_send_json_error(['message' => AV_Petitioner_Labels::get('error_generic')]);
+        }
+
+        $was_confirmed = $old_submission->approval_status === 'Confirmed';
+
+        $updated_rows = AV_Petitioner_Submissions_Model::update_submission($id, $submission);
+
+        $approval_status = isset($submission['approval_status']) ? $submission['approval_status'] : null;
+
+        if ($updated_rows === false) {
+            wp_send_json_error(['message' => AV_Petitioner_Labels::get('error_generic')]);
+        }
+        // Only trigger if it WAS NOT confirmed before, and IS confirmed now
+        if (!$was_confirmed && $approval_status === 'Confirmed') {
+            self::trigger_finalized_hook($id);
+            self::trigger_final_emails($id);
+        }
+
+        wp_send_json_success(['message' => AV_Petitioner_Labels::get('success_generic'), 'updated_rows' => $updated_rows]);
+    }
+
+    /**
+     * @since 0.6.0
+     */
+    public static function api_delete_form_submission()
+    {
+        self::check_admin_request(AV_Petitioner_Admin_Edit_UI::$ADMIN_EDIT_NONCE_LABEL);
+
+        $id = isset($_POST['id']) ? absint($_POST['id']) : null;
+
+        if (empty($id)) {
+            wp_send_json_error([
+                'message'   => AV_Petitioner_Labels::get('missing_fields'),
+            ]);
+            return;
+        }
+
+        $updated_rows = AV_Petitioner_Submissions_Model::delete_submission($id);
+
+        if ($updated_rows === 0) {
+            wp_send_json_error(['message' => AV_Petitioner_Labels::get('error_generic')]);
+        }
+
+        wp_send_json_success(['message' => AV_Petitioner_Labels::get('success_generic'), 'updated_rows' => $updated_rows]);
+    }
+
+    /**
+     * Get the count of submissions for a specific form
+     * 
+     * @since 0.7.0
+     */
+    public static function api_get_submission_count()
+    {
+        self::check_admin_request(AV_Petitioner_Admin_Edit_UI::$ADMIN_EDIT_NONCE_LABEL);
+
+        $form_id = isset($_POST['form_id']) ? absint($_POST['form_id']) : 0;
+        $settings = [];
+
+        if (!$form_id) {
+            wp_send_json_error(['message' => AV_Petitioner_Labels::get('invalid_form_id')]);
+        }
+
+        $conditional_logic_raw = isset($_POST['conditional_logic']) ? wp_unslash($_POST['conditional_logic']) : null;
+
+        if ($conditional_logic_raw) {
+            $conditional_logic = av_petitioner_parse_conditional_logic($conditional_logic_raw);
+            $settings['query'] = av_petitioner_build_model_query($conditional_logic);
+        }
+
+        // $skip_unconfirmed is false because we want user to control this
+        $count = AV_Petitioner_Submissions_Model::get_submission_count($form_id, $settings, false);
+
+        if ($count === false) {
+            wp_send_json_error(['message' => AV_Petitioner_Labels::get('error_generic')]);
+        }
+
+        wp_send_json_success(['count' => $count]);
+    }
+
+    /**
+     * Update submission status via backend
+     */
+    public static function api_change_submission_status()
+    {
+        self::check_admin_request(AV_Petitioner_Admin_Edit_UI::$ADMIN_EDIT_NONCE_LABEL);
+
+        $id         = isset($_POST['id']) ? absint($_POST['id']) : 0;
+        $new_status = isset($_POST['status']) ? sanitize_text_field(wp_unslash($_POST['status'])) : '';
+
+        if (!$id || empty($new_status)) {
+            wp_send_json_error(['message' => AV_Petitioner_Labels::get('missing_fields')]);
+            return;
+        }
+
+        $updated_rows = AV_Petitioner_Submissions_Model::update_submission($id, ['approval_status' => $new_status]);
+
+        if ($updated_rows === false) {
+            wp_send_json_error(['message' => AV_Petitioner_Labels::get('error_generic')]);
+            return;
+        }
+
+        // If the admin manually approved a pending/declined submission, fire the finalization hook
+        // so that CRMs and Webhooks recognize it's now ready for processing.
+        if ($new_status === 'Confirmed' && $updated_rows > 0) {
+            self::trigger_finalized_hook($id);
+
+            self::trigger_final_emails($id);
+        }
+
+        wp_send_json_success([
+            'message' => 'Status updated successfully.',
+            'updated_rows' => $updated_rows
+        ]);
+    }
+
+    /**
+     * Resend confirmation email to a specific submission
+     */
+    public static function api_resend_confirmation_email()
+    {
+        self::check_admin_request(AV_Petitioner_Admin_Edit_UI::$ADMIN_EDIT_NONCE_LABEL);
+
+        $id = isset($_POST['id']) ? absint($_POST['id']) : 0;
+        if (!$id) {
+            wp_send_json_error(['message' => AV_Petitioner_Labels::get('missing_fields')]);
+        }
+
+        $submission = AV_Petitioner_Submissions_Model::get_submission_by_id($id);
+
+        if (!$submission || $submission->approval_status === 'Confirmed') {
+            wp_send_json_error(['message' => AV_Petitioner_Labels::get('already_confirmed')]);
+        }
+
+        if (empty($submission->confirmation_token)) {
+            wp_send_json_error(['message' => AV_Petitioner_Labels::get('missing_confirmation_token')]);
+        }
+
+        $success = AV_Email_Confirmations::send_emails($submission, true, true);
+
+        if ($success) {
+            wp_send_json_success(['message' => AV_Petitioner_Labels::get('confirmation_resent')]);
+        } else {
+            wp_send_json_error(['message' => AV_Petitioner_Labels::get('error_generic')]);
+        }
+    }
+
+    /**
+     * Resend confirmation emails to all unconfirmed submissions
+     */
+    public static function api_resend_all_confirmation_emails()
+    {
+        self::check_admin_request(AV_Petitioner_Admin_Edit_UI::$ADMIN_EDIT_NONCE_LABEL);
+
+        $form_id = isset($_POST['form_id']) ? absint($_POST['form_id']) : 0;
+
+        if (!$form_id) {
+            wp_send_json_error(['message' => AV_Petitioner_Labels::get('missing_fields')]);
+        }
+
+        $results = AV_Petitioner_Submissions_Model::get_unconfirmed_submissions($form_id);
+
+        if (empty($results)) {
+            wp_send_json_error(['message' => 'No unconfirmed submissions found.']);
+        }
+
+        $count = 0;
+        foreach ($results as $submission) {
+            $success = AV_Email_Confirmations::send_emails($submission, true, true);
+            if ($success) {
+                $count++;
+            }
+        }
+
+        wp_send_json_success(['message' => "Resent confirmation emails to $count users."]);
+    }
+
+    /**
+     * Check the count of unconfirmed submissions for a specific form
+     */
+    public static function api_check_unconfirmed_count()
+    {
+        self::check_admin_request(AV_Petitioner_Admin_Edit_UI::$ADMIN_EDIT_NONCE_LABEL);
+
+        $form_id = isset($_POST['form_id']) ? absint($_POST['form_id']) : 0;
+
+        if (!$form_id) {
+            wp_send_json_error(['message' => AV_Petitioner_Labels::get('invalid_form_id')]);
+        }
+
+        $count = AV_Petitioner_Submissions_Model::get_unconfirmed_count($form_id);
+
+        wp_send_json_success(['count' => (int) $count]);
+    }
+
+    /**
+     * Export submissions to CSV
+     * 
+     * @deprecated 0.7.0 Use AV_Petitioner_CSV_Exporter::api_admin_petitioner_export_csv() instead
+     * @see AV_Petitioner_CSV_Exporter::api_admin_petitioner_export_csv()
+     * 
+     * @return void
+     */
+    public static function admin_petitioner_export_csv()
+    {
+        _deprecated_function(
+            __METHOD__,
+            '0.7.0',
+            'AV_Petitioner_CSV_Exporter::api_admin_petitioner_export_csv'
+        );
+
+        AV_Petitioner_CSV_Exporter::api_admin_petitioner_export_csv();
+    }
+
+    /**
+     * Verify the CAPTCHA response (Supports both Google reCAPTCHA v3 & hCaptcha).
+     *
+     * @param string $captcha_response The CAPTCHA response token from the form.
+     * @param string $captcha_type The type of CAPTCHA ('recaptcha' or 'hcaptcha').
+     * @return array Response array with 'success' boolean and 'message' string.
+     * @since 0.2.3
+     */
+    public static function verify_captcha($captcha_response, $captcha_type = 'recaptcha')
+    {
+        // Lookup table for each CAPTCHA provider
+        $providers = [
+            'recaptcha' => [
+                'secret_key_option' => 'petitioner_recaptcha_secret_key',
+                'verify_url'        => 'https://www.google.com/recaptcha/api/siteverify',
+            ],
+            'hcaptcha' => [
+                'secret_key_option' => 'petitioner_hcaptcha_secret_key',
+                'verify_url'        => 'https://hcaptcha.com/siteverify',
+            ],
+            'turnstile' => [
+                'secret_key_option' => 'petitioner_turnstile_secret_key',
+                'verify_url'        => 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+            ],
+        ];
+
+        // Validate captcha type
+        if (! isset($providers[$captcha_type])) {
+            return [
+                'success' => false,
+                'message' => __('Invalid CAPTCHA type.', 'petitioner'),
+            ];
+        }
+
+        $provider = $providers[$captcha_type];
+        $captcha_secret = get_option($provider['secret_key_option'], '');
+
+        // Handle missing response
+        if (empty($captcha_response)) {
+            return [
+                'success' => false,
+                'message' => __('CAPTCHA response is missing.', 'petitioner'),
+            ];
+        }
+
+        // Send request to verification API
+        $api_response = wp_remote_post($provider['verify_url'], [
+            'body' => [
+                'secret'   => $captcha_secret,
+                'response' => $captcha_response,
+                'remoteip' => $_SERVER['REMOTE_ADDR'],
+            ],
+        ]);
+
+        // Handle connection failure
+        if (is_wp_error($api_response)) {
+            return [
+                'success' => false,
+                'message' => __('CAPTCHA verification failed: Unable to connect.', 'petitioner'),
+            ];
+        }
+
+        // Decode API response
+        $body = json_decode(wp_remote_retrieve_body($api_response), true);
+
+        // Validate general success
+        if (! isset($body['success']) || ! $body['success']) {
+            return [
+                'success' => false,
+                'message' => __('CAPTCHA verification failed.', 'petitioner'),
+            ];
+        }
+
+        // Special case: Check reCAPTCHA v3 score
+        if ($captcha_type === 'recaptcha' && isset($body['score']) && $body['score'] < 0.5) {
+            return [
+                'success' => false,
+                'message' => __('reCAPTCHA score too low. Please try again.', 'petitioner'),
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => __('CAPTCHA verification completed.', 'petitioner'),
+        ];
+    }
+
+    public static function check_admin_request($nonce_label)
+    {
+        if (!check_ajax_referer($nonce_label, 'petitioner_nonce', false)) {
+            wp_send_json_error([
+                'title'     => AV_Petitioner_Labels::get('could_not_submit'),
+                'message'   => AV_Petitioner_Labels::get('invalid_nonce'),
+            ]);
+            wp_die();
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message'   => AV_Petitioner_Labels::get('missing_permissions'),
+            ]);
+            wp_die();
+        }
+    }
+
+    /**
+     * Get fields that are safe to display publicly.
+     * 
+     * Note: these are not the same as the actual columns in the database. 
+     * 
+     * @return array Array of field names safe for public display
+     * @since 0.8.0
+     */
+    public static function get_public_fields()
+    {
+        // Calculate public fields: allowed minus sensitive
+        $public_fields = array_diff(
+            AV_Petitioner_Submissions_Model::$ALLOWED_FIELDS,
+            AV_Petitioner_Submissions_Model::$SENSITIVE_FIELDS
+        );
+
+        /**
+         * Filter the public fields that are displayed in the submissions list
+         * 
+         * @param array $public_fields The public fields that are displayed in the submissions list
+         * @return array The public fields that are displayed in the submissions list
+         */
+        $public_fields = apply_filters('av_petitioner_public_fields', $public_fields);
+
+        // Remove internal fields and re-validate sensitive fields
+        $excluded_from_display = array_merge(AV_Petitioner_Submissions_Model::$INTERNAL_FIELDS, AV_Petitioner_Submissions_Model::$SENSITIVE_FIELDS);
+        $public_fields = array_diff($public_fields, $excluded_from_display);
+
+        return array_values($public_fields);
+    }
+
+    /**
+     * Helper that will either turn the name into "Anonymous" or shorten the last name.
+     * 
+     * @param object $submission The current submission object
+     * @param bool   $hide_last_name Whether the form dictates last names should be shortened
+     * @return object Returns the same object with modified fname, lname, and an added name property
+     * @since 0.8.2
+     */
+    public static function maybe_make_names_private($submission, $hide_last_name)
+    {
+        if ($submission->hide_name) {
+            $submission->fname = AV_Petitioner_Labels::get('anonymous');
+            $submission->lname = '';
+        } elseif ($hide_last_name) {
+            $hidden_last_name = mb_substr($submission->lname, 0, 1);
+            /**
+             * Filter the modified/hidden last name for an anonymized submission.
+             * 
+             * Allows developers to customize how a last name is shortened. For example, 
+             * turning "van der Sar" into "v. d. S." instead of just "v".
+             * 
+             * @param string $hidden_last_name The initially calculated hidden last name (e.g., the first letter).
+             * @param array  $submission       The full submission array, including the original `$submission['lname']`.
+             *
+             * @example
+             * ```php
+             * add_filter('av_petitioner_hide_last_name', function ($hidden_last_name, $submission) {
+             *     // Example: $submission['fname'] is "Jan", $submission['lname'] is "van der Sar"
+             *     // We want to turn the last name into "v. d. S."
+             *     $parts = explode(' ', $submission['lname']);
+             *     $initials = array_map(function($part) {
+             *         return mb_substr($part, 0, 1) . '.';
+             *     }, $parts);
+             *     
+             *     return implode(' ', $initials);
+             * }, 10, 2);
+             * ```
+             */
+            $submission->lname = apply_filters('av_petitioner_hide_last_name', $hidden_last_name, (array) $submission);
+        }
+
+        $submission->name = trim($submission->fname . ' ' . $submission->lname);
+
+        return $submission;
+    }
+
+    /**
+     * Helper method to uniformly trigger the finalized hook.
+     * Ensures the fully hydrated object is passed to downstream integrations.
+     * 
+     * @param int $submission_id The submission ID
+     * @return void
+     * @since 0.8.2
+     */
+    public static function trigger_finalized_hook($submission_id)
+    {
+        $submission = AV_Petitioner_Submissions_Model::get_submission_by_id($submission_id);
+
+        if ($submission) {
+            /**
+             * petitioner_submission_finalized
+             *
+             * Fires when a petition submission is verified and fully complete.
+             * This abstracts away double-opt-in logic, firing either right after
+             * submission (if confirmations are off), after email confirmation, or after manual approval.
+             *
+             * Use this to sync data to external services, send custom notifications, etc.
+             * 
+             * @since 0.8.2
+             * 
+             * @param object $submission The submission object.
+             * @param int $form_id       The ID of the form associated with the submission.
+             */
+            do_action('petitioner_submission_finalized', $submission, $submission->form_id);
+        }
+    }
+
+    /**
+     * Helper method to uniformly trigger the representative email.
+     * 
+     * @param int $submission_id The submission ID
+     * @return void
+     * @since 0.8.2
+     */
+    public static function trigger_final_emails($submission_id)
+    {
+        $submission = AV_Petitioner_Submissions_Model::get_submission_by_id($submission_id);
+        if (!$submission) return;
+
+        AV_Email_Confirmations::send_emails($submission, false, false);
+    }
+
+    /**
+     * Get the default approval status for a new submission based on form settings.
+     * 
+     * @since 0.8.2
+     * 
+     * @param bool   $require_approval        Whether approval is required.
+     * @param string $default_approval_status The default approval state setting.
+     * @return string The default approval status ('Confirmed', 'Declined', or 'Pending').
+     */
+    public static function get_default_status($require_approval, $default_approval_status)
+    {
+        if ($require_approval) {
+            if ($default_approval_status === 'Email') {
+                return 'Declined';
+            }
+            return $default_approval_status;
+        }
+
+        return 'Confirmed';
+    }
+}
