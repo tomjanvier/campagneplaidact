@@ -113,7 +113,8 @@ final class Petitioner_Integration
         $is_petitioner_sending = (bool) get_post_meta(
             $form_id,
             "_petitioner_send_to_representative",
-            true
+            true,
+            !empty($submission->newsletter)
         );
         $petitioner_target = sanitize_email(
             (string) get_post_meta($form_id, "_petitioner_email", true)
@@ -133,7 +134,7 @@ final class Petitioner_Integration
     }
 
     /**
-     * Subscribes opted-in Petitioner signers to the campaign newsletter flow.
+     * Subscribes Petitioner signers to the petition Brevo list and newsletter flow when configured.
      *
      * @param object      $submission Submission object.
      * @param string      $full_name Full name.
@@ -145,10 +146,6 @@ final class Petitioner_Integration
         string $full_name,
         ?string $language
     ): void {
-        if (empty($submission->newsletter)) {
-            return;
-        }
-
         $email = sanitize_email((string) ($submission->email ?? ""));
 
         if (!$email) {
@@ -158,7 +155,9 @@ final class Petitioner_Integration
         $result = Shortcodes::subscribe_to_brevo_lists(
             $email,
             $full_name,
-            $language
+            $language,
+            true,
+            !empty($submission->newsletter)
         );
 
         if (!class_exists("AV_Petitioner_Submissions_Model")) {
