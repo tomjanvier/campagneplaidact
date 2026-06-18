@@ -1,117 +1,59 @@
 # PLAID·ACT Campaign Factory
 
-Boilerplate WordPress orienté **campagnes multisite** avec une séparation claire :
-
-- **Plugin (`plaidact-campaign-core`)** : logique métier réutilisable (CPT, taxonomies, métadonnées, shortcodes).
-- **Thème (`plaidact-campaign`)** : rendu one-page, UX, styles, sections éditoriales.
+Plugin WordPress unique pour piloter des campagnes PLAID·ACT en multisite : contenus, pétitions, newsletter, pages one-page et rendu frontend sont regroupés dans `plaidact-campaign-core`.
 
 ## Objectif
 
-Ce repository permet de créer rapidement des sites de campagnes homogènes, tout en gardant chaque sous-site personnalisable via le Customizer.
+Le dépôt ne livre plus de thème WordPress dédié ni de plugin séparé à activer. L’idée est d’installer et d’activer un seul plugin réseau, puis d’activer dans ses réglages les éléments souhaités pour chaque campagne.
 
-## Arborescence GitHub (logique plugin / thème)
+## Arborescence
 
 ```text
 .
 ├─ README.md
 ├─ ARCHITECTURE.md
 └─ wp-content/
-   ├─ plugins/
-   │  └─ plaidact-campaign-core/
-   │     ├─ plaidact-campaign-core.php
-   │     └─ includes/
-   │        ├─ class-plaidact-campaign-cpt.php
-   │        ├─ class-plaidact-campaign-polylang.php
-   │        ├─ class-plaidact-campaign-petition-workflows.php
-   │        ├─ class-plaidact-campaign-petitioner-integration.php
-   │        ├─ class-plaidact-campaign-shortcodes.php
-   │        └─ class-plaidact-campaign-demo.php
-   │  └─ petitioner/
-   │     ├─ petitioner.php
-   │     ├─ dist/
-   │     └─ dist-gutenberg/
-   └─ themes/
-      └─ plaidact-campaign/
-         ├─ style.css
-         ├─ functions.php
-         ├─ front-page.php
-         ├─ index.php
-         ├─ header.php
-         ├─ footer.php
-         ├─ inc/
-         │  └─ customizer.php
-         └─ template-parts/
-            └─ sections/
-               ├─ partners.php
-               ├─ petition.php
-               ├─ breves.php
-               ├─ articles.php
-               ├─ report-highlight.php
-               └─ social-wall.php
+   └─ plugins/
+      └─ plaidact-campaign-core/
+         ├─ plaidact-campaign-core.php
+         ├─ assets/
+         │  ├─ campagne-onepage.css
+         │  └─ campagne-onepage.js
+         ├─ includes/
+         │  ├─ class-plaidact-campaign-cpt.php
+         │  ├─ class-plaidact-campaign-demo.php
+         │  ├─ class-plaidact-campaign-onepage.php
+         │  ├─ class-plaidact-campaign-petitioner-integration.php
+         │  ├─ class-plaidact-campaign-petition-workflows.php
+         │  ├─ class-plaidact-campaign-polylang.php
+         │  └─ class-plaidact-campaign-shortcodes.php
+         ├─ templates/
+         │  └─ campagne-onepage.php
+         └─ vendor/
+            └─ petitioner/
 ```
 
-## Côté plugin : `plaidact-campaign-core`
+## Fonctionnalités regroupées
 
-### Contenu livré
+- CPT `plaid_breve` et `plaid_partner`.
+- Taxonomies de campagne et de classification (`campagne`, `plaid_breve_topic`, `plaid_partner_type`).
+- Création automatique d’une page one-page quand une campagne est créée.
+- Template frontend et assets one-page directement fournis par le plugin.
+- Module `Petitioner` embarqué dans `vendor/petitioner` et chargé par le core.
+- Shortcodes : `[petition_form]`, `[plaid_newsletter_form]`, `[plaid_send_campaign]`, `[plaid_social_wall]`, `[plaidact_campagne_onepage]`.
+- Réglages **Réglages → PLAID·ACT Campagne** pour choisir les éléments actifs : pétition, newsletter, envoi au décideur, social wall, articles et rapport PDF.
+- Compatibilité Polylang pour les chaînes métier et la résolution des formulaires traduits.
+- Outil **Outils → PLAID·ACT Démo** pour exporter/importer une démo.
 
-- CPT `plaid_breve` pour les actualités courtes de campagne.
-- CPT `plaid_partner` pour les organisations partenaires (avec ordre manuel).
-- Module `Petitioner` embarqué et chargé automatiquement par le core pour les formulaires avancés de pétition.
-- Taxonomies :
-  - `plaid_breve_topic` (thématiques des brèves)
-  - `plaid_partner_type` (classification partenaires)
-- Métadonnée REST-compatible `_plaid_partner_url` avec metabox admin.
-- Shortcodes de base :
-  - `[petition_form]`
-  - `[plaid_social_wall]`
-- Compatibilité Polylang :
-  - chaînes des formulaires enregistrées dans Polylang > Traductions des chaînes,
-  - résolution automatique du bon formulaire `Petitioner` traduit si un `petition_form_id` est configuré,
-  - langue transmise aux formulaires pétition / newsletter et à la synchro Brevo.
-- Fusion métier pétition :
-  - la logique de notification / email décideur / redirection est centralisée dans le core,
-  - les signatures `Petitioner` réutilisent la synchro newsletter Brevo du core,
-  - les notifications campagne et l’email au décideur restent pilotés depuis `PLAID·ACT Campagne`.
-- Outil **Outils → PLAID·ACT Démo** pour :
-  - exporter un **ZIP de démo** prêt à partager (`plaidact-demo.json` + README),
-  - importer ce ZIP sur un autre site en quelques clics.
+## Activation
 
-### Activation
-
-- Activer uniquement `plaidact-campaign-core` en **network activation** sur le multisite.
-- Le dossier `petitioner/` reste embarqué dans le repo mais n’a plus vocation à être activé séparément.
-
-## Côté thème : `plaidact-campaign`
-
-### Fonctionnalités
-
-- Template `front-page.php` one-page (hero + sections).
-- Fallback `index.php` (obligatoire pour l’installation du thème via ZIP WordPress).
-- Sections découplées en `template-parts/sections/*`.
-- Toggles Customizer pour activer/désactiver les blocs (pétition, social wall, articles, rapport PDF).
-- Hero personnalisable (titre, sous-titre, image/vidéo).
-- Bloc “**Rapport PDF mis en avant**” personnalisable (titre, texte, CTA, URL PDF).
-- Support logo personnalisé et menu one-page.
-- CSS de base pour hero, cartes, CTA.
-
-### Dépendances logiques
-
-Le thème peut fonctionner seul visuellement, mais les sections **Brèves**, **Partenaires**, **Pétition**, **Social wall** prennent tout leur sens quand le plugin core est actif.
-
-## Workflow recommandé
-
-1. Activer le plugin `plaidact-campaign-core` (network).
-2. Activer le thème `plaidact-campaign` sur un sous-site.
-3. (Optionnel) Aller dans **Outils → PLAID·ACT Démo** pour importer un ZIP de démo.
-4. Configurer :
-   - Menu one-page
-   - Hero dans le Customizer
-   - Section “Rapport PDF mis en avant” dans le Customizer
-   - Réglages > `PLAID·ACT Campagne` pour renseigner l’ID du formulaire `Petitioner`, ou laisser vide si un seul formulaire `petitioner-petition` existe
-   - Contenus (Brèves, Partenaires, Articles)
-5. Ajuster les shortcodes/embeds selon les outils réels de pétition et de social wall.
+1. Installer le dossier `wp-content/plugins/plaidact-campaign-core/`.
+2. Activer `PLAID·ACT Campaign Core` en network activation sur le multisite.
+3. Aller dans **Réglages → PLAID·ACT Campagne** pour configurer les services, textes et éléments one-page à afficher.
+4. Créer des termes dans la taxonomie **Campagnes** : le plugin génère les pages correspondantes.
 
 ## Notes
 
-- La police `gotham-noir.woff2` est optionnelle (fallback Inter/système).
-- Le code est pensé pour être enrichi ensuite (connecteurs API, bloc Gutenberg, tracking analytics).
+- Le dépôt est maintenant volontairement centré sur un plugin unique.
+- Le thème actif du site fournit uniquement l’enveloppe WordPress (`get_header()` / `get_footer()`), tandis que le rendu campagne est assuré par le plugin.
+- `Petitioner` reste embarqué comme module interne et n’a pas vocation à être activé séparément.

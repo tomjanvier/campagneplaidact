@@ -2,7 +2,7 @@
 /**
  * Template one-page rendu par le plugin pour une campagne.
  *
- * @package plaidact-campagne-onepage
+ * @package PLAIDACT\CampaignCore
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

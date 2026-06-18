@@ -106,7 +106,7 @@ final class Demo {
 		}
 
 		$zip->addFromString( 'plaidact-demo.json', wp_json_encode( self::get_demo_payload(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ) ?: '{}' );
-		$zip->addFromString( 'README.txt', "PLAID·ACT demo\n1) Activez le thème plaidact-campaign\n2) Outils > PLAID·ACT Démo > Importer un ZIP\n" );
+		$zip->addFromString( 'README.txt', "PLAID·ACT demo\n1) Activez le plugin PLAID·ACT Campaign Core\n2) Outils > PLAID·ACT Démo > Importer un ZIP\n" );
 		$zip->close();
 
 		header( 'Content-Type: application/zip' );
@@ -180,18 +180,12 @@ final class Demo {
 	 */
 	private static function get_demo_payload(): array {
 		return array(
-			'theme_mods' => array(
-				'hero_title'             => __( 'Agissons ensemble pour un monde plus juste.', 'plaidact-campaign-core' ),
-				'hero_subtitle'          => __( 'Un site de campagne simple, efficace et prêt à accueillir vos organisations partenaires.', 'plaidact-campaign-core' ),
-				'hero_primary_cta_label' => __( 'Signer la pétition', 'plaidact-campaign-core' ),
-				'hero_primary_cta_url'   => '#petition',
-				'hero_secondary_cta_label' => __( 'En savoir plus', 'plaidact-campaign-core' ),
-				'hero_secondary_cta_url' => '#breves',
-				'campaign_primary_color' => '#2f6d4b',
-				'enable_report_highlight'=> true,
-				'report_title'           => __( 'Note stratégique – Printemps 2026', 'plaidact-campaign-core' ),
-				'report_excerpt'         => __( 'Téléchargez notre note pour comprendre les enjeux et relayer des arguments solides.', 'plaidact-campaign-core' ),
-				'report_button_label'    => __( 'Télécharger la note (PDF)', 'plaidact-campaign-core' ),
+			'campaign_settings' => array(
+				'enable_report_highlight' => '1',
+				'report_title'            => __( 'Note stratégique – Printemps 2026', 'plaidact-campaign-core' ),
+				'report_excerpt'          => __( 'Téléchargez notre note pour comprendre les enjeux et relayer des arguments solides.', 'plaidact-campaign-core' ),
+				'report_button_label'     => __( 'Télécharger la note (PDF)', 'plaidact-campaign-core' ),
+				'social_share_text'       => __( 'Je soutiens cette campagne citoyenne. Rejoignez-nous !', 'plaidact-campaign-core' ),
 			),
 			'posts'      => array(
 				array(
@@ -223,12 +217,17 @@ final class Demo {
 	 * @return void
 	 */
 	private static function import_payload( array $payload ): void {
-		if ( ! empty( $payload['theme_mods'] ) && is_array( $payload['theme_mods'] ) ) {
-			foreach ( $payload['theme_mods'] as $key => $value ) {
-				if ( is_string( $key ) ) {
-					set_theme_mod( $key, is_scalar( $value ) ? $value : '' );
+		if ( ! empty( $payload['campaign_settings'] ) && is_array( $payload['campaign_settings'] ) ) {
+			$current_settings = (array) get_option( 'plaidact_campaign_settings', array() );
+			$demo_settings    = array();
+
+			foreach ( $payload['campaign_settings'] as $key => $value ) {
+				if ( is_string( $key ) && is_scalar( $value ) ) {
+					$demo_settings[ $key ] = $value;
 				}
 			}
+
+			update_option( 'plaidact_campaign_settings', array_merge( $current_settings, $demo_settings ) );
 		}
 
 		if ( empty( $payload['posts'] ) || ! is_array( $payload['posts'] ) ) {

@@ -1,9 +1,8 @@
 <?php
 /**
- * Plugin Name: PLAID·ACT Campagne Onepage
- * Description: Déclare une taxonomie campagne et génère automatiquement des pages one-page pilotées depuis un plugin.
- * Version: 0.2.1
- * Author: PLAID·ACT
+ * Campaign one-page rendering bundled in PLAID·ACT Campaign Core.
+ *
+ * @package PLAIDACT\CampaignCore
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -16,7 +15,7 @@ final class Plaidact_Campagne_Onepage {
 	const TERM_PAGE_META_KEY  = '_plaidact_campagne_page_id';
 	const SHORTCODE_TAG       = 'plaidact_campagne_onepage';
 	const DEFAULT_PAGE_STATUS = 'publish';
-	const ASSET_VERSION       = '0.2.1';
+	const ASSET_VERSION       = PLAIDACT_CORE_VERSION;
 
 	public function __construct() {
 		add_action( 'init', array( $this, 'register_taxonomy' ) );
@@ -40,15 +39,15 @@ final class Plaidact_Campagne_Onepage {
 
 	public function register_taxonomy() {
 		$labels = array(
-			'name'              => __( 'Campagnes', 'plaidact-campagne-onepage' ),
-			'singular_name'     => __( 'Campagne', 'plaidact-campagne-onepage' ),
-			'search_items'      => __( 'Rechercher des campagnes', 'plaidact-campagne-onepage' ),
-			'all_items'         => __( 'Toutes les campagnes', 'plaidact-campagne-onepage' ),
-			'edit_item'         => __( 'Modifier la campagne', 'plaidact-campagne-onepage' ),
-			'update_item'       => __( 'Mettre à jour la campagne', 'plaidact-campagne-onepage' ),
-			'add_new_item'      => __( 'Ajouter une campagne', 'plaidact-campagne-onepage' ),
-			'new_item_name'     => __( 'Nom de la nouvelle campagne', 'plaidact-campagne-onepage' ),
-			'menu_name'         => __( 'Campagnes', 'plaidact-campagne-onepage' ),
+			'name'              => __( 'Campagnes', 'plaidact-campaign-core' ),
+			'singular_name'     => __( 'Campagne', 'plaidact-campaign-core' ),
+			'search_items'      => __( 'Rechercher des campagnes', 'plaidact-campaign-core' ),
+			'all_items'         => __( 'Toutes les campagnes', 'plaidact-campaign-core' ),
+			'edit_item'         => __( 'Modifier la campagne', 'plaidact-campaign-core' ),
+			'update_item'       => __( 'Mettre à jour la campagne', 'plaidact-campaign-core' ),
+			'add_new_item'      => __( 'Ajouter une campagne', 'plaidact-campaign-core' ),
+			'new_item_name'     => __( 'Nom de la nouvelle campagne', 'plaidact-campaign-core' ),
+			'menu_name'         => __( 'Campagnes', 'plaidact-campaign-core' ),
 		);
 
 		register_taxonomy(
@@ -84,7 +83,7 @@ final class Plaidact_Campagne_Onepage {
 		$page_id = wp_insert_post(
 			array(
 				'post_type'    => 'page',
-				'post_title'   => sprintf( __( 'Campagne : %s', 'plaidact-campagne-onepage' ), $term->name ),
+				'post_title'   => sprintf( __( 'Campagne : %s', 'plaidact-campaign-core' ), $term->name ),
 				'post_name'    => 'campagne-' . $term->slug,
 				'post_status'  => self::DEFAULT_PAGE_STATUS,
 				'post_content' => sprintf( '[%s term_slug="%s"]', self::SHORTCODE_TAG, esc_attr( $term->slug ) ),
@@ -114,7 +113,7 @@ final class Plaidact_Campagne_Onepage {
 		wp_update_post(
 			array(
 				'ID'         => $page_id,
-				'post_title' => sprintf( __( 'Campagne : %s', 'plaidact-campagne-onepage' ), $term->name ),
+				'post_title' => sprintf( __( 'Campagne : %s', 'plaidact-campaign-core' ), $term->name ),
 			)
 		);
 	}
@@ -139,7 +138,7 @@ final class Plaidact_Campagne_Onepage {
 			return $template;
 		}
 
-		$plugin_template = plugin_dir_path( __FILE__ ) . 'templates/campagne-onepage.php';
+		$plugin_template = PLAIDACT_CORE_PATH . 'templates/campagne-onepage.php';
 		if ( file_exists( $plugin_template ) ) {
 			return $plugin_template;
 		}
@@ -159,15 +158,15 @@ final class Plaidact_Campagne_Onepage {
 		}
 
 		wp_enqueue_style(
-			'plaidact-campagne-onepage',
-			plugin_dir_url( __FILE__ ) . 'assets/campagne-onepage.css',
+			'plaidact-campaign-core',
+			PLAIDACT_CORE_URL . 'assets/campagne-onepage.css',
 			array(),
 			self::ASSET_VERSION
 		);
 
 		wp_enqueue_script(
-			'plaidact-campagne-onepage',
-			plugin_dir_url( __FILE__ ) . 'assets/campagne-onepage.js',
+			'plaidact-campaign-core',
+			PLAIDACT_CORE_URL . 'assets/campagne-onepage.js',
 			array(),
 			self::ASSET_VERSION,
 			true
@@ -183,13 +182,25 @@ final class Plaidact_Campagne_Onepage {
 	}
 
 	private function is_section_enabled( string $key, bool $default = true ): bool {
-		if ( function_exists( 'plaidact_is_enabled' ) ) {
-			return (bool) plaidact_is_enabled( $key, $default );
-		}
+		$settings = $this->get_campaign_settings();
 
-		return $default;
+		return isset( $settings[ $key ] ) ? (bool) $settings[ $key ] : $default;
 	}
 
+
+	private function get_campaign_settings(): array {
+		if ( class_exists( '\\Plaidact\\CampaignCore\\Shortcodes' ) ) {
+			return \Plaidact\CampaignCore\Shortcodes::get_settings();
+		}
+
+		return array();
+	}
+
+	private function get_campaign_setting( string $key, string $default = '' ): string {
+		$settings = $this->get_campaign_settings();
+
+		return isset( $settings[ $key ] ) ? (string) $settings[ $key ] : $default;
+	}
 
 	private function render_shortcode_or_notice( string $tag, string $notice ): string {
 		if ( shortcode_exists( $tag ) ) {
@@ -226,7 +237,7 @@ final class Plaidact_Campagne_Onepage {
 		}
 
 		$settings           = (array) get_option( 'plaidact_campaign_settings', array() );
-		$share_default_text = (string) ( $settings['social_share_text'] ?? __( 'Je soutiens cette campagne citoyenne. Rejoignez-nous !', 'plaidact-campagne-onepage' ) );
+		$share_default_text = (string) ( $settings['social_share_text'] ?? __( 'Je soutiens cette campagne citoyenne. Rejoignez-nous !', 'plaidact-campaign-core' ) );
 		$share_page         = get_permalink( get_queried_object_id() ) ?: home_url( '/' );
 		$share_page_encoded = rawurlencode( $share_page );
 		$main_site_url      = $this->get_main_site_url();
@@ -258,41 +269,49 @@ final class Plaidact_Campagne_Onepage {
 		?>
 		<section class="plaidact-campagne-hero">
 			<div class="plaidact-wrap">
-				<a class="plaidact-return-link" href="<?php echo esc_url( $main_site_url ); ?>"><?php esc_html_e( 'Revenir sur le site de PLAID·ACT', 'plaidact-campagne-onepage' ); ?></a>
-				<p class="plaidact-kicker"><?php esc_html_e( 'Campagne', 'plaidact-campagne-onepage' ); ?></p>
+				<a class="plaidact-return-link" href="<?php echo esc_url( $main_site_url ); ?>"><?php esc_html_e( 'Revenir sur le site de PLAID·ACT', 'plaidact-campaign-core' ); ?></a>
+				<p class="plaidact-kicker"><?php esc_html_e( 'Campagne', 'plaidact-campaign-core' ); ?></p>
 				<h1><?php echo esc_html( $term->name ); ?></h1>
 				<?php if ( ! empty( $term->description ) ) : ?>
 					<p class="plaidact-lead"><?php echo esc_html( $term->description ); ?></p>
 				<?php endif; ?>
 				<div class="plaidact-share-box">
-					<label for="plaidact-share-text"><strong><?php esc_html_e( 'Texte du post à partager', 'plaidact-campagne-onepage' ); ?></strong></label>
+					<label for="plaidact-share-text"><strong><?php esc_html_e( 'Texte du post à partager', 'plaidact-campaign-core' ); ?></strong></label>
 					<textarea id="plaidact-share-text" class="plaidact-share-box__input" rows="3"><?php echo esc_textarea( $share_default_text ); ?></textarea>
 					<div class="plaidact-share-links">
-						<a class="plaidact-share-link" data-share-target="whatsapp" href="<?php echo esc_url( 'https://api.whatsapp.com/send?text=' . rawurlencode( $share_default_text . ' ' . $share_page ) ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( 'Partager sur WhatsApp', 'plaidact-campagne-onepage' ); ?>">🟢 <span>WhatsApp</span></a>
-						<a class="plaidact-share-link" data-share-target="instagram" href="<?php echo esc_url( 'https://www.instagram.com/' ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( 'Partager sur Instagram', 'plaidact-campagne-onepage' ); ?>">📸 <span>Instagram</span></a>
-						<a class="plaidact-share-link" data-share-target="x" href="<?php echo esc_url( 'https://twitter.com/intent/tweet?url=' . $share_page_encoded . '&text=' . rawurlencode( $share_default_text ) ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( 'Partager sur X', 'plaidact-campagne-onepage' ); ?>">𝕏 <span>X</span></a>
+						<a class="plaidact-share-link" data-share-target="whatsapp" href="<?php echo esc_url( 'https://api.whatsapp.com/send?text=' . rawurlencode( $share_default_text . ' ' . $share_page ) ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( 'Partager sur WhatsApp', 'plaidact-campaign-core' ); ?>">🟢 <span>WhatsApp</span></a>
+						<a class="plaidact-share-link" data-share-target="instagram" href="<?php echo esc_url( 'https://www.instagram.com/' ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( 'Partager sur Instagram', 'plaidact-campaign-core' ); ?>">📸 <span>Instagram</span></a>
+						<a class="plaidact-share-link" data-share-target="x" href="<?php echo esc_url( 'https://twitter.com/intent/tweet?url=' . $share_page_encoded . '&text=' . rawurlencode( $share_default_text ) ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( 'Partager sur X', 'plaidact-campaign-core' ); ?>">𝕏 <span>X</span></a>
 					</div>
 				</div>
 			</div>
 		</section>
 
+		<?php if ( $this->is_section_enabled( 'enable_petition', true ) || $this->is_section_enabled( 'enable_send_campaign', true ) ) : ?>
 			<section class="plaidact-campagne-actions">
 				<div class="plaidact-wrap plaidact-grid plaidact-grid--actions">
-					<div><?php echo $this->render_shortcode_or_notice( 'petition_form', __( 'Activez le plugin PLAID·ACT Campaign Core pour afficher le formulaire de pétition.', 'plaidact-campagne-onepage' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
-					<div><?php echo $this->render_shortcode_or_notice( 'plaid_send_campaign', __( 'Activez le plugin PLAID·ACT Campaign Core pour afficher le formulaire d’envoi au décideur.', 'plaidact-campagne-onepage' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+					<?php if ( $this->is_section_enabled( 'enable_petition', true ) ) : ?>
+						<div><?php echo $this->render_shortcode_or_notice( 'petition_form', __( 'Activez le plugin PLAID·ACT Campaign Core pour afficher le formulaire de pétition.', 'plaidact-campaign-core' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+					<?php endif; ?>
+					<?php if ( $this->is_section_enabled( 'enable_send_campaign', true ) ) : ?>
+						<div><?php echo $this->render_shortcode_or_notice( 'plaid_send_campaign', __( 'Activez le plugin PLAID·ACT Campaign Core pour afficher le formulaire d’envoi au décideur.', 'plaidact-campaign-core' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+					<?php endif; ?>
 				</div>
 			</section>
+		<?php endif; ?>
 
+		<?php if ( $this->is_section_enabled( 'enable_newsletter', true ) ) : ?>
 			<section class="plaidact-campagne-actions">
 				<div class="plaidact-wrap">
-					<?php echo $this->render_shortcode_or_notice( 'plaid_newsletter_form', __( 'Activez le plugin PLAID·ACT Campaign Core pour afficher l’inscription newsletter.', 'plaidact-campagne-onepage' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+					<?php echo $this->render_shortcode_or_notice( 'plaid_newsletter_form', __( 'Activez le plugin PLAID·ACT Campaign Core pour afficher l’inscription newsletter.', 'plaidact-campaign-core' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				</div>
 			</section>
+		<?php endif; ?>
 
-		<?php if ( ! empty( $partners ) ) : ?>
+		<?php if ( ! empty( $partners ) && $this->is_section_enabled( 'enable_partners', true ) ) : ?>
 			<section class="plaidact-campagne-partners">
 				<div class="plaidact-wrap">
-					<h2><?php esc_html_e( 'Organisations de la campagne', 'plaidact-campagne-onepage' ); ?></h2>
+					<h2><?php esc_html_e( 'Organisations de la campagne', 'plaidact-campaign-core' ); ?></h2>
 					<div class="plaidact-partners-grid">
 						<?php foreach ( $partners as $partner ) : ?>
 							<div class="plaidact-partner-card">
@@ -307,9 +326,9 @@ final class Plaidact_Campagne_Onepage {
 			<?php if ( $this->is_section_enabled( 'enable_socialwall', true ) ) : ?>
 				<section class="plaidact-campagne-content">
 					<div class="plaidact-wrap">
-						<h2><?php echo esc_html( (string) get_theme_mod( 'social_wall_title', __( 'Social Wall', 'plaidact-campagne-onepage' ) ) ); ?></h2>
-						<p><?php echo esc_html( (string) get_theme_mod( 'social_wall_description', __( 'Suivez ici les publications liées à la campagne.', 'plaidact-campagne-onepage' ) ) ); ?></p>
-						<?php echo $this->render_shortcode_or_notice( 'plaid_social_wall', __( 'Activez le plugin PLAID·ACT Campaign Core pour afficher le social wall.', 'plaidact-campagne-onepage' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+						<h2><?php echo esc_html( (string) $this->get_campaign_setting( 'social_wall_title', __( 'Social Wall', 'plaidact-campaign-core' ) ) ); ?></h2>
+						<p><?php echo esc_html( (string) $this->get_campaign_setting( 'social_wall_description', __( 'Suivez ici les publications liées à la campagne.', 'plaidact-campaign-core' ) ) ); ?></p>
+						<?php echo $this->render_shortcode_or_notice( 'plaid_social_wall', __( 'Activez le plugin PLAID·ACT Campaign Core pour afficher le social wall.', 'plaidact-campaign-core' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 					</div>
 				</section>
 			<?php endif; ?>
@@ -317,25 +336,26 @@ final class Plaidact_Campagne_Onepage {
 			<?php if ( $this->is_section_enabled( 'enable_report_highlight', false ) ) : ?>
 				<section class="plaidact-campagne-content">
 					<div class="plaidact-wrap">
-						<h2><?php echo esc_html( (string) get_theme_mod( 'report_title', __( 'Rapport de campagne', 'plaidact-campagne-onepage' ) ) ); ?></h2>
-						<p><?php echo esc_html( (string) get_theme_mod( 'report_excerpt', __( 'Consultez notre rapport PDF mis en avant.', 'plaidact-campagne-onepage' ) ) ); ?></p>
+						<h2><?php echo esc_html( (string) $this->get_campaign_setting( 'report_title', __( 'Rapport de campagne', 'plaidact-campaign-core' ) ) ); ?></h2>
+						<p><?php echo esc_html( (string) $this->get_campaign_setting( 'report_excerpt', __( 'Consultez notre rapport PDF mis en avant.', 'plaidact-campaign-core' ) ) ); ?></p>
 						<?php
-						$report_pdf_url = esc_url( (string) get_theme_mod( 'report_pdf_url', '' ) );
+						$report_pdf_url = esc_url( (string) $this->get_campaign_setting( 'report_pdf_url', '' ) );
 						if ( $report_pdf_url ) :
 							?>
-							<p><a class="plaidact-share-link" href="<?php echo esc_url( $report_pdf_url ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( (string) get_theme_mod( 'report_button_label', __( 'Lire le rapport PDF', 'plaidact-campagne-onepage' ) ) ); ?></a></p>
+							<p><a class="plaidact-share-link" href="<?php echo esc_url( $report_pdf_url ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( (string) $this->get_campaign_setting( 'report_button_label', __( 'Lire le rapport PDF', 'plaidact-campaign-core' ) ) ); ?></a></p>
 						<?php else : ?>
-							<p><?php echo esc_html( (string) get_theme_mod( 'report_empty_hint', __( 'Ajoutez une URL de PDF dans le customizer du thème.', 'plaidact-campagne-onepage' ) ) ); ?></p>
+							<p><?php echo esc_html( (string) $this->get_campaign_setting( 'report_empty_hint', __( 'Ajoutez une URL de PDF dans les réglages PLAID·ACT Campagne.', 'plaidact-campaign-core' ) ) ); ?></p>
 						<?php endif; ?>
 					</div>
 				</section>
 			<?php endif; ?>
 
+			<?php if ( $this->is_section_enabled( 'enable_articles', true ) ) : ?>
 			<section class="plaidact-campagne-content">
 				<div class="plaidact-wrap">
-					<h2><?php echo esc_html( (string) get_theme_mod( 'articles_section_title', __( 'Les articles de fond', 'plaidact-campagne-onepage' ) ) ); ?></h2>
+					<h2><?php echo esc_html( (string) $this->get_campaign_setting( 'articles_section_title', __( 'Les articles de fond', 'plaidact-campaign-core' ) ) ); ?></h2>
 					<?php if ( empty( $posts ) ) : ?>
-						<p><?php esc_html_e( 'Aucun article associé à cette campagne pour le moment.', 'plaidact-campagne-onepage' ); ?></p>
+						<p><?php esc_html_e( 'Aucun article associé à cette campagne pour le moment.', 'plaidact-campaign-core' ); ?></p>
 					<?php else : ?>
 					<div class="plaidact-grid">
 						<?php foreach ( $posts as $post ) : ?>
@@ -348,12 +368,8 @@ final class Plaidact_Campagne_Onepage {
 				<?php endif; ?>
 			</div>
 		</section>
+			<?php endif; ?>
 		<?php
 		return (string) ob_get_clean();
 	}
 }
-
-new Plaidact_Campagne_Onepage();
-
-register_activation_hook( __FILE__, array( 'Plaidact_Campagne_Onepage', 'activate' ) );
-register_deactivation_hook( __FILE__, array( 'Plaidact_Campagne_Onepage', 'deactivate' ) );
