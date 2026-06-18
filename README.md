@@ -41,7 +41,7 @@ Le dépôt ne livre plus de thème WordPress dédié ni de plugin séparé à ac
 - Template frontend et assets one-page directement fournis par le plugin.
 - Module `Petitioner` embarqué dans `vendor/petitioner` et chargé par le core.
 - Shortcodes : `[petition_form]`, `[plaid_newsletter_form]`, `[plaid_send_campaign]`, `[plaid_social_wall]`, `[plaidact_campagne_onepage]`.
-- Réglages **Réglages → PLAID·ACT Campagne** pour choisir les éléments actifs : pétition, newsletter, envoi au décideur, social wall, articles et rapport PDF.
+- Réglages **Réglages → PLAID·ACT Campagne** pour choisir les parties du plugin à activer : pétition, bloc newsletter, envoi aux décideurs, répertoire, brèves, agenda, out/sorties, social wall, articles, partenaires et rapport PDF.
 - Compatibilité Polylang pour les chaînes métier et la résolution des formulaires traduits.
 - Outil **Outils → PLAID·ACT Démo** pour exporter/importer une démo.
 
@@ -49,7 +49,7 @@ Le dépôt ne livre plus de thème WordPress dédié ni de plugin séparé à ac
 
 1. Installer le dossier `wp-content/plugins/plaidact-campaign-core/`.
 2. Activer `PLAID·ACT Campaign Core` en network activation sur le multisite.
-3. Aller dans **Réglages → PLAID·ACT Campagne** pour configurer les services, textes et éléments one-page à afficher.
+3. Aller dans **Réglages → PLAID·ACT Campagne** pour configurer les services, listes Brevo (newsletter et pétition), textes et parties du plugin à afficher.
 4. Créer des termes dans la taxonomie **Campagnes** : le plugin génère les pages correspondantes.
 
 ## Notes

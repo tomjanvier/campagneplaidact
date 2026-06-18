@@ -98,7 +98,7 @@ class AV_Petitioner_Admin_Settings_UI
     {
         add_submenu_page(
             'edit.php?post_type=petitioner-petition',
-            esc_html__('Petition Settings', 'petitioner'),
+            esc_html__('Réglages pétition', 'petitioner'),
             esc_html__('Settings', 'petitioner'),
             'manage_options',
             'petition-settings',
@@ -110,7 +110,7 @@ class AV_Petitioner_Admin_Settings_UI
     {
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e('Petitioner Settings', 'petitioner'); ?></h1>
+            <h1><?php esc_html_e('Réglages pétition', 'petitioner'); ?></h1>
 
             <form method="post" action="<?php echo esc_url(admin_url('edit.php?post_type=petitioner-petition&page=petition-settings')); ?>">
                 <?php

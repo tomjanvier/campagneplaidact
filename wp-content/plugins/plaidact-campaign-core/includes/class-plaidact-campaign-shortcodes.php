@@ -97,6 +97,7 @@ final class Shortcodes
             "brevo_api_key" => "",
             "brevo_list_plaidact" => 0,
             "brevo_list_campaign" => 0,
+            "brevo_list_petition" => 0,
             "petition_intro" => __(
                 "Signez pour soutenir la campagne.",
                 "plaidact-campaign-core"
@@ -173,6 +174,10 @@ final class Shortcodes
             "enable_articles" => "1",
             "enable_partners" => "1",
             "enable_report_highlight" => "0",
+            "enable_directory" => "1",
+            "enable_breves" => "1",
+            "enable_out" => "1",
+            "enable_agenda" => "1",
             "social_wall_title" => __("Social Wall", "plaidact-campaign-core"),
             "social_wall_description" => __(
                 "Suivez ici les publications liées à la campagne.",
@@ -403,6 +408,7 @@ final class Shortcodes
             ),
             "brevo_list_plaidact" => absint($input["brevo_list_plaidact"] ?? 0),
             "brevo_list_campaign" => absint($input["brevo_list_campaign"] ?? 0),
+            "brevo_list_petition" => absint($input["brevo_list_petition"] ?? 0),
             "petition_intro" => sanitize_text_field(
                 (string) ($input["petition_intro"] ?? "")
             ),
@@ -473,6 +479,10 @@ final class Shortcodes
             "enable_articles" => !empty($input["enable_articles"]) ? "1" : "0",
             "enable_partners" => !empty($input["enable_partners"]) ? "1" : "0",
             "enable_report_highlight" => !empty($input["enable_report_highlight"]) ? "1" : "0",
+            "enable_directory" => !empty($input["enable_directory"]) ? "1" : "0",
+            "enable_breves" => !empty($input["enable_breves"]) ? "1" : "0",
+            "enable_out" => !empty($input["enable_out"]) ? "1" : "0",
+            "enable_agenda" => !empty($input["enable_agenda"]) ? "1" : "0",
             "social_wall_title" => sanitize_text_field(
                 (string) ($input["social_wall_title"] ?? "")
             ),
@@ -529,12 +539,12 @@ final class Shortcodes
     (string) $settings["petition_goal"]
 ); ?>" class="small-text" /></td></tr>
 						<tr><th scope="row"><?php esc_html_e(
-          "ID formulaire Petitioner",
+          "ID formulaire pétition",
           "plaidact-campaign-core"
       ); ?></th><td><input name="plaidact_campaign_settings[petition_form_id]" type="number" value="<?php echo esc_attr(
     (string) $settings["petition_form_id"]
 ); ?>" class="small-text" /><p class="description"><?php esc_html_e(
-    "Le module Petitioner embarqué prendra en charge la pétition. Avec Polylang, sa traduction sera résolue automatiquement.",
+    "Le module pétition embarqué prendra en charge la pétition. Avec Polylang, sa traduction sera résolue automatiquement.",
     "plaidact-campaign-core"
 ); ?></p></td></tr>
 						<tr><th scope="row"><?php esc_html_e(
@@ -561,15 +571,25 @@ final class Shortcodes
      ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_campaign]" type="number" value="<?php echo esc_attr(
     (string) $settings["brevo_list_campaign"]
 ); ?>" class="small-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "ID liste Brevo pétition",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_petition]" type="number" value="<?php echo esc_attr(
+    (string) $settings["brevo_list_petition"]
+); ?>" class="small-text" /><p class="description"><?php esc_html_e("Les personnes qui signent la pétition, y compris via le module pétition embarqué, sont ajoutées à cette liste en plus des listes newsletter cochées.", "plaidact-campaign-core"); ?></p></td></tr>
 
 					<tr><th scope="row"><?php esc_html_e(
-          "Éléments one-page actifs",
+          "Parties du plugin à activer",
           "plaidact-campaign-core"
       ); ?></th><td>
 						<?php foreach ([
           "enable_petition" => __("Pétition", "plaidact-campaign-core"),
-          "enable_newsletter" => __("Newsletter", "plaidact-campaign-core"),
-          "enable_send_campaign" => __("Envoi au décideur", "plaidact-campaign-core"),
+          "enable_newsletter" => __("Bloc newsletter", "plaidact-campaign-core"),
+          "enable_send_campaign" => __("Système d’envoi aux décideurs", "plaidact-campaign-core"),
+          "enable_directory" => __("Répertoire", "plaidact-campaign-core"),
+          "enable_breves" => __("Brèves", "plaidact-campaign-core"),
+          "enable_out" => __("Out", "plaidact-campaign-core"),
+          "enable_agenda" => __("Agenda", "plaidact-campaign-core"),
           "enable_socialwall" => __("Social wall", "plaidact-campaign-core"),
           "enable_articles" => __("Articles", "plaidact-campaign-core"),
           "enable_partners" => __("Partenaires", "plaidact-campaign-core"),
@@ -577,7 +597,7 @@ final class Shortcodes
       ] as $key => $label) : ?>
 							<label><input name="plaidact_campaign_settings[<?php echo esc_attr($key); ?>]" type="checkbox" value="1" <?php checked((string) $settings[$key], "1"); ?> /> <?php echo esc_html($label); ?></label><br />
 						<?php endforeach; ?>
-						<p class="description"><?php esc_html_e("Ces options permettent d’activer uniquement les blocs nécessaires sur les pages campagne générées par le plugin.", "plaidact-campaign-core"); ?></p>
+						<p class="description"><?php esc_html_e("Choisissez ici les parties du plugin à exposer dans l’admin et sur les pages campagne : pétition, newsletter, envoi décideurs, répertoire, brèves, agenda et sorties/out.", "plaidact-campaign-core"); ?></p>
 					</td></tr>
 					<tr><th scope="row"><?php esc_html_e("Titre articles", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[articles_section_title]" type="text" value="<?php echo esc_attr((string) $settings["articles_section_title"]); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e("Titre social wall", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[social_wall_title]" type="text" value="<?php echo esc_attr((string) $settings["social_wall_title"]); ?>" class="regular-text" /></td></tr>
@@ -1041,23 +1061,23 @@ final class Shortcodes
             $language
         );
 
-        if (isset($_POST["newsletter_optin"])) {
-            $brevo_result = self::subscribe_to_brevo_lists(
-                $email,
-                $name,
-                $language
+        $brevo_result = self::subscribe_to_brevo_lists(
+            $email,
+            $name,
+            $language,
+            true,
+            isset($_POST["newsletter_optin"])
+        );
+        if (
+            !is_wp_error($brevo_result) &&
+            !is_wp_error($signature_id) &&
+            $signature_id > 0
+        ) {
+            update_post_meta(
+                $signature_id,
+                "_plaid_signature_brevo_status",
+                $brevo_result
             );
-            if (
-                !is_wp_error($brevo_result) &&
-                !is_wp_error($signature_id) &&
-                $signature_id > 0
-            ) {
-                update_post_meta(
-                    $signature_id,
-                    "_plaid_signature_brevo_status",
-                    $brevo_result
-                );
-            }
         }
 
         self::redirect_with_status("petition_signed", "1", $language);
@@ -1141,7 +1161,7 @@ final class Shortcodes
         $status = "0";
         if ($email) {
             $status = is_wp_error(
-                self::subscribe_to_brevo_lists($email, "", $language)
+                self::subscribe_to_brevo_lists($email, "", $language, false, true)
             )
                 ? "0"
                 : "1";
@@ -1152,7 +1172,9 @@ final class Shortcodes
     public static function subscribe_to_brevo_lists(
         string $email,
         string $name,
-        ?string $language = null
+        ?string $language = null,
+        bool $include_petition_list = false,
+        bool $include_newsletter_lists = true
     ) {
         $email = sanitize_email($email);
         $name = sanitize_text_field($name);
@@ -1166,10 +1188,15 @@ final class Shortcodes
 
         $settings = self::get_settings(true, $language);
         $api_key = (string) ($settings["brevo_api_key"] ?? "");
-        $lists = array_filter([
-            absint($settings["brevo_list_plaidact"] ?? 0),
-            absint($settings["brevo_list_campaign"] ?? 0),
-        ]);
+        $lists = $include_newsletter_lists
+            ? array_filter([
+                absint($settings["brevo_list_plaidact"] ?? 0),
+                absint($settings["brevo_list_campaign"] ?? 0),
+            ])
+            : [];
+        if ($include_petition_list) {
+            $lists[] = absint($settings["brevo_list_petition"] ?? 0);
+        }
         $lists = array_values(
             array_unique(
                 array_map(
@@ -1180,7 +1207,9 @@ final class Shortcodes
                         $language,
                         $settings,
                         $email,
-                        $name
+                        $name,
+                        $include_petition_list,
+                        $include_newsletter_lists
                     )
                 )
             )

@@ -221,7 +221,7 @@ class AV_Petitioner_Setup
 				'post type singular name',
 				'petitioner'
 			),
-			'menu_name' => _x('Petitioner', 'admin menu', 'petitioner'),
+			'menu_name' => _x('Pétition', 'admin menu', 'petitioner'),
 			'name_admin_bar' => _x(
 				'Petition',
 				'add new on admin bar',
