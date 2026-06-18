@@ -106,6 +106,8 @@ final class CPT {
 					'not_found_in_trash' => __( 'Aucune organisation porteuse dans la corbeille', 'plaidact-campaign-core' ),
 				),
 				'public'       => true,
+				'show_ui'      => true,
+				'show_in_menu' => 'plaidact-campaign-admin',
 				'show_in_rest' => true,
 				'menu_icon'    => 'dashicons-groups',
 				'menu_position'=> 22,

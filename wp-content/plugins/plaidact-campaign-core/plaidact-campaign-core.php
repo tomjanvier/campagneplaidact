@@ -53,7 +53,7 @@ require_once PLAIDACT_CORE_PATH .
 require_once PLAIDACT_CORE_PATH .
     "includes/class-plaidact-campaign-shortcodes.php";
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-campaign-demo.php";
-require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-campaign-onepage.php";
+require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-campaign-blocks.php";
 
 /**
  * Activates bundled campaign modules.
@@ -68,9 +68,6 @@ function plaidact_campaign_core_activate(): void
         AV_Petitioner_Setup::plugin_activation();
     }
 
-    if (class_exists("Plaidact_Campagne_Onepage")) {
-        Plaidact_Campagne_Onepage::activate();
-    }
 
     flush_rewrite_rules();
 }
@@ -86,9 +83,6 @@ function plaidact_campaign_core_deactivate(): void
         AV_Petitioner_Setup::plugin_deactivation();
     }
 
-    if (class_exists("Plaidact_Campagne_Onepage")) {
-        Plaidact_Campagne_Onepage::deactivate();
-    }
 
     flush_rewrite_rules();
 }
@@ -122,10 +116,7 @@ function plaidact_campaign_core_init(): void
     \Plaidact\CampaignCore\Polylang::boot();
     \Plaidact\CampaignCore\Petitioner_Integration::boot();
     \Plaidact\CampaignCore\Shortcodes::boot();
+    \Plaidact\CampaignCore\Blocks::boot();
     \Plaidact\CampaignCore\Demo::boot();
-
-    if (class_exists("Plaidact_Campagne_Onepage")) {
-        new Plaidact_Campagne_Onepage();
-    }
 }
 add_action("plugins_loaded", "plaidact_campaign_core_init");

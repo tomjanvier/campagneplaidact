@@ -25,6 +25,7 @@ final class Shortcodes
     {
         add_shortcode("petition_form", [__CLASS__, "render_petition_form"]);
         add_shortcode("plaid_social_wall", [__CLASS__, "render_social_wall"]);
+        add_shortcode("plaid_partners", [__CLASS__, "render_partners"]);
         add_shortcode("petition_signers", [__CLASS__, "render_petition_signers"]);
         add_shortcode("plaid_newsletter_form", [
             __CLASS__,
@@ -37,6 +38,7 @@ final class Shortcodes
         add_action("init", [__CLASS__, "register_options"]);
         add_action("admin_menu", [__CLASS__, "register_admin_pages"]);
         add_action("admin_init", [__CLASS__, "register_settings"]);
+        add_action("wp_enqueue_scripts", [__CLASS__, "enqueue_assets"]);
         add_filter("av_petitioner_labels_defaults", [__CLASS__, "translate_petitioner_labels"]);
         add_filter("av_petitioner_form_attributes", [__CLASS__, "customize_petitioner_form_attributes"], 10, 2);
         add_action("admin_post_nopriv_plaidact_petition_submit", [
@@ -63,6 +65,22 @@ final class Shortcodes
             __CLASS__,
             "handle_send_campaign_mail",
         ]);
+    }
+
+
+    /**
+     * Loads shared frontend styles for shortcode and block output.
+     *
+     * @return void
+     */
+    public static function enqueue_assets(): void
+    {
+        wp_enqueue_style(
+            "plaidact-campaign-shortcodes",
+            PLAIDACT_CORE_URL . "assets/campaign-shortcodes.css",
+            [],
+            PLAIDACT_CORE_VERSION
+        );
     }
 
     public static function register_options(): void
@@ -820,7 +838,7 @@ final class Shortcodes
         ?>
         <div class="wrap">
             <h1><?php esc_html_e("Modules de la campagne", "plaidact-campaign-core"); ?></h1>
-            <p><?php esc_html_e("Activez ici les blocs visibles dans l’admin et sur la one-page. Les réglages techniques restent dans Réglages > PLAID·ACT Campagne.", "plaidact-campaign-core"); ?></p>
+            <p><?php esc_html_e("Activez ici les modules disponibles en shortcodes et en blocs Gutenberg. Les réglages techniques restent dans Réglages > PLAID·ACT Campagne.", "plaidact-campaign-core"); ?></p>
             <form method="post" action="options.php">
                 <?php settings_fields("plaidact_campaign_settings"); ?>
                 <input type="hidden" name="plaidact_campaign_settings[_plaidact_modules_form]" value="1" />
@@ -1114,6 +1132,57 @@ final class Shortcodes
         }
 
         self::redirect_with_status("petition_signed", "1", $language);
+    }
+
+
+    /**
+     * Renders campaign partner cards.
+     *
+     * @param array<string,mixed> $atts Shortcode or block attributes.
+     * @return string
+     */
+    public static function render_partners(array $atts = []): string
+    {
+        $atts = shortcode_atts(
+            [
+                "title" => __("Organisations partenaires", "plaidact-campaign-core"),
+                "limit" => -1,
+            ],
+            $atts,
+            "plaid_partners"
+        );
+
+        $partners = get_posts([
+            "post_type" => "plaid_partner",
+            "post_status" => "publish",
+            "posts_per_page" => (int) $atts["limit"],
+            "orderby" => ["menu_order" => "ASC", "title" => "ASC"],
+        ]);
+
+        if (empty($partners)) {
+            return "";
+        }
+
+        ob_start();
+        ?>
+        <section class="plaidact-campagne-partners plaidact-card plaidact-card--partners">
+            <?php if (!empty($atts["title"])) : ?>
+                <h2><?php echo esc_html((string) $atts["title"]); ?></h2>
+            <?php endif; ?>
+            <div class="plaidact-partners-grid">
+                <?php foreach ($partners as $partner) : ?>
+                    <?php $url = (string) get_post_meta($partner->ID, "_plaid_partner_url", true); ?>
+                    <article class="plaidact-partner-card">
+                        <?php if ($url) : ?><a href="<?php echo esc_url($url); ?>" target="_blank" rel="noopener noreferrer"><?php endif; ?>
+                            <?php echo get_the_post_thumbnail($partner->ID, "medium", ["loading" => "lazy"]); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                            <h3><?php echo esc_html(get_the_title($partner)); ?></h3>
+                        <?php if ($url) : ?></a><?php endif; ?>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php
+        return (string) ob_get_clean();
     }
 
     public static function render_newsletter_form(): string
