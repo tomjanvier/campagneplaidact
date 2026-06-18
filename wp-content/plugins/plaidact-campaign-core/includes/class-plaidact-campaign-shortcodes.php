@@ -25,6 +25,7 @@ final class Shortcodes
     {
         add_shortcode("petition_form", [__CLASS__, "render_petition_form"]);
         add_shortcode("plaid_social_wall", [__CLASS__, "render_social_wall"]);
+        add_shortcode("petition_signers", [__CLASS__, "render_petition_signers"]);
         add_shortcode("plaid_newsletter_form", [
             __CLASS__,
             "render_newsletter_form",
@@ -36,6 +37,8 @@ final class Shortcodes
         add_action("init", [__CLASS__, "register_options"]);
         add_action("admin_menu", [__CLASS__, "register_admin_pages"]);
         add_action("admin_init", [__CLASS__, "register_settings"]);
+        add_filter("av_petitioner_labels_defaults", [__CLASS__, "translate_petitioner_labels"]);
+        add_filter("av_petitioner_form_attributes", [__CLASS__, "customize_petitioner_form_attributes"], 10, 2);
         add_action("admin_post_nopriv_plaidact_petition_submit", [
             __CLASS__,
             "handle_petition_submit",
@@ -133,6 +136,8 @@ final class Shortcodes
                 "Signer maintenant",
                 "plaidact-campaign-core"
             ),
+            "petition_form_color" => "#e01a2b",
+            "petition_show_signers" => "1",
             "petition_optin_label" => __(
                 "M’inscrire aux newsletters PLAID·ACT et de cette campagne",
                 "plaidact-campaign-core"
@@ -453,6 +458,12 @@ final class Shortcodes
             "petition_button_label" => sanitize_text_field(
                 (string) ($input["petition_button_label"] ?? "")
             ),
+            "petition_form_color" => sanitize_hex_color(
+                (string) ($input["petition_form_color"] ?? "#e01a2b")
+            ) ?: "#e01a2b",
+            "petition_show_signers" => !empty($input["petition_show_signers"])
+                ? "1"
+                : "0",
             "petition_optin_label" => sanitize_text_field(
                 (string) ($input["petition_optin_label"] ?? "")
             ),
@@ -658,6 +669,22 @@ final class Shortcodes
     (string) $settings["petition_button_label"]
 ); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e(
+         "Couleur du formulaire pétition",
+         "plaidact-campaign-core"
+     ); ?></th><td><input name="plaidact_campaign_settings[petition_form_color]" type="color" value="<?php echo esc_attr(
+    (string) ($settings["petition_form_color"] ?? "#e01a2b")
+); ?>" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
+         "Signataires publics",
+         "plaidact-campaign-core"
+     ); ?></th><td><label><input name="plaidact_campaign_settings[petition_show_signers]" type="checkbox" value="1" <?php checked(
+    (string) ($settings["petition_show_signers"] ?? "1"),
+    "1"
+); ?> /> <?php esc_html_e(
+     "Afficher la liste publique des signataires sous le formulaire, sans ouvrir l’édition de la pétition.",
+     "plaidact-campaign-core"
+ ); ?></label></td></tr>
+					<tr><th scope="row"><?php esc_html_e(
          "Texte consentement newsletter",
          "plaidact-campaign-core"
      ); ?></th><td><input name="plaidact_campaign_settings[petition_optin_label]" type="text" value="<?php echo esc_attr(
@@ -837,7 +864,19 @@ final class Shortcodes
         );
 
         if ("" !== $petitioner_output) {
-            return $petitioner_output;
+            $signers = "1" === (string) ($settings["petition_show_signers"] ?? "1")
+                ? self::render_petition_signers([])
+                : "";
+
+            return sprintf(
+                '<section class="plaidact-petition-block" style="--plaidact-petition-accent:%1$s"><div class="plaidact-petition-block__header"><p class="plaidact-kicker">%2$s</p><h2>%3$s</h2><p>%4$s</p></div><div class="plaidact-petition-block__body">%5$s</div>%6$s</section>',
+                esc_attr((string) ($settings["petition_form_color"] ?? "#e01a2b")),
+                esc_html__("Pétition", "plaidact-campaign-core"),
+                esc_html((string) ($settings["petition_title"] ?? __("Signer la pétition", "plaidact-campaign-core"))),
+                esc_html((string) ($settings["petition_intro"] ?? __("Signez pour soutenir la campagne.", "plaidact-campaign-core"))),
+                $petitioner_output,
+                $signers
+            );
         }
 
         if (current_user_can("manage_options")) {
@@ -849,6 +888,75 @@ final class Shortcodes
         }
 
         return "";
+    }
+
+    public static function render_petition_signers(array $atts = []): string
+    {
+        $language = self::get_current_language();
+        $settings = self::get_settings(true, $language);
+        $form_id = self::resolve_petitioner_form_id($settings, $language);
+
+        if ($form_id <= 0 || !shortcode_exists("petitioner-submissions")) {
+            return "";
+        }
+
+        $list = do_shortcode(sprintf(
+            '[petitioner-submissions id="%d" style="table" fields="name,submitted_at" per_page="12" show_pagination="true"]',
+            $form_id
+        ));
+
+        if ("" === trim((string) $list)) {
+            return "";
+        }
+
+        return sprintf(
+            '<aside class="plaidact-petition-signers"><div class="plaidact-petition-signers__header"><h3>%s</h3><p>%s</p></div>%s</aside>',
+            esc_html__("Ils et elles ont déjà signé", "plaidact-campaign-core"),
+            esc_html__("Liste publique consultable sans modifier la pétition.", "plaidact-campaign-core"),
+            $list
+        );
+    }
+
+    public static function translate_petitioner_labels(array $labels): array
+    {
+        return array_merge($labels, [
+            "could_not_submit" => __("Impossible d’envoyer le formulaire.", "plaidact-campaign-core"),
+            "error_generic" => __("Une erreur est survenue. Réessayez.", "plaidact-campaign-core"),
+            "error_required" => __("Ce champ est obligatoire.", "plaidact-campaign-core"),
+            "already_signed" => __("Vous avez déjà signé cette pétition !", "plaidact-campaign-core"),
+            "success_message_title" => __("Merci !", "plaidact-campaign-core"),
+            "success_message" => __("Votre signature a bien été prise en compte.", "plaidact-campaign-core"),
+            "your_name_here" => __("{Votre nom apparaîtra ici}", "plaidact-campaign-core"),
+            "view_the_letter" => __("Voir la lettre", "plaidact-campaign-core"),
+            "close_modal" => __("Fermer la fenêtre", "plaidact-campaign-core"),
+            "signatures" => __("Signatures", "plaidact-campaign-core"),
+            "goal" => __("Objectif", "plaidact-campaign-core"),
+            "name" => __("Nom", "plaidact-campaign-core"),
+            "anonymous" => __("Anonyme", "plaidact-campaign-core"),
+            "fname" => __("Prénom", "plaidact-campaign-core"),
+            "fname_placeholder" => __("Camille", "plaidact-campaign-core"),
+            "lname" => __("Nom", "plaidact-campaign-core"),
+            "lname_placeholder" => __("Dupont", "plaidact-campaign-core"),
+            "email" => __("Votre email", "plaidact-campaign-core"),
+            "email_placeholder" => __("camille@example.org", "plaidact-campaign-core"),
+            "country" => __("Pays", "plaidact-campaign-core"),
+            "postal_code" => __("Code postal", "plaidact-campaign-core"),
+            "phone" => __("Téléphone", "plaidact-campaign-core"),
+            "newsletter" => __("Recevoir les actualités", "plaidact-campaign-core"),
+            "hide_name" => __("Ne pas afficher mon nom publiquement", "plaidact-campaign-core"),
+            "accept_tos" => __("J’accepte que ma signature soit enregistrée pour cette pétition.", "plaidact-campaign-core"),
+            "submit_button_label" => __("Signer la pétition", "plaidact-campaign-core"),
+        ]);
+    }
+
+    public static function customize_petitioner_form_attributes(array $attrs, $form_id): array
+    {
+        $settings = self::get_settings();
+        $color = sanitize_hex_color((string) ($settings["petition_form_color"] ?? "#e01a2b")) ?: "#e01a2b";
+        $attrs["class"] = trim(($attrs["class"] ?? "petitioner") . " plaidact-petitioner-form");
+        $attrs["style"] = trim(($attrs["style"] ?? "") . ";--ptr-color-primary:" . $color . ";--plaidact-petition-accent:" . $color);
+
+        return $attrs;
     }
 
     public static function handle_petition_submit(): void

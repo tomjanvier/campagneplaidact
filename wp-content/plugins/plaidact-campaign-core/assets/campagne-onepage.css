@@ -159,3 +159,86 @@
 		min-height: 64px;
 	}
 }
+
+.plaidact-petition-block {
+	--plaidact-petition-accent: #e01a2b;
+	background: linear-gradient(145deg, color-mix(in srgb, var(--plaidact-petition-accent) 12%, #ffffff), #ffffff 45%);
+	border: 1px solid color-mix(in srgb, var(--plaidact-petition-accent) 20%, #e5e7eb);
+	border-radius: 24px;
+	box-shadow: 0 24px 60px rgb(15 23 42 / 12%);
+	margin: 0 auto;
+	overflow: hidden;
+	padding: clamp(1.1rem, 3vw, 2rem);
+}
+
+.plaidact-petition-block__header {
+	margin-bottom: 1rem;
+}
+
+.plaidact-petition-block__header h2 {
+	font-size: clamp(1.65rem, 3vw, 2.4rem);
+	line-height: 1.05;
+	margin: 0 0 0.6rem;
+}
+
+.plaidact-petition-block__header p:last-child {
+	color: #4b5563;
+	font-size: 1rem;
+	margin: 0;
+}
+
+.plaidact-petition-block .petitioner,
+.plaidact-petition-signers .petitioner-submissions {
+	--ptr-color-primary: var(--plaidact-petition-accent);
+	--ptr-btn-bg: var(--plaidact-petition-accent);
+	--ptr-progress-inner-bg: var(--plaidact-petition-accent);
+	--ptr-wrapper-radius: 20px;
+	--ptr-input-border-radius: 14px;
+	--ptr-button-border-radius: 999px;
+	background: rgb(255 255 255 / 90%);
+	border: 1px solid rgb(15 23 42 / 8%);
+	box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
+}
+
+.plaidact-petition-block .petitioner__title {
+	font-size: 1.2rem;
+}
+
+.plaidact-petition-block .petitioner__btn--letter {
+	background: color-mix(in srgb, var(--plaidact-petition-accent) 10%, #ffffff);
+	border: 1px solid color-mix(in srgb, var(--plaidact-petition-accent) 24%, #e5e7eb);
+	color: #111827;
+}
+
+.plaidact-petition-block .petitioner-modal__letter {
+	border-radius: 24px;
+	box-shadow: 0 30px 90px rgb(0 0 0 / 30%);
+	max-width: min(720px, calc(100vw - 2rem));
+	padding: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.plaidact-petition-block .petitioner-modal__inner {
+	background: #fffaf4;
+	border-left: 4px solid var(--plaidact-petition-accent);
+	border-radius: 16px;
+	line-height: 1.65;
+	max-height: 55vh;
+	padding: 1rem 1.15rem;
+}
+
+.plaidact-petition-signers {
+	background: rgb(255 255 255 / 72%);
+	border-radius: 20px;
+	margin-top: 1rem;
+	padding: 1rem;
+}
+
+.plaidact-petition-signers__header h3 {
+	margin: 0 0 0.25rem;
+}
+
+.plaidact-petition-signers__header p {
+	color: #6b7280;
+	font-size: 0.92rem;
+	margin: 0 0 0.8rem;
+}
