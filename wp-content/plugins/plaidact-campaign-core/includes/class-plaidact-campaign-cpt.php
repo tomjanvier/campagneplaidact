@@ -30,8 +30,6 @@ final class CPT {
 		add_action( 'add_meta_boxes', array( __CLASS__, 'register_social_embed_metabox' ) );
 		add_action( 'save_post_plaid_partner', array( __CLASS__, 'save_partner_url' ) );
 		add_action( 'save_post_plaid_social_embed', array( __CLASS__, 'save_social_embed_meta' ) );
-		add_filter( 'manage_plaid_signature_posts_columns', array( __CLASS__, 'filter_signature_columns' ) );
-		add_action( 'manage_plaid_signature_posts_custom_column', array( __CLASS__, 'render_signature_columns' ), 10, 2 );
 	}
 
 	/**
@@ -62,6 +60,33 @@ final class CPT {
 				'has_archive'  => false,
 				'rewrite'      => array( 'slug' => 'breves' ),
 				'supports'     => array( 'title', 'editor', 'excerpt', 'thumbnail' ),
+			)
+		);
+
+
+		register_post_type(
+			'plaid_agenda_event',
+			array(
+				'labels'       => array(
+					'name'               => __( 'Agenda', 'plaidact-campaign-core' ),
+					'singular_name'      => __( 'Événement', 'plaidact-campaign-core' ),
+					'add_new'            => __( 'Ajouter', 'plaidact-campaign-core' ),
+					'add_new_item'       => __( 'Ajouter un événement', 'plaidact-campaign-core' ),
+					'edit_item'          => __( 'Modifier l’événement', 'plaidact-campaign-core' ),
+					'new_item'           => __( 'Nouvel événement', 'plaidact-campaign-core' ),
+					'view_item'          => __( 'Voir l’événement', 'plaidact-campaign-core' ),
+					'search_items'       => __( 'Rechercher un événement', 'plaidact-campaign-core' ),
+					'not_found'          => __( 'Aucun événement trouvé', 'plaidact-campaign-core' ),
+					'not_found_in_trash' => __( 'Aucun événement dans la corbeille', 'plaidact-campaign-core' ),
+				),
+				'public'       => true,
+				'show_ui'      => true,
+				'show_in_rest' => true,
+				'menu_icon'    => 'dashicons-calendar-alt',
+				'menu_position'=> 22,
+				'has_archive'  => false,
+				'rewrite'      => array( 'slug' => 'agenda' ),
+				'supports'     => array( 'title', 'editor', 'excerpt', 'thumbnail', 'custom-fields' ),
 			)
 		);
 
@@ -102,10 +127,8 @@ final class CPT {
 					'not_found_in_trash' => __( 'Aucune signature dans la corbeille', 'plaidact-campaign-core' ),
 				),
 				'public'       => false,
-				'show_ui'      => true,
+				'show_ui'      => false,
 				'show_in_rest' => false,
-				'menu_icon'    => 'dashicons-yes-alt',
-				'menu_position'=> 23,
 				'supports'     => array( 'title', 'editor' ),
 			)
 		);

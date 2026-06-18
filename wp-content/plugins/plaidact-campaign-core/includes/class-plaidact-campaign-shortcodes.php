@@ -34,7 +34,7 @@ final class Shortcodes
             "render_send_campaign_form",
         ]);
         add_action("init", [__CLASS__, "register_options"]);
-        add_action("admin_menu", [__CLASS__, "register_settings_page"]);
+        add_action("admin_menu", [__CLASS__, "register_admin_pages"]);
         add_action("admin_init", [__CLASS__, "register_settings"]);
         add_action("admin_post_nopriv_plaidact_petition_submit", [
             __CLASS__,
@@ -68,8 +68,27 @@ final class Shortcodes
         add_option("plaidact_petition_signed_emails", []);
     }
 
-    public static function register_settings_page(): void
+    public static function register_admin_pages(): void
     {
+        add_menu_page(
+            __("Campagne", "plaidact-campaign-core"),
+            __("Campagne", "plaidact-campaign-core"),
+            "manage_options",
+            "plaidact-campaign-admin",
+            [__CLASS__, "render_modules_page"],
+            "dashicons-megaphone",
+            20
+        );
+
+        add_submenu_page(
+            "plaidact-campaign-admin",
+            __("Modules", "plaidact-campaign-core"),
+            __("Modules", "plaidact-campaign-core"),
+            "manage_options",
+            "plaidact-campaign-admin",
+            [__CLASS__, "render_modules_page"]
+        );
+
         add_options_page(
             __("PLAID·ACT Campagne", "plaidact-campaign-core"),
             __("PLAID·ACT Campagne", "plaidact-campaign-core"),
@@ -397,6 +416,19 @@ final class Shortcodes
 
     public static function sanitize_settings(array $input): array
     {
+        $existing = wp_parse_args(
+            (array) get_option("plaidact_campaign_settings", []),
+            self::get_default_settings()
+        );
+
+        if (!empty($input["_plaidact_modules_form"])) {
+            foreach (array_keys(self::get_module_labels()) as $module_key) {
+                $existing[$module_key] = !empty($input[$module_key]) ? "1" : "0";
+            }
+
+            return $existing;
+        }
+
         return [
             "petition_goal" => absint($input["petition_goal"] ?? 10000),
             "petition_form_id" => absint($input["petition_form_id"] ?? 0),
@@ -472,17 +504,17 @@ final class Shortcodes
             "newsletter_button_label" => sanitize_text_field(
                 (string) ($input["newsletter_button_label"] ?? "")
             ),
-            "enable_petition" => !empty($input["enable_petition"]) ? "1" : "0",
-            "enable_newsletter" => !empty($input["enable_newsletter"]) ? "1" : "0",
-            "enable_send_campaign" => !empty($input["enable_send_campaign"]) ? "1" : "0",
-            "enable_socialwall" => !empty($input["enable_socialwall"]) ? "1" : "0",
-            "enable_articles" => !empty($input["enable_articles"]) ? "1" : "0",
-            "enable_partners" => !empty($input["enable_partners"]) ? "1" : "0",
-            "enable_report_highlight" => !empty($input["enable_report_highlight"]) ? "1" : "0",
-            "enable_directory" => !empty($input["enable_directory"]) ? "1" : "0",
-            "enable_breves" => !empty($input["enable_breves"]) ? "1" : "0",
-            "enable_out" => !empty($input["enable_out"]) ? "1" : "0",
-            "enable_agenda" => !empty($input["enable_agenda"]) ? "1" : "0",
+            "enable_petition" => isset($input["enable_petition"]) ? (!empty($input["enable_petition"]) ? "1" : "0") : (string) $existing["enable_petition"],
+            "enable_newsletter" => isset($input["enable_newsletter"]) ? (!empty($input["enable_newsletter"]) ? "1" : "0") : (string) $existing["enable_newsletter"],
+            "enable_send_campaign" => isset($input["enable_send_campaign"]) ? (!empty($input["enable_send_campaign"]) ? "1" : "0") : (string) $existing["enable_send_campaign"],
+            "enable_socialwall" => isset($input["enable_socialwall"]) ? (!empty($input["enable_socialwall"]) ? "1" : "0") : (string) $existing["enable_socialwall"],
+            "enable_articles" => isset($input["enable_articles"]) ? (!empty($input["enable_articles"]) ? "1" : "0") : (string) $existing["enable_articles"],
+            "enable_partners" => isset($input["enable_partners"]) ? (!empty($input["enable_partners"]) ? "1" : "0") : (string) $existing["enable_partners"],
+            "enable_report_highlight" => isset($input["enable_report_highlight"]) ? (!empty($input["enable_report_highlight"]) ? "1" : "0") : (string) $existing["enable_report_highlight"],
+            "enable_directory" => isset($input["enable_directory"]) ? (!empty($input["enable_directory"]) ? "1" : "0") : (string) $existing["enable_directory"],
+            "enable_breves" => isset($input["enable_breves"]) ? (!empty($input["enable_breves"]) ? "1" : "0") : (string) $existing["enable_breves"],
+            "enable_out" => isset($input["enable_out"]) ? (!empty($input["enable_out"]) ? "1" : "0") : (string) $existing["enable_out"],
+            "enable_agenda" => isset($input["enable_agenda"]) ? (!empty($input["enable_agenda"]) ? "1" : "0") : (string) $existing["enable_agenda"],
             "social_wall_title" => sanitize_text_field(
                 (string) ($input["social_wall_title"] ?? "")
             ),
@@ -578,27 +610,6 @@ final class Shortcodes
     (string) $settings["brevo_list_petition"]
 ); ?>" class="small-text" /><p class="description"><?php esc_html_e("Les personnes qui signent la pétition, y compris via le module pétition embarqué, sont ajoutées à cette liste en plus des listes newsletter cochées.", "plaidact-campaign-core"); ?></p></td></tr>
 
-					<tr><th scope="row"><?php esc_html_e(
-          "Parties du plugin à activer",
-          "plaidact-campaign-core"
-      ); ?></th><td>
-						<?php foreach ([
-          "enable_petition" => __("Pétition", "plaidact-campaign-core"),
-          "enable_newsletter" => __("Bloc newsletter", "plaidact-campaign-core"),
-          "enable_send_campaign" => __("Système d’envoi aux décideurs", "plaidact-campaign-core"),
-          "enable_directory" => __("Répertoire", "plaidact-campaign-core"),
-          "enable_breves" => __("Brèves", "plaidact-campaign-core"),
-          "enable_out" => __("Out", "plaidact-campaign-core"),
-          "enable_agenda" => __("Agenda", "plaidact-campaign-core"),
-          "enable_socialwall" => __("Social wall", "plaidact-campaign-core"),
-          "enable_articles" => __("Articles", "plaidact-campaign-core"),
-          "enable_partners" => __("Partenaires", "plaidact-campaign-core"),
-          "enable_report_highlight" => __("Rapport PDF", "plaidact-campaign-core"),
-      ] as $key => $label) : ?>
-							<label><input name="plaidact_campaign_settings[<?php echo esc_attr($key); ?>]" type="checkbox" value="1" <?php checked((string) $settings[$key], "1"); ?> /> <?php echo esc_html($label); ?></label><br />
-						<?php endforeach; ?>
-						<p class="description"><?php esc_html_e("Choisissez ici les parties du plugin à exposer dans l’admin et sur les pages campagne : pétition, newsletter, envoi décideurs, répertoire, brèves, agenda et sorties/out.", "plaidact-campaign-core"); ?></p>
-					</td></tr>
 					<tr><th scope="row"><?php esc_html_e("Titre articles", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[articles_section_title]" type="text" value="<?php echo esc_attr((string) $settings["articles_section_title"]); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e("Titre social wall", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[social_wall_title]" type="text" value="<?php echo esc_attr((string) $settings["social_wall_title"]); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e("Description social wall", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[social_wall_description]" type="text" value="<?php echo esc_attr((string) $settings["social_wall_description"]); ?>" class="regular-text" /></td></tr>
@@ -772,6 +783,50 @@ final class Shortcodes
 		<?php
     }
 
+    public static function render_modules_page(): void
+    {
+        if (!current_user_can("manage_options")) {
+            return;
+        }
+
+        $settings = self::get_settings(false);
+        ?>
+        <div class="wrap">
+            <h1><?php esc_html_e("Modules de la campagne", "plaidact-campaign-core"); ?></h1>
+            <p><?php esc_html_e("Activez ici les blocs visibles dans l’admin et sur la one-page. Les réglages techniques restent dans Réglages > PLAID·ACT Campagne.", "plaidact-campaign-core"); ?></p>
+            <form method="post" action="options.php">
+                <?php settings_fields("plaidact_campaign_settings"); ?>
+                <input type="hidden" name="plaidact_campaign_settings[_plaidact_modules_form]" value="1" />
+                <table class="form-table" role="presentation">
+                    <tr><th scope="row"><?php esc_html_e("Modules actifs", "plaidact-campaign-core"); ?></th><td>
+                        <?php foreach (self::get_module_labels() as $key => $label) : ?>
+                            <label><input name="plaidact_campaign_settings[<?php echo esc_attr($key); ?>]" type="checkbox" value="1" <?php checked((string) $settings[$key], "1"); ?> /> <?php echo esc_html($label); ?></label><br />
+                        <?php endforeach; ?>
+                    </td></tr>
+                </table>
+                <?php submit_button(); ?>
+            </form>
+        </div>
+        <?php
+    }
+
+    private static function get_module_labels(): array
+    {
+        return [
+            "enable_petition" => __("Pétition unique Petitioner", "plaidact-campaign-core"),
+            "enable_newsletter" => __("Bloc newsletter", "plaidact-campaign-core"),
+            "enable_send_campaign" => __("Système d’envoi aux décideurs", "plaidact-campaign-core"),
+            "enable_directory" => __("Répertoire", "plaidact-campaign-core"),
+            "enable_breves" => __("Brèves", "plaidact-campaign-core"),
+            "enable_out" => __("Out / sorties", "plaidact-campaign-core"),
+            "enable_agenda" => __("Agenda", "plaidact-campaign-core"),
+            "enable_socialwall" => __("Social wall", "plaidact-campaign-core"),
+            "enable_articles" => __("Articles", "plaidact-campaign-core"),
+            "enable_partners" => __("Partenaires", "plaidact-campaign-core"),
+            "enable_report_highlight" => __("Rapport PDF", "plaidact-campaign-core"),
+        ];
+    }
+
     public static function render_petition_form(array $atts = []): string
     {
         $language = self::get_current_language();
@@ -785,145 +840,15 @@ final class Shortcodes
             return $petitioner_output;
         }
 
-        $count = (int) get_option("plaidact_petition_signatures_count", 0);
-        $goal = max(1, (int) ($settings["petition_goal"] ?? 10000));
-        $progress = min(100, (int) round(($count / $goal) * 100));
-        $action = esc_url(admin_url("admin-post.php"));
+        if (current_user_can("manage_options")) {
+            return sprintf(
+                '<div class="plaidact-card plaidact-card--petition"><p><strong>%s</strong></p><p>%s</p></div>',
+                esc_html__("Pétition non configurée", "plaidact-campaign-core"),
+                esc_html__("Créez ou publiez un formulaire dans le module Petitioner embarqué, puis sélectionnez son ID dans Réglages > PLAID·ACT Campagne. L’ancien formulaire natif n’est plus rendu afin de garder un seul système de pétition.", "plaidact-campaign-core")
+            );
+        }
 
-        ob_start();
-        ?>
-		<div class="plaidact-card plaidact-card--petition">
-			<h3 class="plaidact-card__title"><?php echo esc_html(
-       (string) ($settings["petition_title"] ??
-           __("Signer la pétition", "plaidact-campaign-core"))
-   ); ?></h3>
-			<p><?php echo esc_html(
-       (string) ($settings["petition_intro"] ??
-           __(
-               "Signez la pétition. Chaque signature fait monter le compteur en direct.",
-               "plaidact-campaign-core"
-           ))
-   ); ?></p>
-			<p><?php echo nl2br(
-       esc_html(
-           (string) ($settings["petition_description"] ??
-               __(
-                   "Expliquez ici les objectifs et revendications de la pétition.",
-                   "plaidact-campaign-core"
-               ))
-       )
-   );// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-        ?></p>
-			<?php if (
-       !empty($settings["petition_letter"]) ||
-       !empty($settings["decision_maker_name"])
-   ): ?>
-				<details class="plaidact-petition-letter">
-					<summary><?php esc_html_e(
-         "Voir la lettre envoyée",
-         "plaidact-campaign-core"
-     ); ?></summary>
-					<?php if (!empty($settings["decision_maker_name"])): ?>
-						<p><strong><?php echo esc_html(
-          sprintf(
-              __("Destinataire : %s", "plaidact-campaign-core"),
-              (string) $settings["decision_maker_name"]
-          )
-      ); ?></strong></p>
-					<?php endif; ?>
-					<div class="plaidact-petition-letter__body"><?php echo nl2br(
-         esc_html((string) ($settings["petition_letter"] ?? ""))
-     );
-       // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-       ?></div>
-				</details>
-			<?php endif; ?>
-			<?php if (
-       isset($_GET["petition_signed"]) &&
-       "1" === sanitize_text_field(wp_unslash($_GET["petition_signed"]))
-   ): ?>
-				<p><strong><?php esc_html_e(
-        "Merci, votre signature a bien été enregistrée.",
-        "plaidact-campaign-core"
-    ); ?></strong></p>
-			<?php elseif (
-       isset($_GET["petition_signed"]) &&
-       "already" === sanitize_text_field(wp_unslash($_GET["petition_signed"]))
-   ): ?>
-				<p><strong><?php esc_html_e(
-        "Cette adresse email a déjà signé la pétition.",
-        "plaidact-campaign-core"
-    ); ?></strong></p>
-			<?php elseif (
-       isset($_GET["petition_signed"]) &&
-       "0" === sanitize_text_field(wp_unslash($_GET["petition_signed"]))
-   ): ?>
-				<p><strong><?php esc_html_e(
-        "Signature impossible pour le moment. Réessayez plus tard.",
-        "plaidact-campaign-core"
-    ); ?></strong></p>
-			<?php endif; ?>
-			<p class="plaidact-petition__count"><strong><?php echo esc_html(
-       number_format_i18n($count)
-   ); ?></strong> / <?php echo esc_html(number_format_i18n($goal)); ?></p>
-			<div class="plaidact-progress"><span style="width:<?php echo esc_attr(
-       (string) $progress
-   ); ?>%;"></span></div>
-			<form method="post" action="<?php echo $action; ?>" class="plaidact-form-grid">
-				<input type="hidden" name="action" value="plaidact_petition_submit" />
-				<input type="hidden" name="plaidact_language" value="<?php echo esc_attr(
-        (string) $language
-    ); ?>" />
-				<?php wp_nonce_field(
-        "plaidact_petition_submit_action",
-        "plaidact_petition_nonce"
-    ); ?>
-				<input type="text" name="full_name" required autocomplete="name" placeholder="<?php esc_attr_e(
-        "Nom complet",
-        "plaidact-campaign-core"
-    ); ?>" />
-				<input type="text" name="website" value="" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true" />
-				<input type="email" name="email" required autocomplete="email" placeholder="<?php esc_attr_e(
-        "Adresse email",
-        "plaidact-campaign-core"
-    ); ?>" />
-				<?php if ("1" === (string) ($settings["petition_show_postcode"] ?? "1")): ?>
-					<input type="text" name="postcode" autocomplete="postal-code" placeholder="<?php esc_attr_e(
-         "Code postal",
-         "plaidact-campaign-core"
-     ); ?>" />
-				<?php endif; ?>
-				<?php if ("1" === (string) ($settings["petition_show_phone"] ?? "0")): ?>
-					<input type="tel" name="phone" autocomplete="tel" placeholder="<?php esc_attr_e(
-         "Téléphone",
-         "plaidact-campaign-core"
-     ); ?>" />
-				<?php endif; ?>
-				<label><input type="checkbox" name="anonymous_signature" value="1" /> <?php esc_html_e(
-        "Afficher ma signature anonymement dans les exports publics.",
-        "plaidact-campaign-core"
-    ); ?></label>
-				<label><input type="checkbox" name="petition_terms" value="1" required /> <?php echo esc_html(
-        (string) ($settings["petition_terms_label"] ??
-            __(
-                "J’accepte que ma signature soit enregistrée pour cette pétition.",
-                "plaidact-campaign-core"
-            ))
-    ); ?></label>
-				<label><input type="checkbox" name="newsletter_optin" value="1" checked /> <?php echo esc_html(
-        (string) ($settings["petition_optin_label"] ??
-            __(
-                "M’inscrire aux newsletters PLAID·ACT et de cette campagne",
-                "plaidact-campaign-core"
-            ))
-    ); ?></label>
-				<button class="plaidact-button" type="submit"><?php echo esc_html(
-        (string) ($settings["petition_button_label"] ??
-            __("Signer maintenant", "plaidact-campaign-core"))
-    ); ?></button>
-			</form>
-		</div>
-		<?php return (string) ob_get_clean();
+        return "";
     }
 
     public static function handle_petition_submit(): void

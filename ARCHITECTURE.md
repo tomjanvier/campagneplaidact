@@ -43,7 +43,7 @@ wp-content/
 - Le fichier `includes/class-plaidact-campaign-onepage.php` déclare la taxonomie `campagne`.
 - À la création d’une campagne, le plugin crée une page WordPress contenant le shortcode `[plaidact_campagne_onepage]`.
 - Le template `templates/campagne-onepage.php` et les assets dans `assets/` rendent la campagne sans dépendre d’un thème dédié.
-- Les parties pétition, bloc newsletter, envoi aux décideurs, répertoire, brèves, agenda, out/sorties, social wall, articles, partenaires et rapport PDF sont activables via **Réglages → PLAID·ACT Campagne**. Les signatures natives et celles du module pétition embarqué peuvent alimenter une liste Brevo dédiée à la pétition.
+- Les parties pétition, bloc newsletter, envoi aux décideurs, répertoire, brèves, agenda, out/sorties, social wall, articles, partenaires et rapport PDF sont activables via **Campagne → Modules**. La pétition publique est rendue uniquement par le module Petitioner embarqué ; ses signataires alimentent la liste Brevo dédiée à la pétition et, en cas d’opt-in, les listes newsletter.
 
 ### Module Petitioner
 
