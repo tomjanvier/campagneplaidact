@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PLAID·ACT Campaign Core
  * Description: Noyau mutualisé pour le réseau Multisite PLAID·ACT (campagnes, pétitions, newsletter et shortcodes).
- * Version: 1.5.1
+ * Version: 2.0.0
  * Author: PLAID·ACT
  * Network: true
  * Requires at least: 6.5
@@ -14,11 +14,12 @@ if (!defined("ABSPATH")) {
     exit();
 }
 
-define("PLAIDACT_CORE_VERSION", "1.5.1");
+define("PLAIDACT_CORE_VERSION", "2.0.0");
 define("PLAIDACT_CORE_PATH", plugin_dir_path(__FILE__));
+define("PLAIDACT_CORE_URL", plugin_dir_url(__FILE__));
 define(
     "PLAIDACT_CORE_BUNDLED_PETITIONER_PATH",
-    dirname(PLAIDACT_CORE_PATH) . "/petitioner/petitioner.php"
+    PLAIDACT_CORE_PATH . "vendor/petitioner/petitioner.php"
 );
 
 /**
@@ -52,6 +53,7 @@ require_once PLAIDACT_CORE_PATH .
 require_once PLAIDACT_CORE_PATH .
     "includes/class-plaidact-campaign-shortcodes.php";
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-campaign-demo.php";
+require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-campaign-onepage.php";
 
 /**
  * Activates bundled campaign modules.
@@ -66,6 +68,10 @@ function plaidact_campaign_core_activate(): void
         AV_Petitioner_Setup::plugin_activation();
     }
 
+    if (class_exists("Plaidact_Campagne_Onepage")) {
+        Plaidact_Campagne_Onepage::activate();
+    }
+
     flush_rewrite_rules();
 }
 
@@ -78,6 +84,10 @@ function plaidact_campaign_core_deactivate(): void
 {
     if (class_exists("AV_Petitioner_Setup")) {
         AV_Petitioner_Setup::plugin_deactivation();
+    }
+
+    if (class_exists("Plaidact_Campagne_Onepage")) {
+        Plaidact_Campagne_Onepage::deactivate();
     }
 
     flush_rewrite_rules();
@@ -113,5 +123,9 @@ function plaidact_campaign_core_init(): void
     \Plaidact\CampaignCore\Petitioner_Integration::boot();
     \Plaidact\CampaignCore\Shortcodes::boot();
     \Plaidact\CampaignCore\Demo::boot();
+
+    if (class_exists("Plaidact_Campagne_Onepage")) {
+        new Plaidact_Campagne_Onepage();
+    }
 }
 add_action("plugins_loaded", "plaidact_campaign_core_init");

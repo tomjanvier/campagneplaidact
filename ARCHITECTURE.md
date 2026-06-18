@@ -2,79 +2,57 @@
 
 ## Principe
 
-Le dépôt est structuré pour séparer clairement :
-
-1. **Le plugin (métier / données)**
-2. **Le thème (présentation / expérience one-page)**
-
-Cette séparation facilite la maintenance multisite, la réutilisation et l'évolution indépendante des couches.
+Le dépôt est désormais organisé autour d’un seul plugin WordPress : `plaidact-campaign-core`. Le thème dédié a été supprimé et les plugins auparavant séparés ont été fusionnés dans le core.
 
 ## Arborescence cible
 
 ```text
 wp-content/
-├─ plugins/
-│  └─ plaidact-campaign-core/
-│     ├─ plaidact-campaign-core.php
-│     └─ includes/
-│        ├─ class-plaidact-campaign-cpt.php
-│        ├─ class-plaidact-campaign-polylang.php
-│        ├─ class-plaidact-campaign-petition-workflows.php
-│        ├─ class-plaidact-campaign-petitioner-integration.php
-│        └─ class-plaidact-campaign-shortcodes.php
-│  └─ petitioner/
-│     ├─ petitioner.php
-│     ├─ dist/
-│     └─ dist-gutenberg/
-└─ themes/
-   └─ plaidact-campaign/
-      ├─ style.css
-      ├─ functions.php
-      ├─ front-page.php
-      ├─ header.php
-      ├─ footer.php
+└─ plugins/
+   └─ plaidact-campaign-core/
+      ├─ plaidact-campaign-core.php
       ├─ assets/
-      │  └─ fonts/
-      │     └─ gotham-noir.woff2 (optionnel)
-      ├─ inc/
-      │  └─ customizer.php
-      └─ template-parts/
-         └─ sections/
-            ├─ partners.php
-            ├─ petition.php
-            ├─ breves.php
-            ├─ articles.php
-            └─ social-wall.php
+      │  ├─ campagne-onepage.css
+      │  └─ campagne-onepage.js
+      ├─ includes/
+      │  ├─ class-plaidact-campaign-cpt.php
+      │  ├─ class-plaidact-campaign-demo.php
+      │  ├─ class-plaidact-campaign-onepage.php
+      │  ├─ class-plaidact-campaign-petitioner-integration.php
+      │  ├─ class-plaidact-campaign-petition-workflows.php
+      │  ├─ class-plaidact-campaign-polylang.php
+      │  └─ class-plaidact-campaign-shortcodes.php
+      ├─ templates/
+      │  └─ campagne-onepage.php
+      └─ vendor/
+         └─ petitioner/
 ```
 
-## Responsabilités détaillées
+## Responsabilités du plugin
 
-### Plugin `plaidact-campaign-core`
+### Core campagne
 
 - Déclare les contenus de campagne (`plaid_breve`, `plaid_partner`).
-- Déclare les taxonomies de classification.
-- Gère les métadonnées partenaires (URL externe).
-- Expose des shortcodes transverses (pétition / social wall) pour découpler les providers externes du thème.
-- Embarque et initialise le moteur `Petitioner` depuis le même plugin.
-- Fournit la couche de compatibilité Polylang pour les formulaires pétition / newsletter et pour le mapping vers `Petitioner`.
-- Centralise les effets métier partagés de la pétition (notifications, email décideur, redirections frontend).
-- Réinjecte les effets métier campagne dans les signatures `Petitioner` : notification, email décideur, newsletter Brevo.
+- Déclare les taxonomies métier, dont `campagne` pour générer les pages one-page.
+- Gère les métadonnées partenaires.
+- Expose les réglages de campagne et les toggles d’activation des blocs frontend.
+- Fournit les shortcodes transverses.
 
-### Module `petitioner`
+### Rendu one-page
 
-- Fournit le moteur avancé de pétition embarqué depuis le plugin de référence.
-- N’est plus pensé comme un plugin WordPress autonome à activer séparément.
-- Est invoqué par `[petition_form]` via le réglage `petition_form_id` du core, ou automatiquement s’il n’existe qu’un seul formulaire publié.
+- Le fichier `includes/class-plaidact-campaign-onepage.php` déclare la taxonomie `campagne`.
+- À la création d’une campagne, le plugin crée une page WordPress contenant le shortcode `[plaidact_campagne_onepage]`.
+- Le template `templates/campagne-onepage.php` et les assets dans `assets/` rendent la campagne sans dépendre d’un thème dédié.
+- Les blocs pétition, newsletter, envoi au décideur, social wall, articles et rapport PDF sont activables via **Réglages → PLAID·ACT Campagne**.
 
-### Thème `plaidact-campaign`
+### Module Petitioner
 
-- Gère la structure one-page et les sections visuelles.
-- Lit les données du plugin (CPT + meta + shortcodes).
-- Expose les options de personnalisation par sous-site via le Customizer.
+- Le moteur Petitioner est embarqué dans `vendor/petitioner`.
+- Il est chargé automatiquement par `plaidact-campaign-core.php`.
+- Il ne doit pas être activé comme plugin autonome.
 
 ## Notes multisite
 
-- Plugin à activer en **network activation**.
-- Thème partagé et activable sous-site par sous-site.
-- Chaque sous-site conserve ses propres réglages Customizer sans divergence de code.
-- Si Polylang est actif, les chaînes des formulaires et certains textes de thème deviennent traduisibles sans dupliquer le code.
+- Activer `PLAID·ACT Campaign Core` en network activation.
+- Chaque sous-site conserve ses options `plaidact_campaign_settings`.
+- Si Polylang est actif, les chaînes textuelles configurées dans les réglages restent traduisibles.

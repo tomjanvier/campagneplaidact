@@ -166,6 +166,36 @@ final class Shortcodes
                 "S’inscrire",
                 "plaidact-campaign-core"
             ),
+            "enable_petition" => "1",
+            "enable_newsletter" => "1",
+            "enable_send_campaign" => "1",
+            "enable_socialwall" => "1",
+            "enable_articles" => "1",
+            "enable_partners" => "1",
+            "enable_report_highlight" => "0",
+            "social_wall_title" => __("Social Wall", "plaidact-campaign-core"),
+            "social_wall_description" => __(
+                "Suivez ici les publications liées à la campagne.",
+                "plaidact-campaign-core"
+            ),
+            "articles_section_title" => __(
+                "Les articles de fond",
+                "plaidact-campaign-core"
+            ),
+            "report_title" => __("Rapport de campagne", "plaidact-campaign-core"),
+            "report_excerpt" => __(
+                "Consultez notre rapport PDF mis en avant.",
+                "plaidact-campaign-core"
+            ),
+            "report_pdf_url" => "",
+            "report_button_label" => __(
+                "Lire le rapport PDF",
+                "plaidact-campaign-core"
+            ),
+            "report_empty_hint" => __(
+                "Ajoutez une URL de PDF dans les réglages PLAID·ACT Campagne.",
+                "plaidact-campaign-core"
+            ),
             "brevo_doi_enabled" => "0",
             "brevo_doi_template_id" => 0,
             "brevo_redirection_url" => "",
@@ -192,6 +222,13 @@ final class Shortcodes
             "newsletter_title",
             "newsletter_intro",
             "newsletter_button_label",
+            "social_wall_title",
+            "social_wall_description",
+            "articles_section_title",
+            "report_title",
+            "report_excerpt",
+            "report_button_label",
+            "report_empty_hint",
         ];
     }
 
@@ -429,6 +466,37 @@ final class Shortcodes
             "newsletter_button_label" => sanitize_text_field(
                 (string) ($input["newsletter_button_label"] ?? "")
             ),
+            "enable_petition" => !empty($input["enable_petition"]) ? "1" : "0",
+            "enable_newsletter" => !empty($input["enable_newsletter"]) ? "1" : "0",
+            "enable_send_campaign" => !empty($input["enable_send_campaign"]) ? "1" : "0",
+            "enable_socialwall" => !empty($input["enable_socialwall"]) ? "1" : "0",
+            "enable_articles" => !empty($input["enable_articles"]) ? "1" : "0",
+            "enable_partners" => !empty($input["enable_partners"]) ? "1" : "0",
+            "enable_report_highlight" => !empty($input["enable_report_highlight"]) ? "1" : "0",
+            "social_wall_title" => sanitize_text_field(
+                (string) ($input["social_wall_title"] ?? "")
+            ),
+            "social_wall_description" => sanitize_text_field(
+                (string) ($input["social_wall_description"] ?? "")
+            ),
+            "articles_section_title" => sanitize_text_field(
+                (string) ($input["articles_section_title"] ?? "")
+            ),
+            "report_title" => sanitize_text_field(
+                (string) ($input["report_title"] ?? "")
+            ),
+            "report_excerpt" => sanitize_text_field(
+                (string) ($input["report_excerpt"] ?? "")
+            ),
+            "report_pdf_url" => esc_url_raw(
+                (string) ($input["report_pdf_url"] ?? "")
+            ),
+            "report_button_label" => sanitize_text_field(
+                (string) ($input["report_button_label"] ?? "")
+            ),
+            "report_empty_hint" => sanitize_text_field(
+                (string) ($input["report_empty_hint"] ?? "")
+            ),
             "brevo_doi_enabled" => !empty($input["brevo_doi_enabled"])
                 ? "1"
                 : "0",
@@ -493,6 +561,31 @@ final class Shortcodes
      ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_campaign]" type="number" value="<?php echo esc_attr(
     (string) $settings["brevo_list_campaign"]
 ); ?>" class="small-text" /></td></tr>
+
+					<tr><th scope="row"><?php esc_html_e(
+          "Éléments one-page actifs",
+          "plaidact-campaign-core"
+      ); ?></th><td>
+						<?php foreach ([
+          "enable_petition" => __("Pétition", "plaidact-campaign-core"),
+          "enable_newsletter" => __("Newsletter", "plaidact-campaign-core"),
+          "enable_send_campaign" => __("Envoi au décideur", "plaidact-campaign-core"),
+          "enable_socialwall" => __("Social wall", "plaidact-campaign-core"),
+          "enable_articles" => __("Articles", "plaidact-campaign-core"),
+          "enable_partners" => __("Partenaires", "plaidact-campaign-core"),
+          "enable_report_highlight" => __("Rapport PDF", "plaidact-campaign-core"),
+      ] as $key => $label) : ?>
+							<label><input name="plaidact_campaign_settings[<?php echo esc_attr($key); ?>]" type="checkbox" value="1" <?php checked((string) $settings[$key], "1"); ?> /> <?php echo esc_html($label); ?></label><br />
+						<?php endforeach; ?>
+						<p class="description"><?php esc_html_e("Ces options permettent d’activer uniquement les blocs nécessaires sur les pages campagne générées par le plugin.", "plaidact-campaign-core"); ?></p>
+					</td></tr>
+					<tr><th scope="row"><?php esc_html_e("Titre articles", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[articles_section_title]" type="text" value="<?php echo esc_attr((string) $settings["articles_section_title"]); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e("Titre social wall", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[social_wall_title]" type="text" value="<?php echo esc_attr((string) $settings["social_wall_title"]); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e("Description social wall", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[social_wall_description]" type="text" value="<?php echo esc_attr((string) $settings["social_wall_description"]); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e("Titre rapport", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[report_title]" type="text" value="<?php echo esc_attr((string) $settings["report_title"]); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e("Texte rapport", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[report_excerpt]" type="text" value="<?php echo esc_attr((string) $settings["report_excerpt"]); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e("URL PDF rapport", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[report_pdf_url]" type="url" value="<?php echo esc_attr((string) $settings["report_pdf_url"]); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e("Bouton rapport", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[report_button_label]" type="text" value="<?php echo esc_attr((string) $settings["report_button_label"]); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e(
          "Double opt-in Brevo",
          "plaidact-campaign-core"
