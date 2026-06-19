@@ -12,18 +12,16 @@ wp-content/
    └─ plaidact-campaign-core/
       ├─ plaidact-campaign-core.php
       ├─ assets/
-      │  ├─ campagne-onepage.css
-      │  └─ campagne-onepage.js
+      │  ├─ blocks.js
+      │  └─ campaign-shortcodes.css
       ├─ includes/
+      │  ├─ class-plaidact-campaign-blocks.php
       │  ├─ class-plaidact-campaign-cpt.php
       │  ├─ class-plaidact-campaign-demo.php
-      │  ├─ class-plaidact-campaign-onepage.php
       │  ├─ class-plaidact-campaign-petitioner-integration.php
       │  ├─ class-plaidact-campaign-petition-workflows.php
       │  ├─ class-plaidact-campaign-polylang.php
       │  └─ class-plaidact-campaign-shortcodes.php
-      ├─ templates/
-      │  └─ campagne-onepage.php
       └─ vendor/
          └─ petitioner/
 ```
@@ -33,16 +31,16 @@ wp-content/
 ### Core campagne
 
 - Déclare les contenus de campagne (`plaid_breve`, `plaid_partner`).
-- Déclare les taxonomies métier, dont `campagne` pour générer les pages one-page.
+- Déclare les taxonomies métier utiles aux contenus de campagne.
 - Gère les métadonnées partenaires.
-- Expose les réglages de campagne et les toggles d’activation des blocs frontend.
+- Expose les réglages de campagne et les toggles d’activation des modules frontend.
 - Fournit les shortcodes transverses.
 
-### Rendu one-page
+### Shortcodes et blocs Gutenberg
 
-- Le fichier `includes/class-plaidact-campaign-onepage.php` déclare la taxonomie `campagne`.
-- À la création d’une campagne, le plugin crée une page WordPress contenant le shortcode `[plaidact_campagne_onepage]`.
-- Le template `templates/campagne-onepage.php` et les assets dans `assets/` rendent la campagne sans dépendre d’un thème dédié.
+- Les pages de campagne sont composées manuellement avec les shortcodes (`[petition_form]`, `[plaid_newsletter_form]`, `[plaid_partners]`, `[plaid_send_campaign]`, `[plaid_social_wall]`) ou avec les blocs Gutenberg PLAID·ACT.
+- Les blocs newsletter et partenaires sont dynamiques : ils réutilisent les mêmes callbacks serveur que les shortcodes pour garder un seul rendu public.
+- Les partenaires sont accessibles depuis le menu **Campagne** du back office et peuvent être insérés via le bloc PLAID·ACT — Partenaires.
 - Les parties pétition, bloc newsletter, envoi aux décideurs, répertoire, brèves, agenda, out/sorties, social wall, articles, partenaires et rapport PDF sont activables via **Campagne → Modules**. La pétition publique est rendue uniquement par le module Petitioner embarqué ; ses signataires alimentent la liste Brevo dédiée à la pétition et, en cas d’opt-in, les listes newsletter.
 
 ### Module Petitioner
