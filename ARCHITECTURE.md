@@ -2,28 +2,25 @@
 
 ## Principe
 
-Le dépôt est désormais organisé autour d’un seul plugin WordPress : `plaidact-campaign-core`. Le thème dédié a été supprimé et les plugins auparavant séparés ont été fusionnés dans le core.
+Le dépôt est désormais organisé autour d’un seul plugin WordPress : `plaidact-campaign-core`. La racine GitHub correspond à la racine installable de l’extension, ce qui permet de cloner directement le dépôt dans `wp-content/plugins/plaidact-campaign-core/`. Le thème dédié a été supprimé et les plugins auparavant séparés ont été fusionnés dans le core.
 
 ## Arborescence cible
 
 ```text
-wp-content/
-└─ plugins/
-   └─ plaidact-campaign-core/
-      ├─ plaidact-campaign-core.php
-      ├─ assets/
-      │  ├─ blocks.js
-      │  └─ campaign-shortcodes.css
-      ├─ includes/
-      │  ├─ class-plaidact-campaign-blocks.php
-      │  ├─ class-plaidact-campaign-cpt.php
-      │  ├─ class-plaidact-campaign-demo.php
-      │  ├─ class-plaidact-campaign-petitioner-integration.php
-      │  ├─ class-plaidact-campaign-petition-workflows.php
-      │  ├─ class-plaidact-campaign-polylang.php
-      │  └─ class-plaidact-campaign-shortcodes.php
-      └─ vendor/
-         └─ petitioner/
+plaidact-campaign-core.php
+assets/
+├─ blocks.js
+└─ campaign-shortcodes.css
+includes/
+├─ class-plaidact-campaign-blocks.php
+├─ class-plaidact-campaign-cpt.php
+├─ class-plaidact-campaign-demo.php
+├─ class-plaidact-campaign-petitioner-integration.php
+├─ class-plaidact-campaign-petition-workflows.php
+├─ class-plaidact-campaign-polylang.php
+└─ class-plaidact-campaign-shortcodes.php
+vendor/
+└─ petitioner/
 ```
 
 ## Responsabilités du plugin
