@@ -81,6 +81,14 @@ final class Shortcodes
             [],
             plaidact_campaign_core_asset_version("assets/campaign-shortcodes.css")
         );
+
+        wp_enqueue_script(
+            "plaidact-campaign-givoly",
+            PLAIDACT_CORE_URL . "assets/campaign-givoly.js",
+            [],
+            plaidact_campaign_core_asset_version("assets/campaign-givoly.js"),
+            true
+        );
     }
 
     public static function register_options(): void
@@ -246,6 +254,17 @@ final class Shortcodes
             "brevo_doi_enabled" => "0",
             "brevo_doi_template_id" => 0,
             "brevo_redirection_url" => "",
+            "givoly_donation_url" => "",
+            "givoly_campaign" => "",
+            "givoly_amount" => "",
+            "givoly_button_label" => __(
+                "Faire un don",
+                "plaidact-campaign-core"
+            ),
+            "givoly_cta_text" => __(
+                "Merci pour votre signature. Vous pouvez aller plus loin en soutenant la campagne par un don.",
+                "plaidact-campaign-core"
+            ),
         ];
     }
 
@@ -276,6 +295,8 @@ final class Shortcodes
             "report_excerpt",
             "report_button_label",
             "report_empty_hint",
+            "givoly_button_label",
+            "givoly_cta_text",
         ];
     }
 
@@ -577,6 +598,19 @@ final class Shortcodes
             "brevo_redirection_url" => esc_url_raw(
                 (string) ($input["brevo_redirection_url"] ?? "")
             ),
+            "givoly_donation_url" => esc_url_raw(
+                (string) ($input["givoly_donation_url"] ?? "")
+            ),
+            "givoly_campaign" => sanitize_title(
+                (string) ($input["givoly_campaign"] ?? "")
+            ),
+            "givoly_amount" => absint($input["givoly_amount"] ?? 0),
+            "givoly_button_label" => sanitize_text_field(
+                (string) ($input["givoly_button_label"] ?? "")
+            ),
+            "givoly_cta_text" => sanitize_text_field(
+                (string) ($input["givoly_cta_text"] ?? "")
+            ),
         ];
     }
 
@@ -668,6 +702,11 @@ final class Shortcodes
      ); ?></th><td><input name="plaidact_campaign_settings[brevo_redirection_url]" type="url" value="<?php echo esc_attr(
     (string) $settings["brevo_redirection_url"]
 ); ?>" class="regular-text" placeholder="https://example.org/merci" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e("URL page de don Givoly", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_donation_url]" type="url" value="<?php echo esc_attr((string) ($settings["givoly_donation_url"] ?? "")); ?>" class="regular-text" placeholder="https://example.org/donner" /><p class="description"><?php esc_html_e("Si renseignée, un bouton de don apparaît après une signature Petitioner réussie et transmet les coordonnées du signataire en paramètres d’URL pour préremplir Givoly.", "plaidact-campaign-core"); ?></p></td></tr>
+					<tr><th scope="row"><?php esc_html_e("Campagne Givoly", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_campaign]" type="text" value="<?php echo esc_attr((string) ($settings["givoly_campaign"] ?? "")); ?>" class="regular-text" placeholder="slug-campagne" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e("Montant suggéré Givoly", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_amount]" type="number" min="0" value="<?php echo esc_attr((string) ($settings["givoly_amount"] ?? "")); ?>" class="small-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e("Texte bouton don", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_button_label]" type="text" value="<?php echo esc_attr((string) ($settings["givoly_button_label"] ?? "")); ?>" class="regular-text" /></td></tr>
+					<tr><th scope="row"><?php esc_html_e("Texte invitation au don", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_cta_text]" type="text" value="<?php echo esc_attr((string) ($settings["givoly_cta_text"] ?? "")); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e(
          "Titre bloc pétition",
          "plaidact-campaign-core"
@@ -893,7 +932,7 @@ final class Shortcodes
                 esc_html((string) ($settings["petition_title"] ?? __("Signer la pétition", "plaidact-campaign-core"))),
                 esc_html((string) ($settings["petition_intro"] ?? __("Signez pour soutenir la campagne.", "plaidact-campaign-core"))),
                 $petitioner_output,
-                $signers
+                $signers . self::render_givoly_donation_cta($settings)
             );
         }
 
@@ -906,6 +945,40 @@ final class Shortcodes
         }
 
         return "";
+    }
+
+    private static function render_givoly_donation_cta(array $settings): string
+    {
+        $donation_url = esc_url_raw((string) ($settings["givoly_donation_url"] ?? ""));
+
+        if ("" === $donation_url) {
+            return "";
+        }
+
+        $query_args = [];
+        $campaign = sanitize_title((string) ($settings["givoly_campaign"] ?? ""));
+        $amount = absint($settings["givoly_amount"] ?? 0);
+
+        if ("" !== $campaign) {
+            $query_args["campaign"] = $campaign;
+            $query_args["givoly_campaign"] = $campaign;
+        }
+
+        if ($amount > 0) {
+            $query_args["amount"] = $amount;
+            $query_args["givoly_amount"] = $amount;
+        }
+
+        if (!empty($query_args)) {
+            $donation_url = add_query_arg($query_args, $donation_url);
+        }
+
+        return sprintf(
+            '<aside class="plaidact-givoly-cta" hidden><p>%1$s</p><a class="plaidact-givoly-cta__button" href="%2$s">%3$s</a></aside>',
+            esc_html((string) ($settings["givoly_cta_text"] ?? "")),
+            esc_url($donation_url),
+            esc_html((string) ($settings["givoly_button_label"] ?? __("Faire un don", "plaidact-campaign-core")))
+        );
     }
 
     public static function render_petition_signers(array $atts = []): string

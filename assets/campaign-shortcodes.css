@@ -242,3 +242,38 @@
 	font-size: 0.92rem;
 	margin: 0 0 0.8rem;
 }
+
+.plaidact-givoly-cta {
+	margin-top: 1.5rem;
+	padding: 1rem;
+	border: 1px solid color-mix(in srgb, var(--plaidact-petition-accent) 24%, #e5e7eb);
+	border-radius: 14px;
+	background: color-mix(in srgb, var(--plaidact-petition-accent) 8%, #ffffff);
+	text-align: center;
+}
+
+.plaidact-givoly-cta[hidden] {
+	display: none;
+}
+
+.plaidact-givoly-cta p {
+	margin: 0 0 0.75rem;
+}
+
+.plaidact-givoly-cta__button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.75rem 1.25rem;
+	border-radius: 999px;
+	background: var(--plaidact-petition-accent);
+	color: #ffffff;
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.plaidact-givoly-cta__button:hover,
+.plaidact-givoly-cta__button:focus {
+	color: #ffffff;
+	filter: brightness(0.92);
+}
