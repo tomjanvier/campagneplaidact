@@ -15,6 +15,7 @@ Le dépôt est directement installable comme extension WordPress : la racine Git
 ├─ plaidact-campaign-core.php
 ├─ assets/
 │  ├─ blocks.js
+│  ├─ campaign-givoly.js
 │  └─ campaign-shortcodes.css
 ├─ includes/
 │  ├─ class-plaidact-campaign-blocks.php
@@ -36,13 +37,14 @@ Le dépôt est directement installable comme extension WordPress : la racine Git
 - Shortcodes : `[petition_form]`, `[plaid_newsletter_form]`, `[plaid_partners]`, `[plaid_send_campaign]`, `[plaid_social_wall]`.
 - Blocs Gutenberg dynamiques pour la newsletter et les partenaires, et menu **Campagne → Modules** pour choisir les parties du plugin à activer : pétition Petitioner unique, bloc newsletter, envoi aux décideurs, répertoire, brèves, agenda, out/sorties, social wall, articles, partenaires et rapport PDF.
 - Compatibilité Polylang pour les chaînes métier et la résolution des formulaires traduits.
+- Compatibilité Givoly : après une signature Petitioner réussie, un bouton de don peut renvoyer vers une page `[givoly_form]` avec les coordonnées du signataire préremplies via paramètres d’URL.
 - Outil **Outils → PLAID·ACT Démo** pour exporter/importer une démo.
 
 ## Activation
 
 1. Cloner ou copier ce dépôt à l’emplacement `wp-content/plugins/plaidact-campaign-core/` de WordPress : le fichier `plaidact-campaign-core.php` doit être directement à la racine de ce dossier.
 2. Activer `PLAID·ACT Campaign Core` en network activation sur le multisite.
-3. Aller dans **Réglages → PLAID·ACT Campagne** pour configurer les services, listes Brevo (newsletter et pétition) et textes, puis dans **Campagne → Modules** pour activer les blocs affichés.
+3. Aller dans **Réglages → PLAID·ACT Campagne** pour configurer les services, listes Brevo (newsletter et pétition), textes et l’URL de la page de don Givoly, puis dans **Campagne → Modules** pour activer les blocs affichés.
 4. Composer les pages dans Gutenberg avec les blocs PLAID·ACT ou les shortcodes disponibles.
 
 ## Notes
