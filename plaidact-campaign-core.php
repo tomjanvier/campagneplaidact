@@ -17,10 +17,32 @@ if (!defined("ABSPATH")) {
 define("PLAIDACT_CORE_VERSION", "2.0.0");
 define("PLAIDACT_CORE_PATH", plugin_dir_path(__FILE__));
 define("PLAIDACT_CORE_URL", plugin_dir_url(__FILE__));
+define("PLAIDACT_CORE_BASENAME", plugin_basename(__FILE__));
 define(
     "PLAIDACT_CORE_BUNDLED_PETITIONER_PATH",
     PLAIDACT_CORE_PATH . "vendor/petitioner/petitioner.php"
 );
+
+/**
+ * Returns a cache-busting version for plugin assets.
+ *
+ * @param string $relative_path Path relative to the plugin root.
+ * @return string
+ */
+function plaidact_campaign_core_asset_version(string $relative_path): string
+{
+    $asset_path = PLAIDACT_CORE_PATH . ltrim($relative_path, "/");
+
+    if (file_exists($asset_path)) {
+        $mtime = filemtime($asset_path);
+
+        if (is_int($mtime) && $mtime > 0) {
+            return PLAIDACT_CORE_VERSION . "." . $mtime;
+        }
+    }
+
+    return PLAIDACT_CORE_VERSION;
+}
 
 /**
  * Loads the bundled Petitioner module when it is present.
@@ -42,6 +64,44 @@ function plaidact_campaign_core_load_bundled_petitioner(): void
 }
 
 plaidact_campaign_core_load_bundled_petitioner();
+
+/**
+ * Loads translations from the plugin languages directory.
+ *
+ * @return void
+ */
+function plaidact_campaign_core_load_textdomain(): void
+{
+    load_plugin_textdomain(
+        "plaidact-campaign-core",
+        false,
+        dirname(PLAIDACT_CORE_BASENAME) . "/languages"
+    );
+}
+add_action("init", "plaidact_campaign_core_load_textdomain", 0);
+
+/**
+ * Shows an actionable admin warning when the bundled petition engine is missing.
+ *
+ * @return void
+ */
+function plaidact_campaign_core_missing_petitioner_notice(): void
+{
+    if (
+        file_exists(PLAIDACT_CORE_BUNDLED_PETITIONER_PATH) ||
+        !current_user_can("activate_plugins")
+    ) {
+        return;
+    }
+
+    echo '<div class="notice notice-warning"><p>';
+    echo esc_html__(
+        "PLAID·ACT Campaign Core est actif, mais le module Petitioner embarqué est absent. Réinstallez le dossier vendor/petitioner pour réactiver les formulaires de pétition.",
+        "plaidact-campaign-core"
+    );
+    echo "</p></div>";
+}
+add_action("admin_notices", "plaidact_campaign_core_missing_petitioner_notice");
 
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-campaign-cpt.php";
 require_once PLAIDACT_CORE_PATH .

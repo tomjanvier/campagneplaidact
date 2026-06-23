@@ -113,8 +113,7 @@ final class Petitioner_Integration
         $is_petitioner_sending = (bool) get_post_meta(
             $form_id,
             "_petitioner_send_to_representative",
-            true,
-            !empty($submission->newsletter)
+            true
         );
         $petitioner_target = sanitize_email(
             (string) get_post_meta($form_id, "_petitioner_email", true)

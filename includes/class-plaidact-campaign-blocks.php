@@ -35,7 +35,7 @@ final class Blocks {
 			'plaidact-campaign-blocks',
 			PLAIDACT_CORE_URL . 'assets/blocks.js',
 			array( 'wp-blocks', 'wp-element', 'wp-components', 'wp-block-editor', 'wp-i18n' ),
-			PLAIDACT_CORE_VERSION,
+			plaidact_campaign_core_asset_version( 'assets/blocks.js' ),
 			true
 		);
 

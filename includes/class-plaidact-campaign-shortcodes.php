@@ -79,7 +79,7 @@ final class Shortcodes
             "plaidact-campaign-shortcodes",
             PLAIDACT_CORE_URL . "assets/campaign-shortcodes.css",
             [],
-            PLAIDACT_CORE_VERSION
+            plaidact_campaign_core_asset_version("assets/campaign-shortcodes.css")
         );
     }
 

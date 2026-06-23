@@ -4,7 +4,7 @@ Plugin WordPress unique pour piloter des campagnes PLAID·ACT en multisite : con
 
 ## Objectif
 
-Le dépôt ne livre plus de thème WordPress dédié ni de plugin séparé à activer. L’idée est d’installer et d’activer un seul plugin réseau, puis d’activer dans ses réglages les éléments souhaités pour chaque campagne.
+Le dépôt est directement installable comme extension WordPress : la racine GitHub correspond à la racine du plugin. L’idée est de cloner ou copier ce dépôt dans `wp-content/plugins/plaidact-campaign-core/`, d’activer un seul plugin réseau, puis d’activer dans ses réglages les éléments souhaités pour chaque campagne.
 
 ## Arborescence
 
@@ -12,23 +12,20 @@ Le dépôt ne livre plus de thème WordPress dédié ni de plugin séparé à ac
 .
 ├─ README.md
 ├─ ARCHITECTURE.md
-└─ wp-content/
-   └─ plugins/
-      └─ plaidact-campaign-core/
-         ├─ plaidact-campaign-core.php
-         ├─ assets/
-         │  ├─ blocks.js
-         │  └─ campaign-shortcodes.css
-         ├─ includes/
-         │  ├─ class-plaidact-campaign-blocks.php
-         │  ├─ class-plaidact-campaign-cpt.php
-         │  ├─ class-plaidact-campaign-demo.php
-         │  ├─ class-plaidact-campaign-petitioner-integration.php
-         │  ├─ class-plaidact-campaign-petition-workflows.php
-         │  ├─ class-plaidact-campaign-polylang.php
-         │  └─ class-plaidact-campaign-shortcodes.php
-         └─ vendor/
-            └─ petitioner/
+├─ plaidact-campaign-core.php
+├─ assets/
+│  ├─ blocks.js
+│  └─ campaign-shortcodes.css
+├─ includes/
+│  ├─ class-plaidact-campaign-blocks.php
+│  ├─ class-plaidact-campaign-cpt.php
+│  ├─ class-plaidact-campaign-demo.php
+│  ├─ class-plaidact-campaign-petitioner-integration.php
+│  ├─ class-plaidact-campaign-petition-workflows.php
+│  ├─ class-plaidact-campaign-polylang.php
+│  └─ class-plaidact-campaign-shortcodes.php
+└─ vendor/
+   └─ petitioner/
 ```
 
 ## Fonctionnalités regroupées
@@ -43,13 +40,13 @@ Le dépôt ne livre plus de thème WordPress dédié ni de plugin séparé à ac
 
 ## Activation
 
-1. Installer le dossier `wp-content/plugins/plaidact-campaign-core/`.
+1. Cloner ou copier ce dépôt à l’emplacement `wp-content/plugins/plaidact-campaign-core/` de WordPress : le fichier `plaidact-campaign-core.php` doit être directement à la racine de ce dossier.
 2. Activer `PLAID·ACT Campaign Core` en network activation sur le multisite.
 3. Aller dans **Réglages → PLAID·ACT Campagne** pour configurer les services, listes Brevo (newsletter et pétition) et textes, puis dans **Campagne → Modules** pour activer les blocs affichés.
 4. Composer les pages dans Gutenberg avec les blocs PLAID·ACT ou les shortcodes disponibles.
 
 ## Notes
 
-- Le dépôt est maintenant volontairement centré sur un plugin unique.
+- Le dépôt est maintenant volontairement centré sur un plugin unique et sa racine GitHub est la racine installable de l’extension.
 - Le thème actif du site fournit uniquement l’enveloppe WordPress (`get_header()` / `get_footer()`), tandis que les modules campagne sont rendus via shortcodes et blocs Gutenberg.
 - `Petitioner` reste embarqué comme module interne et n’a pas vocation à être activé séparément.
