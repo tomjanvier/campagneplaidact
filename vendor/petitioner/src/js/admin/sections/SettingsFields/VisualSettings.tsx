@@ -61,7 +61,8 @@ export default function VisualSettings() {
 
 			<hr />
 
-			<h3 style={{ marginBottom: '0' }}>Colors</h3>
+			<h3 style={{ marginBottom: '0' }}>Colors and CSS used by the petition frontend</h3>
+			<p>These fields are the single source of truth for Petitioner styling. Campaign shortcodes reuse these values instead of exposing duplicate color or CSS settings.</p>
 			<div className="ptr-field-panel">
 				<div>
 					<label>Primary color</label>
@@ -107,7 +108,7 @@ export default function VisualSettings() {
 			<CodeEditor
 				code={formState?.custom_css || ''}
 				title="Custom CSS"
-				help="Add your custom CSS here."
+				help="Injected after Petitioner styles and campaign adapters. Use .petitioner, .petitioner-submissions, .plaidact-petition-block, or --ptr-* variables to match themes like Support Trans Players."
 			/>
 		</>
 	);
