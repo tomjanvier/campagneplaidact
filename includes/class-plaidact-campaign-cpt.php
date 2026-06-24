@@ -118,24 +118,6 @@ final class CPT {
 		);
 
 		register_post_type(
-			'plaid_signature',
-			array(
-				'labels'       => array(
-					'name'               => __( 'Signatures pétition', 'plaidact-campaign-core' ),
-					'singular_name'      => __( 'Signature', 'plaidact-campaign-core' ),
-					'add_new_item'       => __( 'Ajouter une signature', 'plaidact-campaign-core' ),
-					'edit_item'          => __( 'Voir la signature', 'plaidact-campaign-core' ),
-					'not_found'          => __( 'Aucune signature trouvée', 'plaidact-campaign-core' ),
-					'not_found_in_trash' => __( 'Aucune signature dans la corbeille', 'plaidact-campaign-core' ),
-				),
-				'public'       => false,
-				'show_ui'      => false,
-				'show_in_rest' => false,
-				'supports'     => array( 'title', 'editor' ),
-			)
-		);
-
-		register_post_type(
 			'plaid_social_embed',
 			array(
 				'labels'       => array(
@@ -375,57 +357,6 @@ final class CPT {
 			} else {
 				delete_post_meta( $post_id, '_plaid_partner_url' );
 			}
-		}
-	}
-
-	/**
-	 * Adds custom columns for petition signatures.
-	 *
-	 * @param array<string, string> $columns Existing columns.
-	 * @return array<string, string>
-	 */
-	public static function filter_signature_columns( array $columns ): array {
-		$columns['signature_email'] = __( 'Email', 'plaidact-campaign-core' );
-		$columns['signature_optin'] = __( 'Opt-in newsletter', 'plaidact-campaign-core' );
-		$columns['signature_postcode'] = __( 'Code postal', 'plaidact-campaign-core' );
-		$columns['signature_anonymous'] = __( 'Anonyme', 'plaidact-campaign-core' );
-		$columns['signature_signed_at'] = __( 'Signée le', 'plaidact-campaign-core' );
-		$columns['signature_brevo_status'] = __( 'Brevo', 'plaidact-campaign-core' );
-		return $columns;
-	}
-
-	/**
-	 * Renders custom signature columns.
-	 *
-	 * @param string $column Column identifier.
-	 * @param int    $post_id Signature post ID.
-	 * @return void
-	 */
-	public static function render_signature_columns( string $column, int $post_id ): void {
-		if ( 'signature_email' === $column ) {
-			echo esc_html( (string) get_post_meta( $post_id, '_plaid_signature_email', true ) );
-		}
-
-		if ( 'signature_optin' === $column ) {
-			$optin = (string) get_post_meta( $post_id, '_plaid_signature_optin', true );
-			echo esc_html( '1' === $optin ? __( 'Oui', 'plaidact-campaign-core' ) : __( 'Non', 'plaidact-campaign-core' ) );
-		}
-
-		if ( 'signature_postcode' === $column ) {
-			echo esc_html( (string) get_post_meta( $post_id, '_plaid_signature_postcode', true ) );
-		}
-
-		if ( 'signature_anonymous' === $column ) {
-			$anonymous = (string) get_post_meta( $post_id, '_plaid_signature_anonymous', true );
-			echo esc_html( '1' === $anonymous ? __( 'Oui', 'plaidact-campaign-core' ) : __( 'Non', 'plaidact-campaign-core' ) );
-		}
-
-		if ( 'signature_signed_at' === $column ) {
-			echo esc_html( (string) get_post_meta( $post_id, '_plaid_signature_signed_at', true ) );
-		}
-
-		if ( 'signature_brevo_status' === $column ) {
-			echo esc_html( (string) get_post_meta( $post_id, '_plaid_signature_brevo_status', true ) );
 		}
 	}
 
