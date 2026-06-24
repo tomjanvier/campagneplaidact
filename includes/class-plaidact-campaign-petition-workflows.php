@@ -1,6 +1,6 @@
 <?php
 /**
- * Shared petition workflows for native and bundled forms.
+ * Shared Petitioner side effects for campaign signatures.
  *
  * @package PLAIDACT\CampaignCore
  */

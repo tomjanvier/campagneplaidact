@@ -63,7 +63,7 @@
             lastName = parts.join(' ');
         }
 
-        var baseUrl = formWrapper.getAttribute('data-plaidact-givoly-url') || wrapper.getAttribute('data-plaidact-givoly-url') || link.href;
+        var baseUrl = cta.getAttribute('data-plaidact-givoly-base-url') || formWrapper.getAttribute('data-plaidact-givoly-url') || wrapper.getAttribute('data-plaidact-givoly-url') || link.href;
         var enrichedUrl = appendQuery(baseUrl, {
             givoly_first_name: firstName,
             givoly_last_name: lastName,
@@ -71,6 +71,12 @@
             givoly_email: email,
             givoly_postcode: postcode,
             givoly_phone: phone,
+            donor_first_name: firstName,
+            donor_last_name: lastName,
+            donor_name: fullName || [firstName, lastName].filter(Boolean).join(' '),
+            donor_email: email,
+            donor_postcode: postcode,
+            donor_phone: phone,
             first_name: firstName,
             last_name: lastName,
             name: fullName || [firstName, lastName].filter(Boolean).join(' '),
