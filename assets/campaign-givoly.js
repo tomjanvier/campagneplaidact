@@ -33,7 +33,8 @@
             return;
         }
 
-        var wrapper = event.detail.wrapperEl.closest('.plaidact-petition-block');
+        var formWrapper = event.detail.wrapperEl;
+        var wrapper = formWrapper.closest('.plaidact-petition-block');
         if (!wrapper) {
             return;
         }
@@ -62,7 +63,8 @@
             lastName = parts.join(' ');
         }
 
-        var enrichedUrl = appendQuery(wrapper.getAttribute('data-plaidact-givoly-url') || link.href, {
+        var baseUrl = formWrapper.getAttribute('data-plaidact-givoly-url') || wrapper.getAttribute('data-plaidact-givoly-url') || link.href;
+        var enrichedUrl = appendQuery(baseUrl, {
             givoly_first_name: firstName,
             givoly_last_name: lastName,
             givoly_name: fullName || [firstName, lastName].filter(Boolean).join(' '),
@@ -78,9 +80,8 @@
         });
 
         link.href = enrichedUrl;
-        if (wrapper.getAttribute('data-plaidact-givoly-url')) {
-            wrapper.setAttribute('data-redirect-url', enrichedUrl);
-        }
+        formWrapper.setAttribute('data-redirect-url', enrichedUrl);
+        wrapper.setAttribute('data-plaidact-givoly-url', enrichedUrl);
 
         cta.hidden = false;
     }, true);
