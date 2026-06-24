@@ -49,12 +49,12 @@
         }
 
         var formData = event.detail.formData;
-        var firstName = getField(formData, ['fname', 'first_name', 'prenom']);
-        var lastName = getField(formData, ['lname', 'last_name', 'nom']);
-        var fullName = getField(formData, ['name', 'full_name']);
-        var email = getField(formData, ['email']);
-        var postcode = getField(formData, ['postal_code', 'postcode', 'zip']);
-        var phone = getField(formData, ['phone', 'telephone']);
+        var firstName = getField(formData, ['petitioner_fname', 'fname', 'first_name', 'prenom']);
+        var lastName = getField(formData, ['petitioner_lname', 'lname', 'last_name', 'nom']);
+        var fullName = getField(formData, ['petitioner_name', 'name', 'full_name']);
+        var email = getField(formData, ['petitioner_email', 'email']);
+        var postcode = getField(formData, ['petitioner_postal_code', 'postal_code', 'postcode', 'zip']);
+        var phone = getField(formData, ['petitioner_phone', 'phone', 'telephone']);
 
         if (!firstName && !lastName && fullName) {
             var parts = fullName.trim().split(/\s+/);
@@ -62,7 +62,7 @@
             lastName = parts.join(' ');
         }
 
-        link.href = appendQuery(link.href, {
+        var enrichedUrl = appendQuery(wrapper.getAttribute('data-plaidact-givoly-url') || link.href, {
             givoly_first_name: firstName,
             givoly_last_name: lastName,
             givoly_name: fullName || [firstName, lastName].filter(Boolean).join(' '),
@@ -77,6 +77,11 @@
             phone: phone
         });
 
+        link.href = enrichedUrl;
+        if (wrapper.getAttribute('data-plaidact-givoly-url')) {
+            wrapper.setAttribute('data-redirect-url', enrichedUrl);
+        }
+
         cta.hidden = false;
-    });
+    }, true);
 }());
