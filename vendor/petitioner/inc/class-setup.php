@@ -343,7 +343,20 @@ class AV_Petitioner_Setup
 		$dark_color = $this->sanitize_css_color(get_option('petitioner_dark_color', ''));
 		$grey_color = $this->sanitize_css_color(get_option('petitioner_grey_color', ''));
 
-		$default_colors = '';
+		$theme_colors = '';
+		$theme_colors .= '--ptr-color-primary: var(--color-brand-pink, var(--wp--preset--color--primary, var(--wp--preset--color--accent, #ff99cc)));';
+		$theme_colors .= '--ptr-btn-bg: var(--ptr-color-primary);';
+		$theme_colors .= '--ptr-progress-inner-bg: var(--ptr-color-primary);';
+		$theme_colors .= '--ptr-color-dark: var(--color-neutral-black, var(--wp--preset--color--contrast, #202d55));';
+		$theme_colors .= '--ptr-color-grey: color-mix(in srgb, var(--ptr-color-dark) 14%, transparent);';
+		$theme_colors .= '--ptr-wrapper-bg: var(--color-neutral-beige, var(--wp--preset--color--base, #f2ede4));';
+		$theme_colors .= '--ptr-wrapper-radius: var(--wp--custom--border--radius, 0);';
+		$theme_colors .= '--ptr-input-border-color: var(--ptr-color-dark);';
+		$theme_colors .= '--ptr-input-border-color-active: var(--ptr-color-primary);';
+		$theme_colors .= '--ptr-button-border-radius: var(--wp--custom--button--border--radius, 0);';
+		$theme_colors .= '--ptr-button-border-color: var(--ptr-color-dark);';
+
+		$default_colors = $theme_colors;
 
 		if (!empty($primary_color)) {
 			$default_colors .= '--ptr-color-primary: ' . $primary_color . ' !important;';
@@ -353,15 +366,20 @@ class AV_Petitioner_Setup
 
 		if (!empty($dark_color)) {
 			$default_colors .= '--ptr-color-dark: ' . $dark_color . ' !important;';
+			$default_colors .= '--ptr-input-border-color: ' . $dark_color . ' !important;';
+			$default_colors .= '--ptr-button-border-color: ' . $dark_color . ' !important;';
 		}
 
 		if (!empty($grey_color)) {
 			$default_colors .= '--ptr-color-grey: ' . $grey_color . ' !important;';
 		}
 
-		if (!empty($default_colors)) {
-			$custom_css .= '.petitioner, .petitioner-submissions {' . $default_colors . '} ';
-		}
+		$custom_css .= '.petitioner, .petitioner-submissions {' . $default_colors . '} ';
+		$custom_css .= '.petitioner {font-family: var(--font-sans, inherit); color: var(--ptr-color-dark);} ';
+		$custom_css .= '.petitioner__title {font-family: var(--font-display, inherit); color: var(--ptr-color-dark); text-transform: uppercase;} ';
+		$custom_css .= '.petitioner__btn {border: 2px solid var(--ptr-button-border-color); box-shadow: var(--shadow-neo, none); font-family: var(--font-display, inherit); font-weight: 900; text-transform: uppercase;} ';
+		$custom_css .= '.petitioner__btn:hover {box-shadow: var(--shadow-neo-sm, none); transform: translate(2px, 2px);} ';
+		$custom_css .= '.petitioner__input input, .petitioner__input select, .petitioner__input textarea {border: 2px solid var(--ptr-input-border-color);} ';
 
 		$custom_css .= wp_strip_all_tags((string) get_option('petitioner_custom_css', ''));
 

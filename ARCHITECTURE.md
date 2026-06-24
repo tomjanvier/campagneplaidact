@@ -45,6 +45,7 @@ vendor/
 - Le moteur Petitioner est embarqué dans `vendor/petitioner`.
 - Il est chargé automatiquement par `plaidact-campaign-core.php`.
 - Il ne doit pas être activé comme plugin autonome.
+- Les couleurs et le CSS public se règlent directement dans **Petitioner → Settings** ; les réglages PLAID·ACT ne dupliquent plus ces champs et réutilisent les variables Petitioner.
 
 ## Notes multisite
 

@@ -34,7 +34,7 @@ Le dépôt est directement installable comme extension WordPress : la racine Git
 - CPT `plaid_breve` et `plaid_partner`.
 - Taxonomies de classification (`plaid_breve_topic`, `plaid_partner_type`).
 - Module `Petitioner` embarqué dans `vendor/petitioner` et chargé par le core.
-- Design des pétitions configurable : adaptation automatique aux variables du thème actif, couleur d’accent de secours et CSS personnalisé injecté après les styles PLAID·ACT pour ajuster finement Petitioner.
+- Design des pétitions configurable à un seul endroit dans **Petitioner → Settings** : les couleurs et le CSS personnalisé de Petitioner alimentent aussi les shortcodes PLAID·ACT, avec une adaptation automatique aux variables du thème actif.
 - Shortcodes : `[petition_form]`, `[plaid_newsletter_form]`, `[plaid_partners]`, `[plaid_send_campaign]`, `[plaid_social_wall]`.
 - Blocs Gutenberg dynamiques pour la newsletter et les partenaires, et menu **Campagne → Modules** pour choisir les parties du plugin à activer : pétition Petitioner unique, bloc newsletter, envoi aux décideurs, répertoire, brèves, agenda, out/sorties, social wall, articles, partenaires et rapport PDF.
 - Compatibilité Polylang pour les chaînes métier et la résolution des formulaires traduits.
