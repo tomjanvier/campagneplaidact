@@ -1,6 +1,6 @@
 <?php
 /**
- * Campaign shortcodes for petition and social wall placeholders.
+ * Campaign shortcodes for Petitioner petitions and campaign modules.
  *
  * @package PLAIDACT\CampaignCore
  */
@@ -153,7 +153,7 @@ final class Shortcodes
                 "plaidact-campaign-core"
             ),
             "petition_form_color" => "#e01a2b",
-            "petition_design_mode" => "custom",
+            "petition_design_mode" => "theme",
             "petition_show_signers" => "1",
             "petition_optin_label" => __(
                 "M’inscrire aux newsletters PLAID·ACT et de cette campagne",
@@ -475,9 +475,9 @@ final class Shortcodes
             "petition_form_color" => sanitize_hex_color(
                 (string) ($input["petition_form_color"] ?? "#e01a2b")
             ) ?: "#e01a2b",
-            "petition_design_mode" => in_array(($input["petition_design_mode"] ?? "custom"), ["custom", "theme"], true)
+            "petition_design_mode" => in_array(($input["petition_design_mode"] ?? "theme"), ["custom", "theme"], true)
                 ? (string) $input["petition_design_mode"]
-                : "custom",
+                : "theme",
             "petition_show_signers" => !empty($input["petition_show_signers"])
                 ? "1"
                 : "0",
@@ -691,7 +691,7 @@ final class Shortcodes
      ); ?></th><td><input name="plaidact_campaign_settings[petition_form_color]" type="color" value="<?php echo esc_attr(
     (string) ($settings["petition_form_color"] ?? "#e01a2b")
 ); ?>" /></td></tr>
-                    <tr><th scope="row"><?php esc_html_e("Design du thème WordPress", "plaidact-campaign-core"); ?></th><td><label><input name="plaidact_campaign_settings[petition_design_mode]" type="checkbox" value="theme" <?php checked((string) ($settings["petition_design_mode"] ?? "custom"), "theme"); ?> /> <?php esc_html_e("Reprendre automatiquement les couleurs, boutons, arrondis, champs et typographies du thème pour les blocs de campagne, notamment la pétition Petitioner.", "plaidact-campaign-core"); ?></label><p class="description"><?php esc_html_e("La couleur ci-dessus reste utilisée comme filet de sécurité si le thème ne fournit pas de couleur primaire.", "plaidact-campaign-core"); ?></p></td></tr>
+                    <tr><th scope="row"><?php esc_html_e("Design du thème WordPress", "plaidact-campaign-core"); ?></th><td><label><input name="plaidact_campaign_settings[petition_design_mode]" type="checkbox" value="theme" <?php checked((string) ($settings["petition_design_mode"] ?? "theme"), "theme"); ?> /> <?php esc_html_e("Reprendre automatiquement les couleurs, boutons, arrondis, champs et typographies du thème pour les blocs de campagne, notamment la pétition Petitioner.", "plaidact-campaign-core"); ?></label><p class="description"><?php esc_html_e("La couleur ci-dessus reste utilisée comme filet de sécurité si le thème ne fournit pas de couleur primaire.", "plaidact-campaign-core"); ?></p></td></tr>
 					<tr><th scope="row"><?php esc_html_e(
          "Signataires publics",
          "plaidact-campaign-core"
@@ -944,7 +944,7 @@ final class Shortcodes
                 esc_html((string) ($settings["petition_intro"] ?? __("Signez pour soutenir la campagne.", "plaidact-campaign-core"))),
                 $petitioner_output,
                 $signers . self::render_givoly_donation_cta($settings),
-                "theme" === (string) ($settings["petition_design_mode"] ?? "custom") ? "plaidact-petition-block--theme" : "plaidact-petition-block--custom",
+                "theme" === (string) ($settings["petition_design_mode"] ?? "theme") ? "plaidact-petition-block--theme" : "plaidact-petition-block--custom",
                 self::get_campaign_design_class($settings)
             );
         }
@@ -963,7 +963,7 @@ final class Shortcodes
 
     private static function get_campaign_design_class(array $settings): string
     {
-        return "theme" === (string) ($settings["petition_design_mode"] ?? "custom")
+        return "theme" === (string) ($settings["petition_design_mode"] ?? "theme")
             ? "plaidact-campaign--theme"
             : "plaidact-campaign--custom";
     }
@@ -1006,7 +1006,7 @@ final class Shortcodes
         }
 
         return sprintf(
-            '<aside class="plaidact-givoly-cta" hidden><p>%1$s</p><a class="plaidact-givoly-cta__button" href="%2$s">%3$s</a></aside>',
+            '<aside class="plaidact-givoly-cta" data-plaidact-givoly-base-url="%2$s" hidden><p>%1$s</p><a class="plaidact-givoly-cta__button wp-element-button" href="%2$s">%3$s</a></aside>',
             esc_html((string) ($settings["givoly_cta_text"] ?? "")),
             esc_url($donation_url),
             esc_html((string) ($settings["givoly_button_label"] ?? __("Faire un don", "plaidact-campaign-core")))
@@ -1124,16 +1124,13 @@ final class Shortcodes
     {
         $settings = self::get_settings();
         $color = sanitize_hex_color((string) ($settings["petition_form_color"] ?? "#e01a2b")) ?: "#e01a2b";
-        $design_mode = (string) ($settings["petition_design_mode"] ?? "custom");
+        $design_mode = (string) ($settings["petition_design_mode"] ?? "theme");
         $attrs["class"] = trim(($attrs["class"] ?? "petitioner") . " plaidact-petitioner-form plaidact-petitioner-form--" . ("theme" === $design_mode ? "theme" : "custom"));
         $attrs["style"] = trim(($attrs["style"] ?? "") . ";--ptr-color-primary:" . $color . ";--plaidact-petition-accent:" . $color);
 
         $givoly_url = self::build_givoly_donation_url($settings);
         if ("" !== $givoly_url) {
             $attrs["data-plaidact-givoly-url"] = $givoly_url;
-            if (empty($attrs["data-redirect-url"])) {
-                $attrs["data-redirect-url"] = $givoly_url;
-            }
         }
 
         return $attrs;

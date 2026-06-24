@@ -278,11 +278,19 @@
 	filter: brightness(0.92);
 }
 
+
 .plaidact-petition-block--theme {
-	--plaidact-theme-primary: var(--wp--preset--color--primary, var(--wp--preset--color--accent, var(--plaidact-petition-accent)));
-	--plaidact-theme-contrast: var(--wp--preset--color--contrast, currentColor);
-	--plaidact-theme-base: var(--wp--preset--color--base, #ffffff);
-	--plaidact-theme-radius: var(--wp--custom--border--radius, var(--wp--custom--button--border--radius, 0.75rem));
+	--plaidact-theme-primary: var(--wp--preset--color--primary, var(--wp--preset--color--accent, var(--wp--preset--color--vivid-red, var(--color-primary, var(--primary, var(--accent-color, var(--plaidact-petition-accent))))));
+	--plaidact-theme-contrast: var(--wp--preset--color--contrast, var(--color-foreground, var(--text-color, currentColor)));
+	--plaidact-theme-base: var(--wp--preset--color--base, var(--color-background, var(--background-color, transparent)));
+	--plaidact-theme-muted: color-mix(in srgb, var(--plaidact-theme-contrast) 68%, transparent);
+	--plaidact-theme-radius: var(--wp--custom--border--radius, var(--wp--custom--button--border--radius, var(--radius, var(--border-radius, 0.75rem))));
+	--ptr-color-primary: var(--plaidact-theme-primary);
+	--ptr-btn-bg: var(--plaidact-theme-primary);
+	--ptr-progress-inner-bg: var(--plaidact-theme-primary);
+	--ptr-wrapper-radius: var(--plaidact-theme-radius);
+	--ptr-input-border-radius: var(--plaidact-theme-radius);
+	--ptr-button-border-radius: var(--wp--custom--button--border--radius, var(--plaidact-theme-radius));
 	--plaidact-petition-accent: var(--plaidact-theme-primary);
 	background: var(--plaidact-theme-base);
 	border-color: color-mix(in srgb, var(--plaidact-theme-primary) 24%, transparent);
@@ -291,7 +299,6 @@
 	color: var(--plaidact-theme-contrast);
 	font-family: inherit;
 }
-
 .plaidact-petition-block--theme .plaidact-card,
 .plaidact-petition-block--theme .plaidact-givoly-cta,
 .plaidact-petition-block--theme .plaidact-petition-signers,
@@ -309,24 +316,31 @@
 .plaidact-petition-block--theme .petitioner__btn,
 .plaidact-petition-block--theme .plaidact-givoly-cta__button {
 	background: var(--plaidact-theme-primary);
+	border: var(--wp--custom--button--border--width, 0) solid var(--plaidact-theme-primary);
 	border-radius: var(--wp--custom--button--border--radius, var(--plaidact-theme-radius));
 	color: var(--wp--preset--color--base, #ffffff);
 	font-family: inherit;
+	font-weight: inherit;
+	line-height: inherit;
+	text-decoration: none;
 }
 
 .plaidact-petition-block--theme input,
 .plaidact-petition-block--theme select,
 .plaidact-petition-block--theme textarea {
+	background: var(--wp--preset--color--base, #ffffff);
+	border-color: color-mix(in srgb, var(--plaidact-theme-contrast) 24%, transparent);
 	border-radius: var(--plaidact-theme-radius);
+	color: var(--plaidact-theme-contrast);
 	font-family: inherit;
 }
 
 .plaidact-campaign--theme {
-	--plaidact-theme-primary: var(--wp--preset--color--primary, var(--wp--preset--color--accent, var(--plaidact-petition-accent, #e01a2b)));
-	--plaidact-theme-contrast: var(--wp--preset--color--contrast, currentColor);
-	--plaidact-theme-base: var(--wp--preset--color--base, #ffffff);
+	--plaidact-theme-primary: var(--wp--preset--color--primary, var(--wp--preset--color--accent, var(--wp--preset--color--vivid-red, var(--color-primary, var(--primary, var(--accent-color, var(--plaidact-petition-accent, #e01a2b))))));
+	--plaidact-theme-contrast: var(--wp--preset--color--contrast, var(--color-foreground, var(--text-color, currentColor)));
+	--plaidact-theme-base: var(--wp--preset--color--base, var(--color-background, var(--background-color, #ffffff)));
 	--plaidact-theme-muted: color-mix(in srgb, var(--plaidact-theme-contrast) 68%, transparent);
-	--plaidact-theme-radius: var(--wp--custom--border--radius, var(--wp--custom--button--border--radius, 0.75rem));
+	--plaidact-theme-radius: var(--wp--custom--border--radius, var(--wp--custom--button--border--radius, var(--radius, var(--border-radius, 0.75rem))));
 	--plaidact-petition-accent: var(--plaidact-theme-primary);
 	background: var(--plaidact-theme-base);
 	border-color: color-mix(in srgb, var(--plaidact-theme-primary) 24%, transparent);
