@@ -375,11 +375,14 @@ class AV_Petitioner_Setup
 		}
 
 		$custom_css .= '.petitioner, .petitioner-submissions {' . $default_colors . '} ';
-		$custom_css .= '.petitioner {font-family: var(--font-sans, inherit); color: var(--ptr-color-dark);} ';
-		$custom_css .= '.petitioner__title {font-family: var(--font-display, inherit); color: var(--ptr-color-dark); text-transform: uppercase;} ';
-		$custom_css .= '.petitioner__btn {border: 2px solid var(--ptr-button-border-color); box-shadow: var(--shadow-neo, none); font-family: var(--font-display, inherit); font-weight: 900; text-transform: uppercase;} ';
-		$custom_css .= '.petitioner__btn:hover {box-shadow: var(--shadow-neo-sm, none); transform: translate(2px, 2px);} ';
-		$custom_css .= '.petitioner__input input, .petitioner__input select, .petitioner__input textarea {border: 2px solid var(--ptr-input-border-color);} ';
+		$custom_css .= '.petitioner, .petitioner-submissions {font-family: var(--font-sans, inherit); color: var(--ptr-color-dark);} ';
+		$custom_css .= '.petitioner {border: 2px solid var(--ptr-color-dark); border-radius: var(--ptr-wrapper-radius); box-shadow: var(--shadow-neo, none);} ';
+		$custom_css .= '.petitioner__title {font-family: var(--font-display, inherit); color: var(--ptr-color-dark); text-transform: uppercase; letter-spacing: .02em;} ';
+		$custom_css .= '.petitioner__btn {border: 2px solid var(--ptr-button-border-color); border-radius: var(--ptr-button-border-radius); box-shadow: var(--shadow-neo, none); font-family: var(--font-display, inherit); font-weight: 900; letter-spacing: .04em; text-transform: uppercase;} ';
+		$custom_css .= '.petitioner__btn:hover, .petitioner__btn:focus {box-shadow: var(--shadow-neo-sm, none); transform: translate(2px, 2px);} ';
+		$custom_css .= '.petitioner__input input, .petitioner__input select, .petitioner__input textarea {border: 2px solid var(--ptr-input-border-color); border-radius: 0; background: #fff; color: var(--ptr-color-dark);} ';
+		$custom_css .= '.petitioner__input input:focus, .petitioner__input select:focus, .petitioner__input textarea:focus {border-color: var(--ptr-input-border-color-active); outline: 2px solid var(--ptr-input-border-color-active); outline-offset: 2px;} ';
+		$custom_css .= '.petitioner-submissions {border: 2px solid var(--ptr-color-dark); border-radius: var(--ptr-wrapper-radius); box-shadow: var(--shadow-neo, none); background: var(--ptr-wrapper-bg);} ';
 
 		$custom_css .= wp_strip_all_tags((string) get_option('petitioner_custom_css', ''));
 

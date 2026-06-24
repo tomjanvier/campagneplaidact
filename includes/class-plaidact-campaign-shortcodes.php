@@ -662,7 +662,7 @@ final class Shortcodes
 					<tr><th scope="row"><?php esc_html_e("Texte invitation au don", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_cta_text]" type="text" value="<?php echo esc_attr((string) ($settings["givoly_cta_text"] ?? "")); ?>" class="regular-text" /></td></tr>
                     <tr><th scope="row"><?php esc_html_e("Design pétition Petitioner", "plaidact-campaign-core"); ?></th><td>
                         <p><?php esc_html_e("Les couleurs et le CSS du formulaire se règlent maintenant à un seul endroit : directement dans Petitioner.", "plaidact-campaign-core"); ?></p>
-                        <p><a class="button" href="<?php echo esc_url(admin_url('edit.php?post_type=petitioner-petition&page=petitioner-settings')); ?>"><?php esc_html_e("Ouvrir les réglages Petitioner", "plaidact-campaign-core"); ?></a></p>
+                        <p><a class="button" href="<?php echo esc_url(admin_url('edit.php?post_type=petitioner-petition&page=petition-settings')); ?>"><?php esc_html_e("Ouvrir les réglages Petitioner", "plaidact-campaign-core"); ?></a></p>
                         <p class="description"><?php esc_html_e("Le shortcode PLAID·ACT ne duplique plus ces champs : il applique automatiquement les variables Petitioner au rendu public, puis laisse le CSS personnalisé de Petitioner surcharger le tout.", "plaidact-campaign-core"); ?></p>
                     </td></tr>
                     <tr><th scope="row"><?php esc_html_e(
