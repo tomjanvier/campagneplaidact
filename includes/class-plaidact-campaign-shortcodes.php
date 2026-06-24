@@ -73,6 +73,16 @@ final class Shortcodes
             plaidact_campaign_core_asset_version("assets/campaign-shortcodes.css")
         );
 
+        $settings = self::get_settings();
+        $petition_custom_css = trim((string) ($settings["petition_custom_css"] ?? ""));
+
+        if ("" !== $petition_custom_css) {
+            wp_add_inline_style(
+                "plaidact-campaign-shortcodes",
+                "/* PLAID·ACT petition custom CSS */\n" . wp_strip_all_tags($petition_custom_css)
+            );
+        }
+
         wp_enqueue_script(
             "plaidact-campaign-givoly",
             PLAIDACT_CORE_URL . "assets/campaign-givoly.js",
@@ -154,6 +164,7 @@ final class Shortcodes
             ),
             "petition_form_color" => "#e01a2b",
             "petition_design_mode" => "theme",
+            "petition_custom_css" => "",
             "petition_show_signers" => "1",
             "petition_optin_label" => __(
                 "M’inscrire aux newsletters PLAID·ACT et de cette campagne",
@@ -478,6 +489,9 @@ final class Shortcodes
             "petition_design_mode" => in_array(($input["petition_design_mode"] ?? $existing["petition_design_mode"] ?? "theme"), ["custom", "theme"], true)
                 ? (string) ($input["petition_design_mode"] ?? $existing["petition_design_mode"] ?? "theme")
                 : "theme",
+            "petition_custom_css" => wp_strip_all_tags(
+                (string) ($input["petition_custom_css"] ?? $existing["petition_custom_css"] ?? "")
+            ),
             "petition_show_signers" => !empty($input["petition_show_signers"])
                 ? "1"
                 : "0",
@@ -667,6 +681,16 @@ final class Shortcodes
 					<tr><th scope="row"><?php esc_html_e("Montant suggéré Givoly", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_amount]" type="number" min="0" value="<?php echo esc_attr((string) ($settings["givoly_amount"] ?? "")); ?>" class="small-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e("Texte bouton don", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_button_label]" type="text" value="<?php echo esc_attr((string) ($settings["givoly_button_label"] ?? "")); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e("Texte invitation au don", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_cta_text]" type="text" value="<?php echo esc_attr((string) ($settings["givoly_cta_text"] ?? "")); ?>" class="regular-text" /></td></tr>
+                    <tr><th scope="row"><?php esc_html_e("Design pétition Petitioner", "plaidact-campaign-core"); ?></th><td>
+                        <fieldset>
+                            <label><input name="plaidact_campaign_settings[petition_design_mode]" type="radio" value="theme" <?php checked((string) ($settings["petition_design_mode"] ?? "theme"), "theme"); ?> /> <?php esc_html_e("Adapter automatiquement au thème actif", "plaidact-campaign-core"); ?></label><br />
+                            <label><input name="plaidact_campaign_settings[petition_design_mode]" type="radio" value="custom" <?php checked((string) ($settings["petition_design_mode"] ?? "theme"), "custom"); ?> /> <?php esc_html_e("Utiliser le style PLAID·ACT personnalisé", "plaidact-campaign-core"); ?></label>
+                        </fieldset>
+                        <p class="description"><?php esc_html_e("Le mode thème reprend les variables WordPress du thème actif (couleurs, rayon, typographie). Le mode personnalisé garde une carte plus marquée avec la couleur d’accent ci-dessous.", "plaidact-campaign-core"); ?></p>
+                    </td></tr>
+                    <tr><th scope="row"><?php esc_html_e("Couleur d’accent pétition", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[petition_form_color]" type="text" value="<?php echo esc_attr((string) ($settings["petition_form_color"] ?? "#e01a2b")); ?>" class="regular-text" placeholder="#e01a2b" /><p class="description"><?php esc_html_e("Utilisée comme couleur de secours et comme accent principal en mode personnalisé.", "plaidact-campaign-core"); ?></p></td></tr>
+                    <tr><th scope="row"><?php esc_html_e("CSS pétition personnalisé", "plaidact-campaign-core"); ?></th><td><textarea name="plaidact_campaign_settings[petition_custom_css]" class="large-text code" rows="10" placeholder=".plaidact-petition-block { ... }
+.plaidact-petition-block .petitioner__btn--submit { ... }"><?php echo esc_textarea((string) ($settings["petition_custom_css"] ?? "")); ?></textarea><p class="description"><?php esc_html_e("CSS injecté après les styles PLAID·ACT. Ciblez .plaidact-petition-block, .plaidact-petitioner-form, .petitioner__input, .petitioner__btn, .petitioner__progress-bar ou les variables --ptr-* pour reproduire un design de thème comme Support Trans Players sans modifier Petitioner.", "plaidact-campaign-core"); ?></p></td></tr>
                     <tr><th scope="row"><?php esc_html_e(
          "Signataires publics",
          "plaidact-campaign-core"

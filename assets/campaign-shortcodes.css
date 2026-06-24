@@ -162,10 +162,17 @@
 
 .plaidact-petition-block {
 	--plaidact-petition-accent: #e01a2b;
+	--plaidact-petition-radius: 24px;
+	--plaidact-petition-surface: rgb(255 255 255 / 90%);
+	--plaidact-petition-text: #111827;
+	--plaidact-petition-muted: #4b5563;
+	--plaidact-petition-border: color-mix(in srgb, var(--plaidact-petition-accent) 20%, #e5e7eb);
 	background: linear-gradient(145deg, color-mix(in srgb, var(--plaidact-petition-accent) 12%, #ffffff), #ffffff 45%);
-	border: 1px solid color-mix(in srgb, var(--plaidact-petition-accent) 20%, #e5e7eb);
-	border-radius: 24px;
+	border: 1px solid var(--plaidact-petition-border);
+	border-radius: var(--plaidact-petition-radius);
 	box-shadow: 0 24px 60px rgb(15 23 42 / 12%);
+	color: var(--plaidact-petition-text);
+	font-family: inherit;
 	margin: 0 auto;
 	overflow: hidden;
 	padding: clamp(1.1rem, 3vw, 2rem);
@@ -182,7 +189,7 @@
 }
 
 .plaidact-petition-block__header p:last-child {
-	color: #4b5563;
+	color: var(--plaidact-petition-muted);
 	font-size: 1rem;
 	margin: 0;
 }
@@ -195,8 +202,8 @@
 	--ptr-wrapper-radius: 20px;
 	--ptr-input-border-radius: 14px;
 	--ptr-button-border-radius: 999px;
-	background: rgb(255 255 255 / 90%);
-	border: 1px solid rgb(15 23 42 / 8%);
+	background: var(--plaidact-petition-surface);
+	border: 1px solid var(--plaidact-petition-border);
 	box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
 }
 
@@ -279,12 +286,16 @@
 }
 
 
+.plaidact-petition-block--custom {
+	--ptr-color-primary: var(--plaidact-petition-accent);
+}
+
 .plaidact-petition-block--theme,
 .plaidact-campaign--theme {
 	--plaidact-theme-primary: var(--wp--preset--color--primary, var(--wp--preset--color--accent, var(--wp--preset--color--tertiary, var(--wp--custom--color--primary, var(--wp--custom--colors--primary, var(--color-primary, var(--color-accent, var(--primary, var(--accent, var(--accent-color, var(--tw-prose-links, var(--plaidact-petition-accent, #e01a2b))))))))))));
 	--plaidact-theme-contrast: var(--wp--preset--color--contrast, var(--wp--preset--color--foreground, var(--wp--custom--color--foreground, var(--wp--custom--color--text, var(--color-foreground, var(--color-text, var(--foreground, var(--text-color, currentColor))))))));
 	--plaidact-theme-base: var(--wp--preset--color--base, var(--wp--preset--color--background, var(--wp--custom--color--background, var(--color-background, var(--background-color, transparent)))));
-	--plaidact-theme-surface: var(--wp--preset--color--base, var(--wp--preset--color--background, transparent));
+	--plaidact-theme-surface: var(--wp--preset--color--base, var(--wp--preset--color--background, var(--wp--custom--color--surface, var(--color-surface, transparent))));
 	--plaidact-theme-muted: color-mix(in srgb, var(--plaidact-theme-contrast) 68%, transparent);
 	--plaidact-theme-border: color-mix(in srgb, var(--plaidact-theme-contrast) 18%, transparent);
 	--plaidact-theme-radius: var(--wp--custom--border--radius, var(--wp--custom--button--border--radius, var(--wp--custom--radius, var(--radius, var(--border-radius, 0.75rem)))));
@@ -303,6 +314,10 @@
 	--ptr-button-border-color-active: var(--plaidact-theme-primary);
 	--ptr-progress-bg: color-mix(in srgb, var(--plaidact-theme-contrast) 12%, transparent);
 	--ptr-progress-inner-bg: var(--plaidact-theme-primary);
+	--plaidact-petition-surface: var(--plaidact-theme-surface);
+	--plaidact-petition-text: var(--plaidact-theme-contrast);
+	--plaidact-petition-muted: var(--plaidact-theme-muted);
+	--plaidact-petition-border: var(--plaidact-theme-border);
 	background: var(--plaidact-theme-base);
 	border-color: var(--plaidact-theme-border);
 	border-radius: var(--plaidact-theme-radius);
