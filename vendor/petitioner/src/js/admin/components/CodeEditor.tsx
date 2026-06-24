@@ -1,10 +1,10 @@
 export default function CodeEditor({ title = '', help = '', code = '' }) {
 	return (
 		<div>
-			<p>
+			<div>
 				<h3>{title}</h3>
-				<span>{help}</span>
-			</p>
+				<p>{help}</p>
+			</div>
 			<textarea
 				name="petitioner_custom_css"
 				id="petitionerCode"

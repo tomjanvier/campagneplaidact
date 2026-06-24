@@ -19,7 +19,7 @@ return [
     ],
     'custom_css'           => [
         'meta_key' => 'petitioner_custom_css',
-        'type'     => 'textarea'
+        'type'     => 'css'
     ],
     'primary_color'        => [
         'meta_key' => 'petitioner_primary_color',
