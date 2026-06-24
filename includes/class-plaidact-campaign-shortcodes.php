@@ -35,20 +35,11 @@ final class Shortcodes
             __CLASS__,
             "render_send_campaign_form",
         ]);
-        add_action("init", [__CLASS__, "register_options"]);
         add_action("admin_menu", [__CLASS__, "register_admin_pages"]);
         add_action("admin_init", [__CLASS__, "register_settings"]);
         add_action("wp_enqueue_scripts", [__CLASS__, "enqueue_assets"]);
         add_filter("av_petitioner_labels_defaults", [__CLASS__, "translate_petitioner_labels"]);
         add_filter("av_petitioner_form_attributes", [__CLASS__, "customize_petitioner_form_attributes"], 10, 2);
-        add_action("admin_post_nopriv_plaidact_petition_submit", [
-            __CLASS__,
-            "handle_petition_submit",
-        ]);
-        add_action("admin_post_plaidact_petition_submit", [
-            __CLASS__,
-            "handle_petition_submit",
-        ]);
         add_action("admin_post_nopriv_plaidact_newsletter_submit", [
             __CLASS__,
             "handle_newsletter_submit",
@@ -89,12 +80,6 @@ final class Shortcodes
             plaidact_campaign_core_asset_version("assets/campaign-givoly.js"),
             true
         );
-    }
-
-    public static function register_options(): void
-    {
-        add_option("plaidact_petition_signatures_count", 0);
-        add_option("plaidact_petition_signed_emails", []);
     }
 
     public static function register_admin_pages(): void
@@ -167,10 +152,6 @@ final class Shortcodes
                 "Signer la pétition",
                 "plaidact-campaign-core"
             ),
-            "petition_button_label" => __(
-                "Signer maintenant",
-                "plaidact-campaign-core"
-            ),
             "petition_form_color" => "#e01a2b",
             "petition_design_mode" => "custom",
             "petition_show_signers" => "1",
@@ -186,20 +167,10 @@ final class Shortcodes
                 "Envoyer le message",
                 "plaidact-campaign-core"
             ),
-            "petition_description" => __(
-                "Expliquez ici les objectifs et revendications de la pétition.",
-                "plaidact-campaign-core"
-            ),
             "petition_letter" => __(
                 'Madame, Monsieur,\n\nNous vous demandons d’agir rapidement pour répondre aux revendications de cette campagne citoyenne.',
                 "plaidact-campaign-core"
             ),
-            "petition_terms_label" => __(
-                "J’accepte que ma signature soit enregistrée pour cette pétition.",
-                "plaidact-campaign-core"
-            ),
-            "petition_show_phone" => "0",
-            "petition_show_postcode" => "1",
             "decision_maker_name" => "",
             "decision_maker_email" => "",
             "decision_mail_subject" => __(
@@ -284,13 +255,10 @@ final class Shortcodes
             "petition_intro",
             "campaign_share_mail_title",
             "petition_title",
-            "petition_button_label",
             "petition_optin_label",
             "send_mail_intro",
             "send_mail_button_label",
-            "petition_description",
             "petition_letter",
-            "petition_terms_label",
             "decision_mail_subject",
             "decision_mail_placeholder",
             "decision_mail_button_label",
@@ -504,9 +472,6 @@ final class Shortcodes
             "petition_title" => sanitize_text_field(
                 (string) ($input["petition_title"] ?? "")
             ),
-            "petition_button_label" => sanitize_text_field(
-                (string) ($input["petition_button_label"] ?? "")
-            ),
             "petition_form_color" => sanitize_hex_color(
                 (string) ($input["petition_form_color"] ?? "#e01a2b")
             ) ?: "#e01a2b",
@@ -525,21 +490,9 @@ final class Shortcodes
             "send_mail_button_label" => sanitize_text_field(
                 (string) ($input["send_mail_button_label"] ?? "")
             ),
-            "petition_description" => sanitize_textarea_field(
-                (string) ($input["petition_description"] ?? "")
-            ),
             "petition_letter" => sanitize_textarea_field(
                 (string) ($input["petition_letter"] ?? "")
             ),
-            "petition_terms_label" => sanitize_text_field(
-                (string) ($input["petition_terms_label"] ?? "")
-            ),
-            "petition_show_phone" => !empty($input["petition_show_phone"])
-                ? "1"
-                : "0",
-            "petition_show_postcode" => !empty($input["petition_show_postcode"])
-                ? "1"
-                : "0",
             "decision_maker_name" => sanitize_text_field(
                 (string) ($input["decision_maker_name"] ?? "")
             ),
@@ -732,19 +685,13 @@ final class Shortcodes
      ); ?></th><td><input name="plaidact_campaign_settings[petition_intro]" type="text" value="<?php echo esc_attr(
     (string) $settings["petition_intro"]
 ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "Libellé bouton pétition",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[petition_button_label]" type="text" value="<?php echo esc_attr(
-    (string) $settings["petition_button_label"]
-); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
+<tr><th scope="row"><?php esc_html_e(
          "Couleur du formulaire pétition",
          "plaidact-campaign-core"
      ); ?></th><td><input name="plaidact_campaign_settings[petition_form_color]" type="color" value="<?php echo esc_attr(
     (string) ($settings["petition_form_color"] ?? "#e01a2b")
 ); ?>" /></td></tr>
-                    <tr><th scope="row"><?php esc_html_e("Design du site", "plaidact-campaign-core"); ?></th><td><label><input name="plaidact_campaign_settings[petition_design_mode]" type="checkbox" value="theme" <?php checked((string) ($settings["petition_design_mode"] ?? "custom"), "theme"); ?> /> <?php esc_html_e("Reprendre automatiquement les couleurs, boutons, arrondis et typographies du thème WordPress pour les éléments de campagne.", "plaidact-campaign-core"); ?></label><p class="description"><?php esc_html_e("Quand cette option est active, la couleur ci-dessus reste un filet de sécurité si le thème ne fournit pas de couleur primaire.", "plaidact-campaign-core"); ?></p></td></tr>
+                    <tr><th scope="row"><?php esc_html_e("Design du thème WordPress", "plaidact-campaign-core"); ?></th><td><label><input name="plaidact_campaign_settings[petition_design_mode]" type="checkbox" value="theme" <?php checked((string) ($settings["petition_design_mode"] ?? "custom"), "theme"); ?> /> <?php esc_html_e("Reprendre automatiquement les couleurs, boutons, arrondis, champs et typographies du thème pour les blocs de campagne, notamment la pétition Petitioner.", "plaidact-campaign-core"); ?></label><p class="description"><?php esc_html_e("La couleur ci-dessus reste utilisée comme filet de sécurité si le thème ne fournit pas de couleur primaire.", "plaidact-campaign-core"); ?></p></td></tr>
 					<tr><th scope="row"><?php esc_html_e(
          "Signataires publics",
          "plaidact-campaign-core"
@@ -773,13 +720,7 @@ final class Shortcodes
      ); ?></th><td><input name="plaidact_campaign_settings[send_mail_intro]" type="text" value="<?php echo esc_attr(
     (string) $settings["send_mail_intro"]
 ); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "Description pétition",
-         "plaidact-campaign-core"
-     ); ?></th><td><textarea name="plaidact_campaign_settings[petition_description]" class="large-text" rows="4"><?php echo esc_textarea(
-    (string) $settings["petition_description"]
-); ?></textarea></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
+<tr><th scope="row"><?php esc_html_e(
          "Lettre de pétition",
          "plaidact-campaign-core"
      ); ?></th><td><textarea name="plaidact_campaign_settings[petition_letter]" class="large-text" rows="6"><?php echo esc_textarea(
@@ -788,29 +729,7 @@ final class Shortcodes
     "Texte affiché aux signataires et envoyé au décideur à chaque signature.",
     "plaidact-campaign-core"
 ); ?></p></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "Consentement signature",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[petition_terms_label]" type="text" value="<?php echo esc_attr(
-    (string) $settings["petition_terms_label"]
-); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "Champs complémentaires",
-         "plaidact-campaign-core"
-     ); ?></th><td><label><input name="plaidact_campaign_settings[petition_show_postcode]" type="checkbox" value="1" <?php checked(
-    (string) $settings["petition_show_postcode"],
-    "1"
-); ?> /> <?php esc_html_e(
-     "Afficher le code postal",
-     "plaidact-campaign-core"
- ); ?></label><br /><label><input name="plaidact_campaign_settings[petition_show_phone]" type="checkbox" value="1" <?php checked(
-    (string) $settings["petition_show_phone"],
-    "1"
-); ?> /> <?php esc_html_e(
-     "Afficher le téléphone",
-     "plaidact-campaign-core"
- ); ?></label></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
+<tr><th scope="row"><?php esc_html_e(
          "Nom du décideur",
          "plaidact-campaign-core"
      ); ?></th><td><input name="plaidact_campaign_settings[decision_maker_name]" type="text" value="<?php echo esc_attr(
@@ -1018,14 +937,15 @@ final class Shortcodes
                 : "";
 
             return sprintf(
-                '<section class="plaidact-petition-block %7$s" style="--plaidact-petition-accent:%1$s"><div class="plaidact-petition-block__header"><p class="plaidact-kicker">%2$s</p><h2>%3$s</h2><p>%4$s</p></div><div class="plaidact-petition-block__body">%5$s</div>%6$s</section>',
+                '<section class="plaidact-petition-block %7$s %8$s" style="--plaidact-petition-accent:%1$s"><div class="plaidact-petition-block__header"><p class="plaidact-kicker">%2$s</p><h2>%3$s</h2><p>%4$s</p></div><div class="plaidact-petition-block__body">%5$s</div>%6$s</section>',
                 esc_attr((string) ($settings["petition_form_color"] ?? "#e01a2b")),
                 esc_html__("Pétition", "plaidact-campaign-core"),
                 esc_html((string) ($settings["petition_title"] ?? __("Signer la pétition", "plaidact-campaign-core"))),
                 esc_html((string) ($settings["petition_intro"] ?? __("Signez pour soutenir la campagne.", "plaidact-campaign-core"))),
                 $petitioner_output,
                 $signers . self::render_givoly_donation_cta($settings),
-                "theme" === (string) ($settings["petition_design_mode"] ?? "custom") ? "plaidact-petition-block--theme" : "plaidact-petition-block--custom"
+                "theme" === (string) ($settings["petition_design_mode"] ?? "custom") ? "plaidact-petition-block--theme" : "plaidact-petition-block--custom",
+                self::get_campaign_design_class($settings)
             );
         }
 
@@ -1038,6 +958,14 @@ final class Shortcodes
         }
 
         return "";
+    }
+
+
+    private static function get_campaign_design_class(array $settings): string
+    {
+        return "theme" === (string) ($settings["petition_design_mode"] ?? "custom")
+            ? "plaidact-campaign--theme"
+            : "plaidact-campaign--custom";
     }
 
     private static function build_givoly_donation_url(array $settings): string
@@ -1163,164 +1091,6 @@ final class Shortcodes
         return $attrs;
     }
 
-    public static function handle_petition_submit(): void
-    {
-        $language = self::get_request_language();
-
-        if (
-            !isset($_POST["plaidact_petition_nonce"]) ||
-            !wp_verify_nonce(
-                sanitize_text_field(
-                    wp_unslash($_POST["plaidact_petition_nonce"])
-                ),
-                "plaidact_petition_submit_action"
-            )
-        ) {
-            wp_safe_redirect(self::get_redirect_url($language));
-            exit();
-        }
-
-        if (!empty($_POST["website"])) {
-            wp_safe_redirect(self::get_redirect_url($language));
-            exit();
-        }
-
-        $email = sanitize_email(wp_unslash($_POST["email"] ?? ""));
-        $name = sanitize_text_field(wp_unslash($_POST["full_name"] ?? ""));
-        $postcode = sanitize_text_field(wp_unslash($_POST["postcode"] ?? ""));
-        $phone = sanitize_text_field(wp_unslash($_POST["phone"] ?? ""));
-        if (empty($email) || empty($name) || empty($_POST["petition_terms"])) {
-            wp_safe_redirect(self::get_redirect_url($language));
-            exit();
-        }
-
-        $email_key = md5(strtolower($email));
-        $signed_emails = (array) get_option(
-            "plaidact_petition_signed_emails",
-            []
-        );
-        $existing = get_posts([
-            "post_type" => "plaid_signature",
-            "post_status" => "publish",
-            "posts_per_page" => 1,
-            "fields" => "ids",
-            "meta_key" => "_plaid_signature_email",
-            "meta_value" => $email,
-        ]);
-        if (isset($signed_emails[$email_key]) || !empty($existing)) {
-            self::redirect_with_status("petition_signed", "already", $language);
-        }
-
-        $signature_id = wp_insert_post([
-            "post_type" => "plaid_signature",
-            "post_status" => "publish",
-            "post_title" => $name,
-            "post_content" => sprintf(
-                __(
-                    'Signature de %1$s (%2$s) sur %3$s.',
-                    "plaidact-campaign-core"
-                ),
-                $name,
-                $email,
-                wp_date(
-                    get_option("date_format") . " " . get_option("time_format")
-                )
-            ),
-        ]);
-
-        if (!is_wp_error($signature_id) && $signature_id > 0) {
-            $count = (int) get_option("plaidact_petition_signatures_count", 0);
-            update_option("plaidact_petition_signatures_count", $count + 1);
-            $signed_emails[$email_key] = time();
-            update_option(
-                "plaidact_petition_signed_emails",
-                $signed_emails,
-                false
-            );
-
-            update_post_meta(
-                $signature_id,
-                "_plaid_signature_full_name",
-                $name
-            );
-            update_post_meta($signature_id, "_plaid_signature_email", $email);
-            update_post_meta(
-                $signature_id,
-                "_plaid_signature_optin",
-                isset($_POST["newsletter_optin"]) ? "1" : "0"
-            );
-            update_post_meta(
-                $signature_id,
-                "_plaid_signature_anonymous",
-                isset($_POST["anonymous_signature"]) ? "1" : "0"
-            );
-            update_post_meta(
-                $signature_id,
-                "_plaid_signature_postcode",
-                $postcode
-            );
-            update_post_meta($signature_id, "_plaid_signature_phone", $phone);
-            update_post_meta(
-                $signature_id,
-                "_plaid_signature_signed_at",
-                current_time("mysql")
-            );
-            update_post_meta(
-                $signature_id,
-                "_plaid_signature_ip_hash",
-                wp_hash((string) ($_SERVER["REMOTE_ADDR"] ?? ""))
-            );
-            if ($language) {
-                update_post_meta(
-                    $signature_id,
-                    "_plaid_signature_language",
-                    $language
-                );
-            }
-        } else {
-            self::redirect_with_status("petition_signed", "0", $language);
-        }
-
-        $settings = self::get_settings(true, $language);
-        Petition_Workflows::maybe_notify_admin(
-            $settings,
-            $name,
-            $email,
-            $postcode,
-            $phone,
-            $language
-        );
-        Petition_Workflows::maybe_send_decision_maker_email(
-            $settings,
-            $name,
-            $email,
-            $postcode,
-            $language
-        );
-
-        $brevo_result = self::subscribe_to_brevo_lists(
-            $email,
-            $name,
-            $language,
-            true,
-            isset($_POST["newsletter_optin"])
-        );
-        if (
-            !is_wp_error($brevo_result) &&
-            !is_wp_error($signature_id) &&
-            $signature_id > 0
-        ) {
-            update_post_meta(
-                $signature_id,
-                "_plaid_signature_brevo_status",
-                $brevo_result
-            );
-        }
-
-        self::redirect_with_status("petition_signed", "1", $language);
-    }
-
-
     /**
      * Renders campaign partner cards.
      *
@@ -1349,9 +1119,11 @@ final class Shortcodes
             return "";
         }
 
+        $settings = self::get_settings();
+
         ob_start();
         ?>
-        <section class="plaidact-campagne-partners plaidact-card plaidact-card--partners">
+        <section class="plaidact-campagne-partners plaidact-card plaidact-card--partners <?php echo esc_attr(self::get_campaign_design_class($settings)); ?>">
             <?php if (!empty($atts["title"])) : ?>
                 <h2><?php echo esc_html((string) $atts["title"]); ?></h2>
             <?php endif; ?>
@@ -1378,7 +1150,7 @@ final class Shortcodes
         $action = esc_url(admin_url("admin-post.php"));
         ob_start();
         ?>
-		<div class="plaidact-card plaidact-card--newsletter" id="newsletter">
+		<div class="plaidact-card plaidact-card--newsletter <?php echo esc_attr(self::get_campaign_design_class($settings)); ?>" id="newsletter">
 			<h3><?php echo esc_html(
        (string) ($settings["newsletter_title"] ??
            __("Newsletter", "plaidact-campaign-core"))
@@ -1595,7 +1367,7 @@ final class Shortcodes
 
         ob_start();
         ?>
-		<div class="plaidact-card plaidact-card--send-mail">
+		<div class="plaidact-card plaidact-card--send-mail <?php echo esc_attr(self::get_campaign_design_class($settings)); ?>">
 			<h3 class="plaidact-card__title"><?php echo esc_html(
        (string) ($settings["campaign_share_mail_title"] ??
            __("Écrire au décideur", "plaidact-campaign-core"))
@@ -1741,7 +1513,7 @@ final class Shortcodes
 
         ob_start();
         ?>
-		<div class="plaidact-card plaidact-card--social">
+		<div class="plaidact-card plaidact-card--social <?php echo esc_attr(self::get_campaign_design_class($settings)); ?>">
 			<?php if (!empty($embeds)): ?>
 				<div class="plaidact-social-grid">
 					<?php foreach ($embeds as $embed): ?>
