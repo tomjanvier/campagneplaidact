@@ -452,7 +452,7 @@ final class Shortcodes
         }
 
         return [
-            "petition_goal" => absint($input["petition_goal"] ?? 10000),
+            "petition_goal" => absint($input["petition_goal"] ?? $existing["petition_goal"] ?? 10000),
             "petition_form_id" => absint($input["petition_form_id"] ?? 0),
             "notification_email" => sanitize_email(
                 $input["notification_email"] ?? get_option("admin_email")
@@ -464,25 +464,25 @@ final class Shortcodes
             "brevo_list_campaign" => absint($input["brevo_list_campaign"] ?? 0),
             "brevo_list_petition" => absint($input["brevo_list_petition"] ?? 0),
             "petition_intro" => sanitize_text_field(
-                (string) ($input["petition_intro"] ?? "")
+                (string) ($input["petition_intro"] ?? $existing["petition_intro"] ?? "")
             ),
             "campaign_share_mail_title" => sanitize_text_field(
                 (string) ($input["campaign_share_mail_title"] ?? "")
             ),
             "petition_title" => sanitize_text_field(
-                (string) ($input["petition_title"] ?? "")
+                (string) ($input["petition_title"] ?? $existing["petition_title"] ?? "")
             ),
             "petition_form_color" => sanitize_hex_color(
-                (string) ($input["petition_form_color"] ?? "#e01a2b")
+                (string) ($input["petition_form_color"] ?? $existing["petition_form_color"] ?? "#e01a2b")
             ) ?: "#e01a2b",
-            "petition_design_mode" => in_array(($input["petition_design_mode"] ?? "theme"), ["custom", "theme"], true)
-                ? (string) $input["petition_design_mode"]
+            "petition_design_mode" => in_array(($input["petition_design_mode"] ?? $existing["petition_design_mode"] ?? "theme"), ["custom", "theme"], true)
+                ? (string) ($input["petition_design_mode"] ?? $existing["petition_design_mode"] ?? "theme")
                 : "theme",
             "petition_show_signers" => !empty($input["petition_show_signers"])
                 ? "1"
                 : "0",
             "petition_optin_label" => sanitize_text_field(
-                (string) ($input["petition_optin_label"] ?? "")
+                (string) ($input["petition_optin_label"] ?? $existing["petition_optin_label"] ?? "")
             ),
             "send_mail_intro" => sanitize_text_field(
                 (string) ($input["send_mail_intro"] ?? "")
@@ -491,7 +491,7 @@ final class Shortcodes
                 (string) ($input["send_mail_button_label"] ?? "")
             ),
             "petition_letter" => sanitize_textarea_field(
-                (string) ($input["petition_letter"] ?? "")
+                (string) ($input["petition_letter"] ?? $existing["petition_letter"] ?? "")
             ),
             "decision_maker_name" => sanitize_text_field(
                 (string) ($input["decision_maker_name"] ?? "")
@@ -594,12 +594,6 @@ final class Shortcodes
 				<?php settings_fields("plaidact_campaign_settings"); ?>
 					<table class="form-table" role="presentation">
 						<tr><th scope="row"><?php esc_html_e(
-          "Objectif signatures",
-          "plaidact-campaign-core"
-      ); ?></th><td><input name="plaidact_campaign_settings[petition_goal]" type="number" value="<?php echo esc_attr(
-    (string) $settings["petition_goal"]
-); ?>" class="small-text" /></td></tr>
-						<tr><th scope="row"><?php esc_html_e(
           "ID formulaire pétition",
           "plaidact-campaign-core"
       ); ?></th><td><input name="plaidact_campaign_settings[petition_form_id]" type="number" value="<?php echo esc_attr(
@@ -673,41 +667,19 @@ final class Shortcodes
 					<tr><th scope="row"><?php esc_html_e("Montant suggéré Givoly", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_amount]" type="number" min="0" value="<?php echo esc_attr((string) ($settings["givoly_amount"] ?? "")); ?>" class="small-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e("Texte bouton don", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_button_label]" type="text" value="<?php echo esc_attr((string) ($settings["givoly_button_label"] ?? "")); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e("Texte invitation au don", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_cta_text]" type="text" value="<?php echo esc_attr((string) ($settings["givoly_cta_text"] ?? "")); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "Titre bloc pétition",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[petition_title]" type="text" value="<?php echo esc_attr(
-    (string) $settings["petition_title"]
-); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "Texte intro pétition",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[petition_intro]" type="text" value="<?php echo esc_attr(
-    (string) $settings["petition_intro"]
-); ?>" class="regular-text" /></td></tr>
-<tr><th scope="row"><?php esc_html_e(
-         "Couleur du formulaire pétition",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[petition_form_color]" type="color" value="<?php echo esc_attr(
-    (string) ($settings["petition_form_color"] ?? "#e01a2b")
-); ?>" /></td></tr>
-                    <tr><th scope="row"><?php esc_html_e("Design du thème WordPress", "plaidact-campaign-core"); ?></th><td><label><input name="plaidact_campaign_settings[petition_design_mode]" type="checkbox" value="theme" <?php checked((string) ($settings["petition_design_mode"] ?? "theme"), "theme"); ?> /> <?php esc_html_e("Reprendre automatiquement les couleurs, boutons, arrondis, champs et typographies du thème pour les blocs de campagne, notamment la pétition Petitioner.", "plaidact-campaign-core"); ?></label><p class="description"><?php esc_html_e("La couleur ci-dessus reste utilisée comme filet de sécurité si le thème ne fournit pas de couleur primaire.", "plaidact-campaign-core"); ?></p></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
+                    <tr><th scope="row"><?php esc_html_e(
          "Signataires publics",
          "plaidact-campaign-core"
      ); ?></th><td><label><input name="plaidact_campaign_settings[petition_show_signers]" type="checkbox" value="1" <?php checked(
     (string) ($settings["petition_show_signers"] ?? "1"),
     "1"
 ); ?> /> <?php esc_html_e(
-     "Afficher la liste publique des signataires sous le formulaire, sans ouvrir l’édition de la pétition.",
+     "Afficher la liste publique des signataires sous le formulaire Petitioner.",
      "plaidact-campaign-core"
- ); ?></label></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "Texte consentement newsletter",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[petition_optin_label]" type="text" value="<?php echo esc_attr(
-    (string) $settings["petition_optin_label"]
-); ?>" class="regular-text" /></td></tr>
+ ); ?></label><p class="description"><?php esc_html_e(
+    "Le titre, le texte, la lettre, les couleurs et les champs de la pétition se modifient directement dans Petitioner. PLAID·ACT n’affiche plus les anciens réglages du formulaire natif.",
+    "plaidact-campaign-core"
+); ?></p></td></tr>
 					<tr><th scope="row"><?php esc_html_e(
          "Titre email de partage",
          "plaidact-campaign-core"
@@ -720,15 +692,6 @@ final class Shortcodes
      ); ?></th><td><input name="plaidact_campaign_settings[send_mail_intro]" type="text" value="<?php echo esc_attr(
     (string) $settings["send_mail_intro"]
 ); ?>" class="regular-text" /></td></tr>
-<tr><th scope="row"><?php esc_html_e(
-         "Lettre de pétition",
-         "plaidact-campaign-core"
-     ); ?></th><td><textarea name="plaidact_campaign_settings[petition_letter]" class="large-text" rows="6"><?php echo esc_textarea(
-    (string) $settings["petition_letter"]
-); ?></textarea><p class="description"><?php esc_html_e(
-    "Texte affiché aux signataires et envoyé au décideur à chaque signature.",
-    "plaidact-campaign-core"
-); ?></p></td></tr>
 <tr><th scope="row"><?php esc_html_e(
          "Nom du décideur",
          "plaidact-campaign-core"
@@ -937,11 +900,8 @@ final class Shortcodes
                 : "";
 
             return sprintf(
-                '<section class="plaidact-petition-block %7$s %8$s" style="--plaidact-petition-accent:%1$s"><div class="plaidact-petition-block__header"><p class="plaidact-kicker">%2$s</p><h2>%3$s</h2><p>%4$s</p></div><div class="plaidact-petition-block__body">%5$s</div>%6$s</section>',
+                '<section class="plaidact-petition-block %4$s %5$s" style="--plaidact-petition-accent:%1$s"><div class="plaidact-petition-block__body">%2$s</div>%3$s</section>',
                 esc_attr((string) ($settings["petition_form_color"] ?? "#e01a2b")),
-                esc_html__("Pétition", "plaidact-campaign-core"),
-                esc_html((string) ($settings["petition_title"] ?? __("Signer la pétition", "plaidact-campaign-core"))),
-                esc_html((string) ($settings["petition_intro"] ?? __("Signez pour soutenir la campagne.", "plaidact-campaign-core"))),
                 $petitioner_output,
                 $signers . self::render_givoly_donation_cta($settings),
                 "theme" === (string) ($settings["petition_design_mode"] ?? "theme") ? "plaidact-petition-block--theme" : "plaidact-petition-block--custom",
