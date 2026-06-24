@@ -277,3 +277,46 @@
 	color: #ffffff;
 	filter: brightness(0.92);
 }
+
+.plaidact-petition-block--theme {
+	--plaidact-theme-primary: var(--wp--preset--color--primary, var(--wp--preset--color--accent, var(--plaidact-petition-accent)));
+	--plaidact-theme-contrast: var(--wp--preset--color--contrast, currentColor);
+	--plaidact-theme-base: var(--wp--preset--color--base, #ffffff);
+	--plaidact-theme-radius: var(--wp--custom--border--radius, var(--wp--custom--button--border--radius, 0.75rem));
+	--plaidact-petition-accent: var(--plaidact-theme-primary);
+	background: var(--plaidact-theme-base);
+	border-color: color-mix(in srgb, var(--plaidact-theme-primary) 24%, transparent);
+	border-radius: var(--plaidact-theme-radius);
+	box-shadow: none;
+	color: var(--plaidact-theme-contrast);
+	font-family: inherit;
+}
+
+.plaidact-petition-block--theme .plaidact-card,
+.plaidact-petition-block--theme .plaidact-givoly-cta,
+.plaidact-petition-block--theme .plaidact-petition-signers,
+.plaidact-petition-block--theme .petitioner,
+.plaidact-petition-block--theme .petitioner-submissions {
+	background: transparent;
+	border-color: color-mix(in srgb, var(--plaidact-theme-primary) 20%, transparent);
+	border-radius: var(--plaidact-theme-radius);
+	box-shadow: none;
+	font-family: inherit;
+}
+
+.plaidact-petition-block--theme button,
+.plaidact-petition-block--theme input[type="submit"],
+.plaidact-petition-block--theme .petitioner__btn,
+.plaidact-petition-block--theme .plaidact-givoly-cta__button {
+	background: var(--plaidact-theme-primary);
+	border-radius: var(--wp--custom--button--border--radius, var(--plaidact-theme-radius));
+	color: var(--wp--preset--color--base, #ffffff);
+	font-family: inherit;
+}
+
+.plaidact-petition-block--theme input,
+.plaidact-petition-block--theme select,
+.plaidact-petition-block--theme textarea {
+	border-radius: var(--plaidact-theme-radius);
+	font-family: inherit;
+}

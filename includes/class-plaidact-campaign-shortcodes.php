@@ -118,6 +118,15 @@ final class Shortcodes
             [__CLASS__, "render_modules_page"]
         );
 
+        add_submenu_page(
+            "plaidact-campaign-admin",
+            __("Signataires", "plaidact-campaign-core"),
+            __("Signataires", "plaidact-campaign-core"),
+            "manage_options",
+            "plaidact-campaign-signers",
+            [__CLASS__, "render_signers_admin_page"]
+        );
+
         add_options_page(
             __("PLAID·ACT Campagne", "plaidact-campaign-core"),
             __("PLAID·ACT Campagne", "plaidact-campaign-core"),
@@ -163,6 +172,7 @@ final class Shortcodes
                 "plaidact-campaign-core"
             ),
             "petition_form_color" => "#e01a2b",
+            "petition_design_mode" => "custom",
             "petition_show_signers" => "1",
             "petition_optin_label" => __(
                 "M’inscrire aux newsletters PLAID·ACT et de cette campagne",
@@ -500,6 +510,9 @@ final class Shortcodes
             "petition_form_color" => sanitize_hex_color(
                 (string) ($input["petition_form_color"] ?? "#e01a2b")
             ) ?: "#e01a2b",
+            "petition_design_mode" => in_array(($input["petition_design_mode"] ?? "custom"), ["custom", "theme"], true)
+                ? (string) $input["petition_design_mode"]
+                : "custom",
             "petition_show_signers" => !empty($input["petition_show_signers"])
                 ? "1"
                 : "0",
@@ -731,6 +744,7 @@ final class Shortcodes
      ); ?></th><td><input name="plaidact_campaign_settings[petition_form_color]" type="color" value="<?php echo esc_attr(
     (string) ($settings["petition_form_color"] ?? "#e01a2b")
 ); ?>" /></td></tr>
+                    <tr><th scope="row"><?php esc_html_e("Design du site", "plaidact-campaign-core"); ?></th><td><label><input name="plaidact_campaign_settings[petition_design_mode]" type="checkbox" value="theme" <?php checked((string) ($settings["petition_design_mode"] ?? "custom"), "theme"); ?> /> <?php esc_html_e("Reprendre automatiquement les couleurs, boutons, arrondis et typographies du thème WordPress pour les éléments de campagne.", "plaidact-campaign-core"); ?></label><p class="description"><?php esc_html_e("Quand cette option est active, la couleur ci-dessus reste un filet de sécurité si le thème ne fournit pas de couleur primaire.", "plaidact-campaign-core"); ?></p></td></tr>
 					<tr><th scope="row"><?php esc_html_e(
          "Signataires publics",
          "plaidact-campaign-core"
@@ -911,6 +925,84 @@ final class Shortcodes
         ];
     }
 
+    public static function render_signers_admin_page(): void
+    {
+        if (!current_user_can("manage_options")) {
+            return;
+        }
+
+        $settings = self::get_settings(false);
+        $form_id = self::resolve_petitioner_form_id($settings);
+        $page = max(1, absint($_GET["paged"] ?? 1));
+        $per_page = 50;
+        $result = ["submissions" => [], "total" => 0];
+
+        if ($form_id > 0 && class_exists("AV_Petitioner_Submissions_Model")) {
+            $result = \AV_Petitioner_Submissions_Model::get_form_submissions(
+                $form_id,
+                [
+                    "per_page" => $per_page,
+                    "offset" => ($page - 1) * $per_page,
+                    "fields" => [
+                        "fname",
+                        "lname",
+                        "email",
+                        "postal_code",
+                        "phone",
+                        "newsletter",
+                        "approval_status",
+                        "submitted_at",
+                    ],
+                ]
+            );
+        }
+
+        $total = absint($result["total"] ?? 0);
+        $total_pages = max(1, (int) ceil($total / $per_page));
+        ?>
+        <div class="wrap">
+            <h1><?php esc_html_e("Signataires de la pétition", "plaidact-campaign-core"); ?></h1>
+            <p><?php esc_html_e("Consultez les signatures Petitioner de la campagne sans ouvrir ni modifier la pétition.", "plaidact-campaign-core"); ?></p>
+            <?php if ($form_id <= 0 || !class_exists("AV_Petitioner_Submissions_Model")) : ?>
+                <div class="notice notice-warning"><p><?php esc_html_e("Aucun formulaire Petitioner publié ou module de signatures indisponible.", "plaidact-campaign-core"); ?></p></div>
+            <?php else : ?>
+                <p><strong><?php esc_html_e("Formulaire", "plaidact-campaign-core"); ?> :</strong> #<?php echo esc_html((string) $form_id); ?> — <strong><?php esc_html_e("Total", "plaidact-campaign-core"); ?> :</strong> <?php echo esc_html((string) $total); ?></p>
+                <table class="widefat striped">
+                    <thead><tr>
+                        <th><?php esc_html_e("Nom", "plaidact-campaign-core"); ?></th>
+                        <th><?php esc_html_e("Email", "plaidact-campaign-core"); ?></th>
+                        <th><?php esc_html_e("Code postal", "plaidact-campaign-core"); ?></th>
+                        <th><?php esc_html_e("Téléphone", "plaidact-campaign-core"); ?></th>
+                        <th><?php esc_html_e("Newsletter", "plaidact-campaign-core"); ?></th>
+                        <th><?php esc_html_e("Statut", "plaidact-campaign-core"); ?></th>
+                        <th><?php esc_html_e("Date", "plaidact-campaign-core"); ?></th>
+                    </tr></thead>
+                    <tbody>
+                    <?php foreach ((array) ($result["submissions"] ?? []) as $submission) : ?>
+                        <tr>
+                            <td><?php echo esc_html(trim(($submission->fname ?? "") . " " . ($submission->lname ?? ""))); ?></td>
+                            <td><a href="mailto:<?php echo esc_attr((string) ($submission->email ?? "")); ?>"><?php echo esc_html((string) ($submission->email ?? "")); ?></a></td>
+                            <td><?php echo esc_html((string) ($submission->postal_code ?? "")); ?></td>
+                            <td><?php echo esc_html((string) ($submission->phone ?? "")); ?></td>
+                            <td><?php echo !empty($submission->newsletter) ? esc_html__("Oui", "plaidact-campaign-core") : esc_html__("Non", "plaidact-campaign-core"); ?></td>
+                            <td><?php echo esc_html((string) ($submission->approval_status ?? "")); ?></td>
+                            <td><?php echo esc_html((string) ($submission->submitted_at ?? "")); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <?php if ($total_pages > 1) : ?>
+                    <p class="tablenav-pages">
+                        <?php for ($i = 1; $i <= $total_pages; $i++) : ?>
+                            <a class="button<?php echo $i === $page ? " button-primary" : ""; ?>" href="<?php echo esc_url(add_query_arg(["page" => "plaidact-campaign-signers", "paged" => $i], admin_url("admin.php"))); ?>"><?php echo esc_html((string) $i); ?></a>
+                        <?php endfor; ?>
+                    </p>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
     public static function render_petition_form(array $atts = []): string
     {
         $language = self::get_current_language();
@@ -926,13 +1018,14 @@ final class Shortcodes
                 : "";
 
             return sprintf(
-                '<section class="plaidact-petition-block" style="--plaidact-petition-accent:%1$s"><div class="plaidact-petition-block__header"><p class="plaidact-kicker">%2$s</p><h2>%3$s</h2><p>%4$s</p></div><div class="plaidact-petition-block__body">%5$s</div>%6$s</section>',
+                '<section class="plaidact-petition-block %7$s" style="--plaidact-petition-accent:%1$s"><div class="plaidact-petition-block__header"><p class="plaidact-kicker">%2$s</p><h2>%3$s</h2><p>%4$s</p></div><div class="plaidact-petition-block__body">%5$s</div>%6$s</section>',
                 esc_attr((string) ($settings["petition_form_color"] ?? "#e01a2b")),
                 esc_html__("Pétition", "plaidact-campaign-core"),
                 esc_html((string) ($settings["petition_title"] ?? __("Signer la pétition", "plaidact-campaign-core"))),
                 esc_html((string) ($settings["petition_intro"] ?? __("Signez pour soutenir la campagne.", "plaidact-campaign-core"))),
                 $petitioner_output,
-                $signers . self::render_givoly_donation_cta($settings)
+                $signers . self::render_givoly_donation_cta($settings),
+                "theme" === (string) ($settings["petition_design_mode"] ?? "custom") ? "plaidact-petition-block--theme" : "plaidact-petition-block--custom"
             );
         }
 
@@ -947,7 +1040,7 @@ final class Shortcodes
         return "";
     }
 
-    private static function render_givoly_donation_cta(array $settings): string
+    private static function build_givoly_donation_url(array $settings): string
     {
         $donation_url = esc_url_raw((string) ($settings["givoly_donation_url"] ?? ""));
 
@@ -971,6 +1064,17 @@ final class Shortcodes
 
         if (!empty($query_args)) {
             $donation_url = add_query_arg($query_args, $donation_url);
+        }
+
+        return $donation_url;
+    }
+
+    private static function render_givoly_donation_cta(array $settings): string
+    {
+        $donation_url = self::build_givoly_donation_url($settings);
+
+        if ("" === $donation_url) {
+            return "";
         }
 
         return sprintf(
@@ -1044,8 +1148,17 @@ final class Shortcodes
     {
         $settings = self::get_settings();
         $color = sanitize_hex_color((string) ($settings["petition_form_color"] ?? "#e01a2b")) ?: "#e01a2b";
-        $attrs["class"] = trim(($attrs["class"] ?? "petitioner") . " plaidact-petitioner-form");
+        $design_mode = (string) ($settings["petition_design_mode"] ?? "custom");
+        $attrs["class"] = trim(($attrs["class"] ?? "petitioner") . " plaidact-petitioner-form plaidact-petitioner-form--" . ("theme" === $design_mode ? "theme" : "custom"));
         $attrs["style"] = trim(($attrs["style"] ?? "") . ";--ptr-color-primary:" . $color . ";--plaidact-petition-accent:" . $color);
+
+        $givoly_url = self::build_givoly_donation_url($settings);
+        if ("" !== $givoly_url) {
+            $attrs["data-plaidact-givoly-url"] = $givoly_url;
+            if (empty($attrs["data-redirect-url"])) {
+                $attrs["data-redirect-url"] = $givoly_url;
+            }
+        }
 
         return $attrs;
     }
