@@ -215,6 +215,8 @@ class AV_Petitioner_Admin_Settings_UI
                 $value = $value === "on" ? 1 : 0;
             } else if ($type === 'json') {
                 $value = $this->sanitize_array($value);
+            } else if ($type === 'css') {
+                $value = wp_strip_all_tags((string) $value);
             } else if ($type === 'textarea') {
                 $value = sanitize_textarea_field($value);
             } else {

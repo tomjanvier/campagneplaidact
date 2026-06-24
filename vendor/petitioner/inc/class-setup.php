@@ -282,11 +282,13 @@ class AV_Petitioner_Setup
 		// Custom CSS styles
 		$custom_css = $this->generate_custom_css();
 
-		if (!empty($custom_css) && file_exists($frontend_css_file)) {
-			wp_add_inline_style(
-				'petitioner-style',
-				esc_html(wp_strip_all_tags($custom_css))
-			);
+		if (!empty($custom_css)) {
+			if (!wp_style_is('petitioner-style', 'registered')) {
+				wp_register_style('petitioner-style', false, [], AV_PETITIONER_PLUGIN_VERSION);
+			}
+
+			wp_enqueue_style('petitioner-style');
+			wp_add_inline_style('petitioner-style', $custom_css);
 		}
 
 		if (!file_exists($frontend_js_file)) {
@@ -337,34 +339,46 @@ class AV_Petitioner_Setup
 	public function generate_custom_css()
 	{
 		$custom_css = '';
-		$primary_color = get_option('petitioner_primary_color', '');
-		$dark_color = get_option('petitioner_dark_color', '');
-		$grey_color = get_option('petitioner_grey_color', '');
+		$primary_color = $this->sanitize_css_color(get_option('petitioner_primary_color', ''));
+		$dark_color = $this->sanitize_css_color(get_option('petitioner_dark_color', ''));
+		$grey_color = $this->sanitize_css_color(get_option('petitioner_grey_color', ''));
 
 		$default_colors = '';
 
 		if (!empty($primary_color)) {
-			$default_colors .=
-				'--ptr-color-primary: ' . $primary_color . '!important;';
+			$default_colors .= '--ptr-color-primary: ' . $primary_color . ' !important;';
+			$default_colors .= '--ptr-btn-bg: ' . $primary_color . ' !important;';
+			$default_colors .= '--ptr-progress-inner-bg: ' . $primary_color . ' !important;';
 		}
 
 		if (!empty($dark_color)) {
-			$default_colors .=
-				'--ptr-color-dark: ' . $dark_color . '!important;';
+			$default_colors .= '--ptr-color-dark: ' . $dark_color . ' !important;';
 		}
 
 		if (!empty($grey_color)) {
-			$default_colors .=
-				'--ptr-color-grey: ' . $grey_color . '!important;';
+			$default_colors .= '--ptr-color-grey: ' . $grey_color . ' !important;';
 		}
 
 		if (!empty($default_colors)) {
-			$custom_css .= '.petitioner {' . $default_colors . ' } ';
+			$custom_css .= '.petitioner, .petitioner-submissions {' . $default_colors . '} ';
 		}
 
-		$custom_css .= get_option('petitioner_custom_css', '');
+		$custom_css .= wp_strip_all_tags((string) get_option('petitioner_custom_css', ''));
 
-		return $custom_css;
+		return apply_filters('av_petitioner_custom_css', $custom_css);
+	}
+
+	private function sanitize_css_color($color): string
+	{
+		$color = trim((string) $color);
+
+		if ($color === '') {
+			return '';
+		}
+
+		$hex_color = sanitize_hex_color($color);
+
+		return $hex_color ?: '';
 	}
 
 	/**
