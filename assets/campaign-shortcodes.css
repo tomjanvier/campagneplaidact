@@ -380,3 +380,37 @@
 	color: var(--plaidact-theme-contrast);
 	font-family: inherit;
 }
+
+.plaidact-petition-signers__fallback {
+	display: grid;
+	gap: 0.55rem;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.plaidact-petition-signers__fallback li {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.7rem 0;
+	border-bottom: 1px solid rgb(15 23 42 / 10%);
+}
+
+.plaidact-petition-signers__fallback li:last-child {
+	border-bottom: 0;
+}
+
+.plaidact-petition-signers__fallback span {
+	color: #6b7280;
+	font-size: 0.9rem;
+}
+
+.plaidact-campaign--theme .plaidact-petition-signers__fallback li {
+	border-bottom-color: color-mix(in srgb, var(--plaidact-theme-contrast) 16%, transparent);
+}
+
+.plaidact-campaign--theme .plaidact-petition-signers__fallback span {
+	color: var(--plaidact-theme-muted);
+}

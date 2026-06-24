@@ -1019,14 +1019,21 @@ final class Shortcodes
         $settings = self::get_settings(true, $language);
         $form_id = self::resolve_petitioner_form_id($settings, $language);
 
-        if ($form_id <= 0 || !shortcode_exists("petitioner-submissions")) {
+        if ($form_id <= 0) {
             return "";
         }
 
-        $list = do_shortcode(sprintf(
-            '[petitioner-submissions id="%d" style="table" fields="name,submitted_at" per_page="12" show_pagination="true"]',
-            $form_id
-        ));
+        $list = "";
+        if (shortcode_exists("petitioner-submissions")) {
+            $list = do_shortcode(sprintf(
+                '[petitioner-submissions id="%d" style="simple" fields="name" per_page="12" show_pagination="true"]',
+                $form_id
+            ));
+        }
+
+        if ("" === trim((string) $list)) {
+            $list = self::render_petition_signers_fallback($form_id);
+        }
 
         if ("" === trim((string) $list)) {
             return "";
@@ -1038,6 +1045,47 @@ final class Shortcodes
             esc_html__("Liste publique consultable sans modifier la pétition.", "plaidact-campaign-core"),
             $list
         );
+    }
+
+
+    private static function render_petition_signers_fallback(int $form_id): string
+    {
+        if (!class_exists("AV_Petitioner_Submissions_Model")) {
+            return "";
+        }
+
+        $result = \AV_Petitioner_Submissions_Model::get_form_submissions($form_id, [
+            "per_page" => 12,
+            "fields" => ["fname", "lname", "submitted_at", "hide_name", "approval_status"],
+            "query" => [[
+                "field" => "approval_status",
+                "operator" => "equals",
+                "value" => "Confirmed",
+            ]],
+        ]);
+
+        $submissions = (array) ($result["submissions"] ?? []);
+        if (empty($submissions)) {
+            return "";
+        }
+
+        $items = "";
+        foreach ($submissions as $submission) {
+            $name = !empty($submission->hide_name)
+                ? __("Anonyme", "plaidact-campaign-core")
+                : trim((string) ($submission->fname ?? "") . " " . substr((string) ($submission->lname ?? ""), 0, 1));
+            if ("" === trim($name)) {
+                $name = __("Signataire", "plaidact-campaign-core");
+            }
+
+            $items .= sprintf(
+                '<li><strong>%1$s</strong><span>%2$s</span></li>',
+                esc_html($name),
+                esc_html((string) ($submission->submitted_at ?? ""))
+            );
+        }
+
+        return '<ul class="plaidact-petition-signers__fallback">' . $items . '</ul>';
     }
 
     public static function translate_petitioner_labels(array $labels): array
