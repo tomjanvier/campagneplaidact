@@ -27,6 +27,7 @@ final class Shortcodes
         add_shortcode("plaid_social_wall", [__CLASS__, "render_social_wall"]);
         add_shortcode("plaid_partners", [__CLASS__, "render_partners"]);
         add_shortcode("petition_signers", [__CLASS__, "render_petition_signers"]);
+        add_shortcode("plaid_petition_gauge", [__CLASS__, "render_petition_gauge"]);
         add_shortcode("plaid_newsletter_form", [
             __CLASS__,
             "render_newsletter_form",
@@ -967,6 +968,95 @@ final class Shortcodes
             esc_url($donation_url),
             esc_html((string) ($settings["givoly_button_label"] ?? __("Faire un don", "plaidact-campaign-core")))
         );
+    }
+
+
+    /**
+     * Renders a standalone Petitioner signature gauge for a petition.
+     *
+     * @param array<string,mixed> $atts Shortcode or block attributes.
+     * @return string
+     */
+    public static function render_petition_gauge(array $atts = []): string
+    {
+        $language = self::get_current_language();
+        $settings = self::get_settings(true, $language);
+        $atts = shortcode_atts(
+            [
+                "id" => 0,
+                "petition_id" => 0,
+                "title" => __("Progression de la pétition", "plaidact-campaign-core"),
+            ],
+            $atts,
+            "plaid_petition_gauge"
+        );
+
+        $requested_id = absint($atts["id"] ?: $atts["petition_id"]);
+        $form_id = $requested_id > 0
+            ? Polylang::resolve_post_translation($requested_id, $language)
+            : self::resolve_petitioner_form_id($settings, $language);
+
+        if ($form_id <= 0) {
+            return "";
+        }
+
+        $goal = self::get_petition_goal($form_id, $settings);
+        $signatures = self::get_petition_signature_count($form_id);
+        $progress = $goal > 0 ? min(100, (int) round(($signatures / $goal) * 100)) : 0;
+        $title = trim((string) $atts["title"]);
+        $style = sprintf(
+            "--plaidact-petition-accent:%s;--plaidact-petition-progress:%d%%",
+            esc_attr(self::get_petitioner_accent_color()),
+            $progress
+        );
+
+        return sprintf(
+            '<aside class="plaidact-petition-gauge %6$s" style="%7$s" aria-label="%1$s">%2$s<div class="plaidact-petition-gauge__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="%5$d"><span class="plaidact-petition-gauge__bar"></span></div><div class="plaidact-petition-gauge__stats"><span><strong>%3$s</strong> %8$s</span><span><strong>%4$s</strong> %9$s</span></div></aside>',
+            esc_attr($title ?: __("Progression de la pétition", "plaidact-campaign-core")),
+            $title !== "" ? sprintf('<h3 class="plaidact-petition-gauge__title">%s</h3>', esc_html($title)) : "",
+            esc_html(number_format_i18n($signatures)),
+            esc_html(number_format_i18n($goal)),
+            $progress,
+            esc_attr(self::get_campaign_design_class($settings)),
+            esc_attr($style),
+            esc_html__("signatures", "plaidact-campaign-core"),
+            esc_html__("objectif", "plaidact-campaign-core")
+        );
+    }
+
+    /**
+     * Gets the active Petitioner goal, with campaign settings as fallback.
+     *
+     * @param int          $form_id Petition form ID.
+     * @param array<mixed> $settings Campaign settings.
+     * @return int
+     */
+    private static function get_petition_goal(int $form_id, array $settings): int
+    {
+        if (class_exists("AV_Petitioner_Goal_Milestones")) {
+            return max(0, (int) \AV_Petitioner_Goal_Milestones::get_active_goal($form_id));
+        }
+
+        return max(0, absint($settings["petition_goal"] ?? 0));
+    }
+
+    /**
+     * Gets the confirmed signature count for a Petitioner petition.
+     *
+     * @param int $form_id Petition form ID.
+     * @return int
+     */
+    private static function get_petition_signature_count(int $form_id): int
+    {
+        if (class_exists("AV_Petitioner_Submissions_Model")) {
+            return max(0, (int) \AV_Petitioner_Submissions_Model::get_submission_count($form_id));
+        }
+
+        if (shortcode_exists("petitioner-submission-count")) {
+            return max(0, absint(do_shortcode(sprintf('[petitioner-submission-count id="%d"]', $form_id))));
+        }
+
+        return 0;
     }
 
     public static function render_petition_signers(array $atts = []): string
