@@ -5,6 +5,8 @@
 	const PanelBody = components.PanelBody;
 	const TextControl = components.TextControl;
 	const RangeControl = components.RangeControl;
+	const __experimentalNumberControl = components.__experimentalNumberControl;
+	const NumberControl = __experimentalNumberControl || TextControl;
 
 	function PlaceholderCard(props) {
 		return el(
@@ -27,6 +29,56 @@
 				description: __('Le formulaire réel sera rendu sur le site public avec les réglages Brevo.', 'plaidact-campaign-core'),
 				shortcode: '[plaid_newsletter_form]',
 			});
+		},
+		save: function () {
+			return null;
+		},
+	});
+
+
+	blocks.registerBlockType('plaidact/petition-gauge', {
+		title: __('PLAID·ACT — Jauge de signatures', 'plaidact-campaign-core'),
+		icon: 'chart-bar',
+		category: 'widgets',
+		description: __('Affiche la progression des signatures pour une pétition Petitioner donnée.', 'plaidact-campaign-core'),
+		attributes: {
+			id: { type: 'number', default: 0 },
+			title: { type: 'string', default: '' },
+		},
+		edit: function (props) {
+			const petitionId = props.attributes.id || 0;
+
+			return el(
+				element.Fragment,
+				null,
+				el(
+					InspectorControls,
+					null,
+					el(
+						PanelBody,
+						{ title: __('Réglages de la jauge', 'plaidact-campaign-core') },
+						el(NumberControl, {
+							label: __('ID de la pétition Petitioner', 'plaidact-campaign-core'),
+							value: petitionId,
+							min: 0,
+							onChange: function (value) { props.setAttributes({ id: parseInt(value, 10) || 0 }); },
+							help: __('Laissez 0 pour utiliser la pétition configurée dans Campagne → Réglages.', 'plaidact-campaign-core'),
+						}),
+						el(TextControl, {
+							label: __('Titre', 'plaidact-campaign-core'),
+							value: props.attributes.title,
+							onChange: function (value) { props.setAttributes({ title: value }); },
+						})
+					)
+				),
+				el(PlaceholderCard, {
+					title: props.attributes.title || __('Jauge de signatures', 'plaidact-campaign-core'),
+					description: petitionId
+						? __('Le site public affichera la progression de la pétition sélectionnée.', 'plaidact-campaign-core')
+						: __('Le site public affichera la progression de la pétition configurée pour la campagne.', 'plaidact-campaign-core'),
+					shortcode: petitionId ? '[plaid_petition_gauge id="' + petitionId + '"]' : '[plaid_petition_gauge]',
+				})
+			);
 		},
 		save: function () {
 			return null;

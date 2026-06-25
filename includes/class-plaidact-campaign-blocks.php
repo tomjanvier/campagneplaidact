@@ -52,6 +52,27 @@ final class Blocks {
 		);
 
 		register_block_type(
+			'plaidact/petition-gauge',
+			array(
+				'api_version'     => 2,
+				'editor_script'   => 'plaidact-campaign-blocks',
+				'render_callback' => static function ( array $attributes ): string {
+					return Shortcodes::render_petition_gauge( $attributes );
+				},
+				'attributes'      => array(
+					'id'    => array(
+						'type'    => 'number',
+						'default' => 0,
+					),
+					'title' => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+				),
+			)
+		);
+
+		register_block_type(
 			'plaidact/partners',
 			array(
 				'api_version'     => 2,

@@ -417,3 +417,52 @@
 .plaidact-campaign--theme .plaidact-petition-signers__fallback span {
 	color: var(--plaidact-theme-muted);
 }
+
+.plaidact-petition-gauge {
+	--plaidact-petition-progress: 0%;
+	background: var(--plaidact-petition-surface, #ffffff);
+	border: 1px solid var(--plaidact-petition-border, rgb(15 23 42 / 12%));
+	border-radius: var(--plaidact-theme-radius, 20px);
+	box-shadow: 0 18px 45px rgb(15 23 42 / 8%);
+	color: var(--plaidact-petition-text, inherit);
+	padding: clamp(1rem, 2.5vw, 1.5rem);
+}
+
+.plaidact-petition-gauge__title {
+	font-size: clamp(1.2rem, 2vw, 1.6rem);
+	line-height: 1.15;
+	margin: 0 0 1rem;
+}
+
+.plaidact-petition-gauge__track {
+	background: var(--ptr-progress-bg, rgb(15 23 42 / 12%));
+	border-radius: 999px;
+	height: 0.9rem;
+	overflow: hidden;
+}
+
+.plaidact-petition-gauge__bar {
+	background: var(--ptr-progress-inner-bg, var(--plaidact-petition-accent));
+	border-radius: inherit;
+	display: block;
+	height: 100%;
+	width: var(--plaidact-petition-progress);
+}
+
+.plaidact-petition-gauge__stats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem 1.5rem;
+	justify-content: space-between;
+	margin-top: 0.8rem;
+}
+
+.plaidact-petition-gauge__stats span {
+	color: var(--plaidact-petition-muted, #6b7280);
+}
+
+.plaidact-petition-gauge__stats strong {
+	color: var(--plaidact-petition-text, currentColor);
+	font-size: clamp(1.35rem, 2.5vw, 2rem);
+	line-height: 1;
+}
