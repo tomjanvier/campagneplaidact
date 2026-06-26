@@ -420,11 +420,17 @@
 
 .plaidact-petition-gauge {
 	--plaidact-petition-progress: 0%;
+	--plaidact-petition-track: var(--ptr-progress-bg, rgb(15 23 42 / 12%));
+	--plaidact-petition-fill: var(--ptr-progress-inner-bg, var(--plaidact-petition-accent, #e01a2b));
 	background: var(--ptr-wrapper-bg, var(--plaidact-petition-surface, #ffffff));
-	border-color: var(--ptr-color-dark, var(--plaidact-petition-border, rgb(15 23 42 / 12%)));
-	color: var(--ptr-color-dark, var(--plaidact-petition-text, inherit));
+	border: 1px solid var(--plaidact-petition-border, rgb(15 23 42 / 12%));
+	border-radius: var(--ptr-wrapper-border-radius, var(--plaidact-petition-radius, 1.25rem));
+	box-shadow: 0 1rem 2.5rem rgb(15 23 42 / 8%);
+	color: var(--plaidact-petition-text, inherit);
+	display: block;
 	margin-inline: auto;
 	max-width: min(100%, 34rem);
+	padding: clamp(1rem, 3vw, 1.5rem);
 }
 
 .plaidact-petition-gauge__title {
@@ -433,30 +439,55 @@
 	margin: 0 0 var(--ptr-spacer-md, 1rem);
 }
 
+.plaidact-petition-gauge__stats {
+	display: flex;
+	gap: var(--ptr-spacer-sm, 0.5rem) var(--ptr-spacer-lg, 1.5rem);
+	justify-content: space-between;
+	margin: 0 0 var(--ptr-spacer-md, 1rem);
+}
+
+.plaidact-petition-gauge__stat {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.plaidact-petition-gauge__stat--end {
+	align-items: flex-end;
+	text-align: right;
+}
+
+.plaidact-petition-gauge__stat span {
+	color: var(--plaidact-petition-muted, #6b7280);
+	font-size: clamp(0.875rem, 1.8vw, 1rem);
+}
+
+.plaidact-petition-gauge__stat strong {
+	color: var(--plaidact-petition-text, currentColor);
+	font-size: clamp(1.75rem, 5vw, 2.75rem);
+	line-height: 1;
+}
+
 .plaidact-petition-gauge__track {
-	background: var(--ptr-progress-bg, rgb(15 23 42 / 12%));
+	background: var(--plaidact-petition-track);
+	border-radius: 999px;
+	display: block;
+	height: max(var(--ptr-progress-height, 0.625rem), 0.625rem);
 	overflow: hidden;
+	position: relative;
+	width: 100%;
 }
 
 .plaidact-petition-gauge__bar {
-	background: var(--ptr-progress-inner-bg, var(--plaidact-petition-accent));
+	background: var(--plaidact-petition-fill);
+	border-radius: inherit;
+	display: block;
+	height: 100%;
+	min-width: var(--plaidact-petition-bar-min-width, 0);
+	transition: width 240ms ease;
 	width: var(--plaidact-petition-progress);
 }
 
-.plaidact-petition-gauge__stats {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--ptr-spacer-sm, 0.5rem) var(--ptr-spacer-lg, 1.5rem);
-	justify-content: space-between;
-	margin: var(--ptr-spacer-lg, 1.5rem) 0 0;
-}
-
-.plaidact-petition-gauge__stats span {
-	color: var(--ptr-color-dark, var(--plaidact-petition-muted, #6b7280));
-}
-
-.plaidact-petition-gauge__stats strong {
-	color: var(--ptr-color-dark, var(--plaidact-petition-text, currentColor));
-	font-size: clamp(1.35rem, 2.5vw, 2rem);
-	line-height: 1;
+.plaidact-petition-gauge[style*="--plaidact-petition-progress:0%"] .plaidact-petition-gauge__bar {
+	min-width: 0;
 }
