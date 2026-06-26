@@ -1011,9 +1011,9 @@ final class Shortcodes
         );
 
         return sprintf(
-            '<aside class="plaidact-petition-gauge %6$s" style="%7$s" aria-label="%1$s">%2$s<div class="plaidact-petition-gauge__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="%5$d"><span class="plaidact-petition-gauge__bar"></span></div><div class="plaidact-petition-gauge__stats"><span><strong>%3$s</strong> %8$s</span><span><strong>%4$s</strong> %9$s</span></div></aside>',
+            '<aside class="petitioner plaidact-petition-gauge %6$s" style="%7$s" aria-label="%1$s">%2$s<div class="petitioner__goal plaidact-petition-gauge__stats"><span class="petitioner__col"><strong class="petitioner__num">%3$s</strong> <span class="petitioner__numlabel">%8$s</span></span><span class="petitioner__col petitioner__col--end"><strong class="petitioner__num">%4$s</strong> <span class="petitioner__numlabel">%9$s</span></span><span class="petitioner__progress plaidact-petition-gauge__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="%5$d"><span class="petitioner__progress-bar plaidact-petition-gauge__bar"></span></span></div></aside>',
             esc_attr($title ?: __("Progression de la pétition", "plaidact-campaign-core")),
-            $title !== "" ? sprintf('<h3 class="plaidact-petition-gauge__title">%s</h3>', esc_html($title)) : "",
+            $title !== "" ? sprintf('<h3 class="petitioner__title plaidact-petition-gauge__title">%s</h3>', esc_html($title)) : "",
             esc_html(number_format_i18n($signatures)),
             esc_html(number_format_i18n($goal)),
             $progress,
