@@ -1005,13 +1005,14 @@ final class Shortcodes
         $progress = $goal > 0 ? min(100, (int) round(($signatures / $goal) * 100)) : 0;
         $title = trim((string) $atts["title"]);
         $style = sprintf(
-            "--plaidact-petition-accent:%s;--plaidact-petition-progress:%d%%",
+            "--plaidact-petition-accent:%s;--plaidact-petition-progress:%d%%;--plaidact-petition-bar-min-width:%s",
             esc_attr(self::get_petitioner_accent_color()),
-            $progress
+            $progress,
+            $progress > 0 ? "0.5rem" : "0"
         );
 
         return sprintf(
-            '<aside class="petitioner plaidact-petition-gauge %6$s" style="%7$s" aria-label="%1$s">%2$s<div class="petitioner__goal plaidact-petition-gauge__stats"><span class="petitioner__col"><strong class="petitioner__num">%3$s</strong> <span class="petitioner__numlabel">%8$s</span></span><span class="petitioner__col petitioner__col--end"><strong class="petitioner__num">%4$s</strong> <span class="petitioner__numlabel">%9$s</span></span><span class="petitioner__progress plaidact-petition-gauge__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="%5$d"><span class="petitioner__progress-bar plaidact-petition-gauge__bar"></span></span></div></aside>',
+            '<aside class="petitioner plaidact-petition-gauge %6$s" style="%7$s" aria-label="%1$s">%2$s<div class="plaidact-petition-gauge__stats"><span class="plaidact-petition-gauge__stat"><strong>%3$s</strong> <span>%8$s</span></span><span class="plaidact-petition-gauge__stat plaidact-petition-gauge__stat--end"><strong>%4$s</strong> <span>%9$s</span></span></div><span class="plaidact-petition-gauge__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="%5$d"><span class="plaidact-petition-gauge__bar"></span></span></aside>',
             esc_attr($title ?: __("Progression de la pétition", "plaidact-campaign-core")),
             $title !== "" ? sprintf('<h3 class="petitioner__title plaidact-petition-gauge__title">%s</h3>', esc_html($title)) : "",
             esc_html(number_format_i18n($signatures)),
