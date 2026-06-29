@@ -986,6 +986,8 @@ final class Shortcodes
                 "id" => 0,
                 "petition_id" => 0,
                 "title" => __("Progression de la pétition", "plaidact-campaign-core"),
+                "width" => 34,
+                "height" => 0,
             ],
             $atts,
             "plaid_petition_gauge"
@@ -1004,11 +1006,15 @@ final class Shortcodes
         $signatures = self::get_petition_signature_count($form_id);
         $progress = $goal > 0 ? min(100, (int) round(($signatures / $goal) * 100)) : 0;
         $title = trim((string) $atts["title"]);
+        $width = max(12, min(96, (float) $atts["width"]));
+        $height = max(0, min(6, (float) $atts["height"]));
         $style = sprintf(
-            "--plaidact-petition-accent:%s;--plaidact-petition-progress:%d%%;--plaidact-petition-bar-min-width:%s",
+            "--plaidact-petition-accent:%s;--plaidact-petition-progress:%d%%;--plaidact-petition-bar-min-width:%s;--plaidact-petition-gauge-width:%srem;%s",
             esc_attr(self::get_petitioner_accent_color()),
             $progress,
-            $progress > 0 ? "0.5rem" : "0"
+            $progress > 0 ? "0.5rem" : "0",
+            esc_attr((string) $width),
+            $height > 0 ? sprintf("--plaidact-petition-gauge-height:%srem;", esc_attr((string) $height)) : ""
         );
 
         return sprintf(
@@ -1245,20 +1251,33 @@ final class Shortcodes
         return (string) ob_get_clean();
     }
 
-    public static function render_newsletter_form(): string
+    public static function render_newsletter_form(array $atts = []): string
     {
         $language = self::get_current_language();
         $settings = self::get_settings(true, $language);
+        $atts = shortcode_atts(
+            [
+                "title" => "",
+                "intro" => "",
+                "buttonLabel" => "",
+                "button_label" => "",
+            ],
+            $atts,
+            "plaid_newsletter_form"
+        );
+        $newsletter_title = trim((string) $atts["title"]);
+        $newsletter_intro = trim((string) $atts["intro"]);
+        $newsletter_button_label = trim((string) ($atts["buttonLabel"] ?: $atts["button_label"]));
         $action = esc_url(admin_url("admin-post.php"));
         ob_start();
         ?>
 		<div class="plaidact-card plaidact-card--newsletter <?php echo esc_attr(self::get_campaign_design_class($settings)); ?>" id="newsletter">
 			<h3><?php echo esc_html(
-       (string) ($settings["newsletter_title"] ??
+       $newsletter_title !== "" ? $newsletter_title : (string) ($settings["newsletter_title"] ??
            __("Newsletter", "plaidact-campaign-core"))
    ); ?></h3>
 			<p><?php echo esc_html(
-       (string) ($settings["newsletter_intro"] ??
+       $newsletter_intro !== "" ? $newsletter_intro : (string) ($settings["newsletter_intro"] ??
            __(
                "Inscription aux newsletters PLAID·ACT + campagne via Brevo.",
                "plaidact-campaign-core"
@@ -1295,7 +1314,7 @@ final class Shortcodes
         "plaidact-campaign-core"
     ); ?>" />
 				<button class="plaidact-button" type="submit"><?php echo esc_html(
-        (string) ($settings["newsletter_button_label"] ??
+        $newsletter_button_label !== "" ? $newsletter_button_label : (string) ($settings["newsletter_button_label"] ??
             __("S’inscrire", "plaidact-campaign-core"))
     ); ?></button>
 			</form>
