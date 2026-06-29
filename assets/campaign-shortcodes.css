@@ -429,7 +429,7 @@
 	color: var(--plaidact-petition-text, inherit);
 	display: block;
 	margin-inline: auto;
-	max-width: min(100%, 34rem);
+	max-width: min(100%, var(--plaidact-petition-gauge-width, 34rem));
 	padding: clamp(1rem, 3vw, 1.5rem);
 }
 
@@ -472,7 +472,7 @@
 	background: var(--plaidact-petition-track);
 	border-radius: 999px;
 	display: block;
-	height: max(var(--ptr-progress-height, 0.625rem), 0.625rem);
+	height: max(var(--plaidact-petition-gauge-height, var(--ptr-progress-height, 0.625rem)), 0.625rem);
 	overflow: hidden;
 	position: relative;
 	width: 100%;

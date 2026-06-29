@@ -44,10 +44,23 @@ final class Blocks {
 			array(
 				'api_version'     => 2,
 				'editor_script'   => 'plaidact-campaign-blocks',
-				'render_callback' => static function (): string {
-					return Shortcodes::render_newsletter_form();
+				'render_callback' => static function ( array $attributes ): string {
+					return Shortcodes::render_newsletter_form( $attributes );
 				},
-				'attributes'      => array(),
+				'attributes'      => array(
+					'title'        => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'intro'        => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'buttonLabel'  => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+				),
 			)
 		);
 
@@ -67,6 +80,14 @@ final class Blocks {
 					'title' => array(
 						'type'    => 'string',
 						'default' => '',
+					),
+					'width' => array(
+						'type'    => 'number',
+						'default' => 34,
+					),
+					'height' => array(
+						'type'    => 'number',
+						'default' => 0,
 					),
 				),
 			)
