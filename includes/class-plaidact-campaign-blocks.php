@@ -47,6 +47,9 @@ final class Blocks {
 				'render_callback' => static function ( array $attributes ): string {
 					return Shortcodes::render_newsletter_form( $attributes );
 				},
+				'supports'        => array(
+					'className' => true,
+				),
 				'attributes'      => array(
 					'title'        => array(
 						'type'    => 'string',
@@ -57,6 +60,10 @@ final class Blocks {
 						'default' => '',
 					),
 					'buttonLabel'  => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'className'    => array(
 						'type'    => 'string',
 						'default' => '',
 					),

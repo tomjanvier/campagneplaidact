@@ -32,6 +32,10 @@ final class Shortcodes
             __CLASS__,
             "render_newsletter_form",
         ]);
+        add_action("plaidact_newsletter_form", [
+            __CLASS__,
+            "echo_newsletter_form",
+        ]);
         add_shortcode("plaid_send_campaign", [
             __CLASS__,
             "render_send_campaign_form",
@@ -140,7 +144,6 @@ final class Shortcodes
             "notification_email" => get_option("admin_email"),
             "brevo_api_key" => "",
             "brevo_list_plaidact" => 0,
-            "brevo_list_campaign" => 0,
             "brevo_list_petition" => 0,
             "petition_intro" => __(
                 "Signez pour soutenir la campagne.",
@@ -156,7 +159,7 @@ final class Shortcodes
             ),
             "petition_show_signers" => "1",
             "petition_optin_label" => __(
-                "M’inscrire aux newsletters PLAID·ACT et de cette campagne",
+                "M’inscrire à la newsletter PLAID·ACT",
                 "plaidact-campaign-core"
             ),
             "send_mail_intro" => __(
@@ -191,7 +194,7 @@ final class Shortcodes
             ),
             "newsletter_title" => __("Newsletter", "plaidact-campaign-core"),
             "newsletter_intro" => __(
-                "Inscription aux newsletters PLAID·ACT + campagne via Brevo.",
+                "Inscription à la newsletter PLAID·ACT via Brevo.",
                 "plaidact-campaign-core"
             ),
             "newsletter_button_label" => __(
@@ -461,7 +464,6 @@ final class Shortcodes
                 (string) ($input["brevo_api_key"] ?? "")
             ),
             "brevo_list_plaidact" => absint($input["brevo_list_plaidact"] ?? 0),
-            "brevo_list_campaign" => absint($input["brevo_list_campaign"] ?? 0),
             "brevo_list_petition" => absint($input["brevo_list_petition"] ?? 0),
             "petition_intro" => sanitize_text_field(
                 (string) ($input["petition_intro"] ?? $existing["petition_intro"] ?? "")
@@ -615,17 +617,11 @@ final class Shortcodes
     (string) $settings["brevo_list_plaidact"]
 ); ?>" class="small-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e(
-         "ID liste newsletter campagne",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_campaign]" type="number" value="<?php echo esc_attr(
-    (string) $settings["brevo_list_campaign"]
-); ?>" class="small-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
          "ID liste Brevo pétition",
          "plaidact-campaign-core"
      ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_petition]" type="number" value="<?php echo esc_attr(
     (string) $settings["brevo_list_petition"]
-); ?>" class="small-text" /><p class="description"><?php esc_html_e("Les personnes qui signent la pétition, y compris via le module pétition embarqué, sont ajoutées à cette liste en plus des listes newsletter cochées.", "plaidact-campaign-core"); ?></p></td></tr>
+); ?>" class="small-text" /><p class="description"><?php esc_html_e("Les personnes qui signent la pétition, y compris via le module pétition embarqué, sont ajoutées à cette liste en plus de la liste newsletter si l’opt-in est coché.", "plaidact-campaign-core"); ?></p></td></tr>
 
 					<tr><th scope="row"><?php esc_html_e("Titre articles", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[articles_section_title]" type="text" value="<?php echo esc_attr((string) $settings["articles_section_title"]); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e("Titre social wall", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[social_wall_title]" type="text" value="<?php echo esc_attr((string) $settings["social_wall_title"]); ?>" class="regular-text" /></td></tr>
@@ -772,7 +768,7 @@ final class Shortcodes
         ?>
         <div class="wrap">
             <h1><?php esc_html_e("Modules de la campagne", "plaidact-campaign-core"); ?></h1>
-            <p><?php esc_html_e("Activez ici les modules disponibles en shortcodes et en blocs Gutenberg. Les réglages techniques restent dans Réglages > PLAID·ACT Campagne.", "plaidact-campaign-core"); ?></p>
+            <p><?php esc_html_e("Activez ici les modules disponibles en shortcodes et en blocs Gutenberg. Les réglages techniques restent dans Réglages > PLAID·ACT.", "plaidact-campaign-core"); ?></p>
             <form method="post" action="options.php">
                 <?php settings_fields("plaidact_campaign_settings"); ?>
                 <input type="hidden" name="plaidact_campaign_settings[_plaidact_modules_form]" value="1" />
@@ -1251,6 +1247,23 @@ final class Shortcodes
         return (string) ob_get_clean();
     }
 
+
+    /**
+     * Sanitizes a space-separated CSS class list.
+     *
+     * @param string $classes Raw class list.
+     * @return string
+     */
+    private static function sanitize_css_classes(string $classes): string
+    {
+        $sanitized = array_filter(array_map(
+            static fn(string $class): string => sanitize_html_class($class),
+            preg_split('/\s+/', trim($classes)) ?: []
+        ));
+
+        return implode(' ', array_unique($sanitized));
+    }
+
     public static function render_newsletter_form(array $atts = []): string
     {
         $language = self::get_current_language();
@@ -1261,6 +1274,8 @@ final class Shortcodes
                 "intro" => "",
                 "buttonLabel" => "",
                 "button_label" => "",
+                "class" => "",
+                "className" => "",
             ],
             $atts,
             "plaid_newsletter_form"
@@ -1268,10 +1283,13 @@ final class Shortcodes
         $newsletter_title = trim((string) $atts["title"]);
         $newsletter_intro = trim((string) $atts["intro"]);
         $newsletter_button_label = trim((string) ($atts["buttonLabel"] ?: $atts["button_label"]));
+        $extra_class = self::sanitize_css_classes(
+            (string) $atts["class"] . " " . (string) $atts["className"]
+        );
         $action = esc_url(admin_url("admin-post.php"));
         ob_start();
         ?>
-		<div class="plaidact-card plaidact-card--newsletter <?php echo esc_attr(self::get_campaign_design_class($settings)); ?>" id="newsletter">
+		<div class="plaidact-card plaidact-card--newsletter <?php echo esc_attr(trim(self::get_campaign_design_class($settings) . " " . $extra_class)); ?>" id="newsletter">
 			<h3><?php echo esc_html(
        $newsletter_title !== "" ? $newsletter_title : (string) ($settings["newsletter_title"] ??
            __("Newsletter", "plaidact-campaign-core"))
@@ -1279,7 +1297,7 @@ final class Shortcodes
 			<p><?php echo esc_html(
        $newsletter_intro !== "" ? $newsletter_intro : (string) ($settings["newsletter_intro"] ??
            __(
-               "Inscription aux newsletters PLAID·ACT + campagne via Brevo.",
+               "Inscription à la newsletter PLAID·ACT via Brevo.",
                "plaidact-campaign-core"
            ))
    ); ?></p>
@@ -1300,7 +1318,7 @@ final class Shortcodes
         "plaidact-campaign-core"
     ); ?></strong></p>
 			<?php endif; ?>
-			<form method="post" action="<?php echo $action; ?>" style="display:grid;gap:.6rem;grid-template-columns:1fr auto;">
+			<form class="plaidact-newsletter-form" method="post" action="<?php echo $action; ?>">
 				<input type="hidden" name="action" value="plaidact_newsletter_submit" />
 				<input type="hidden" name="plaidact_language" value="<?php echo esc_attr(
         (string) $language
@@ -1320,6 +1338,21 @@ final class Shortcodes
 			</form>
 		</div>
 		<?php return (string) ob_get_clean();
+    }
+
+
+    /**
+     * Echoes the newsletter form for theme templates.
+     *
+     * Themes can render the extension-managed Brevo form with:
+     * do_action('plaidact_newsletter_form', ['class' => 'my-theme-newsletter']);
+     *
+     * @param array<string,mixed> $atts Rendering attributes.
+     * @return void
+     */
+    public static function echo_newsletter_form(array $atts = []): void
+    {
+        echo self::render_newsletter_form($atts); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     }
 
     public static function handle_newsletter_submit(): void
@@ -1372,7 +1405,6 @@ final class Shortcodes
         $lists = $include_newsletter_lists
             ? array_filter([
                 absint($settings["brevo_list_plaidact"] ?? 0),
-                absint($settings["brevo_list_campaign"] ?? 0),
             ])
             : [];
         if ($include_petition_list) {

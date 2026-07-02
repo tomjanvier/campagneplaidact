@@ -491,3 +491,30 @@
 .plaidact-petition-gauge[style*="--plaidact-petition-progress:0%"] .plaidact-petition-gauge__bar {
 	min-width: 0;
 }
+
+.plaidact-card--newsletter {
+	--plaidact-newsletter-gap: 0.75rem;
+	--plaidact-newsletter-columns: minmax(0, 1fr) auto;
+}
+
+.plaidact-card--newsletter h3 {
+	font-size: var(--wp--preset--font-size--large, 1.25rem);
+}
+
+.plaidact-newsletter-form {
+	display: grid;
+	gap: var(--plaidact-newsletter-gap);
+	grid-template-columns: var(--plaidact-newsletter-columns);
+	margin-top: 1rem;
+}
+
+.plaidact-card--newsletter input[type="email"] {
+	min-width: 0;
+	width: 100%;
+}
+
+@media (max-width: 600px) {
+	.plaidact-newsletter-form {
+		--plaidact-newsletter-columns: 1fr;
+	}
+}
