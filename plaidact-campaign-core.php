@@ -112,7 +112,6 @@ require_once PLAIDACT_CORE_PATH .
     "includes/class-plaidact-campaign-petitioner-integration.php";
 require_once PLAIDACT_CORE_PATH .
     "includes/class-plaidact-campaign-shortcodes.php";
-require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-campaign-demo.php";
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-campaign-blocks.php";
 
 /**
@@ -177,6 +176,5 @@ function plaidact_campaign_core_init(): void
     \Plaidact\CampaignCore\Petitioner_Integration::boot();
     \Plaidact\CampaignCore\Shortcodes::boot();
     \Plaidact\CampaignCore\Blocks::boot();
-    \Plaidact\CampaignCore\Demo::boot();
 }
 add_action("plugins_loaded", "plaidact_campaign_core_init");

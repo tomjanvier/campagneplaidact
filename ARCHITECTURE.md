@@ -14,7 +14,6 @@ assets/
 includes/
 ├─ class-plaidact-campaign-blocks.php
 ├─ class-plaidact-campaign-cpt.php
-├─ class-plaidact-campaign-demo.php
 ├─ class-plaidact-campaign-petitioner-integration.php
 ├─ class-plaidact-campaign-petition-workflows.php
 ├─ class-plaidact-campaign-polylang.php
@@ -37,6 +36,7 @@ vendor/
 
 - Les pages de campagne sont composées manuellement avec les shortcodes (`[petition_form]`, `[plaid_newsletter_form]`, `[plaid_partners]`, `[plaid_send_campaign]`, `[plaid_social_wall]`) ou avec les blocs Gutenberg PLAID·ACT.
 - Les blocs newsletter et partenaires sont dynamiques : ils réutilisent les mêmes callbacks serveur que les shortcodes pour garder un seul rendu public.
+- Le bloc newsletter peut aussi être appelé par un thème via `do_action('plaidact_newsletter_form', ['class' => 'ma-classe']);` : le thème contrôle l’enveloppe et les styles, l’extension conserve le formulaire, le nonce et la synchronisation Brevo.
 - Les partenaires sont accessibles depuis le menu **Campagne** du back office et peuvent être insérés via le bloc PLAID·ACT — Partenaires.
 - Les parties pétition, bloc newsletter, envoi aux décideurs, répertoire, brèves, agenda, out/sorties, social wall, articles, partenaires et rapport PDF sont activables via **Campagne → Modules**. La pétition publique est rendue uniquement par le module Petitioner embarqué ; ses signataires alimentent la liste Brevo dédiée à la pétition et, en cas d’opt-in, les listes newsletter.
 
