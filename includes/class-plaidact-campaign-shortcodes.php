@@ -1,6 +1,6 @@
 <?php
 /**
- * Campaign shortcodes for Petitioner petitions and campaign modules.
+ * PLAID·ACT shortcodes for Petitioner petitions and frontend modules.
  *
  * @package PLAIDACT\CampaignCore
  */
@@ -12,7 +12,7 @@ if (!defined("ABSPATH")) {
 }
 
 /**
- * Registers campaign shortcodes.
+ * Registers PLAID·ACT shortcodes.
  */
 final class Shortcodes
 {
@@ -91,8 +91,8 @@ final class Shortcodes
     public static function register_admin_pages(): void
     {
         add_menu_page(
-            __("Campagne", "plaidact-campaign-core"),
-            __("Campagne", "plaidact-campaign-core"),
+            __("PLAID·ACT", "plaidact-campaign-core"),
+            __("PLAID·ACT", "plaidact-campaign-core"),
             "manage_options",
             "plaidact-campaign-admin",
             [__CLASS__, "render_modules_page"],
@@ -119,8 +119,8 @@ final class Shortcodes
         );
 
         add_options_page(
-            __("PLAID·ACT Campagne", "plaidact-campaign-core"),
-            __("PLAID·ACT Campagne", "plaidact-campaign-core"),
+            __("PLAID·ACT", "plaidact-campaign-core"),
+            __("PLAID·ACT", "plaidact-campaign-core"),
             "manage_options",
             "plaidact-campaign-settings",
             [__CLASS__, "render_settings_page"]
@@ -146,11 +146,11 @@ final class Shortcodes
             "brevo_list_plaidact" => 0,
             "brevo_list_petition" => 0,
             "petition_intro" => __(
-                "Signez pour soutenir la campagne.",
+                "Signez pour soutenir cette action.",
                 "plaidact-campaign-core"
             ),
             "campaign_share_mail_title" => __(
-                "Découvre cette campagne PLAID·ACT",
+                "Découvre cette pétition PLAID·ACT",
                 "plaidact-campaign-core"
             ),
             "petition_title" => __(
@@ -163,7 +163,7 @@ final class Shortcodes
                 "plaidact-campaign-core"
             ),
             "send_mail_intro" => __(
-                "Partagez la campagne à votre réseau en un clic.",
+                "Partagez cette page à votre réseau en un clic.",
                 "plaidact-campaign-core"
             ),
             "send_mail_button_label" => __(
@@ -171,13 +171,13 @@ final class Shortcodes
                 "plaidact-campaign-core"
             ),
             "petition_letter" => __(
-                'Madame, Monsieur,\n\nNous vous demandons d’agir rapidement pour répondre aux revendications de cette campagne citoyenne.',
+                'Madame, Monsieur,\n\nNous vous demandons d’agir rapidement pour répondre aux revendications de cette action citoyenne.',
                 "plaidact-campaign-core"
             ),
             "decision_maker_name" => "",
             "decision_maker_email" => "",
             "decision_mail_subject" => __(
-                "Message citoyen depuis la campagne PLAID·ACT",
+                "Message citoyen depuis PLAID·ACT",
                 "plaidact-campaign-core"
             ),
             "decision_mail_placeholder" => __(
@@ -189,7 +189,7 @@ final class Shortcodes
                 "plaidact-campaign-core"
             ),
             "social_share_text" => __(
-                "Je soutiens cette campagne citoyenne. Rejoignez-nous !",
+                "Je soutiens cette action citoyenne. Rejoignez-nous !",
                 "plaidact-campaign-core"
             ),
             "newsletter_title" => __("Newsletter", "plaidact-campaign-core"),
@@ -214,14 +214,14 @@ final class Shortcodes
             "enable_agenda" => "1",
             "social_wall_title" => __("Social Wall", "plaidact-campaign-core"),
             "social_wall_description" => __(
-                "Suivez ici les publications liées à la campagne.",
+                "Suivez ici les publications liées à PLAID·ACT.",
                 "plaidact-campaign-core"
             ),
             "articles_section_title" => __(
                 "Les articles de fond",
                 "plaidact-campaign-core"
             ),
-            "report_title" => __("Rapport de campagne", "plaidact-campaign-core"),
+            "report_title" => __("Rapport", "plaidact-campaign-core"),
             "report_excerpt" => __(
                 "Consultez notre rapport PDF mis en avant.",
                 "plaidact-campaign-core"
@@ -232,21 +232,20 @@ final class Shortcodes
                 "plaidact-campaign-core"
             ),
             "report_empty_hint" => __(
-                "Ajoutez une URL de PDF dans les réglages PLAID·ACT Campagne.",
+                "Ajoutez une URL de PDF dans les réglages PLAID·ACT.",
                 "plaidact-campaign-core"
             ),
             "brevo_doi_enabled" => "0",
             "brevo_doi_template_id" => 0,
             "brevo_redirection_url" => "",
             "givoly_donation_url" => "",
-            "givoly_campaign" => "",
             "givoly_amount" => "",
             "givoly_button_label" => __(
                 "Faire un don",
                 "plaidact-campaign-core"
             ),
             "givoly_cta_text" => __(
-                "Merci pour votre signature. Vous pouvez aller plus loin en soutenant la campagne par un don.",
+                "Merci pour votre signature. Vous pouvez aller plus loin en soutenant cette action par un don.",
                 "plaidact-campaign-core"
             ),
         ];
@@ -373,7 +372,7 @@ final class Shortcodes
     /**
      * Resolves the Petitioner form ID to render for the current campaign.
      *
-     * @param array       $settings Campaign settings.
+     * @param array       $settings PLAID·ACT settings.
      * @param string|null $language Optional language slug.
      * @return int
      */
@@ -563,9 +562,6 @@ final class Shortcodes
             "givoly_donation_url" => esc_url_raw(
                 (string) ($input["givoly_donation_url"] ?? "")
             ),
-            "givoly_campaign" => sanitize_title(
-                (string) ($input["givoly_campaign"] ?? "")
-            ),
             "givoly_amount" => absint($input["givoly_amount"] ?? 0),
             "givoly_button_label" => sanitize_text_field(
                 (string) ($input["givoly_button_label"] ?? "")
@@ -585,7 +581,7 @@ final class Shortcodes
         $settings = self::get_settings(false);
         ?>
 		<div class="wrap">
-			<h1><?php esc_html_e("Réglages campagne", "plaidact-campaign-core"); ?></h1>
+			<h1><?php esc_html_e("Réglages PLAID·ACT", "plaidact-campaign-core"); ?></h1>
 			<form method="post" action="options.php">
 				<?php settings_fields("plaidact_campaign_settings"); ?>
 					<table class="form-table" role="presentation">
@@ -653,7 +649,6 @@ final class Shortcodes
     (string) $settings["brevo_redirection_url"]
 ); ?>" class="regular-text" placeholder="https://example.org/merci" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e("URL page de don Givoly", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_donation_url]" type="url" value="<?php echo esc_attr((string) ($settings["givoly_donation_url"] ?? "")); ?>" class="regular-text" placeholder="https://example.org/donner" /><p class="description"><?php esc_html_e("Si renseignée, un bouton de don apparaît après une signature Petitioner réussie et transmet les coordonnées du signataire en paramètres d’URL pour préremplir Givoly.", "plaidact-campaign-core"); ?></p></td></tr>
-					<tr><th scope="row"><?php esc_html_e("Campagne Givoly", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_campaign]" type="text" value="<?php echo esc_attr((string) ($settings["givoly_campaign"] ?? "")); ?>" class="regular-text" placeholder="slug-campagne" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e("Montant suggéré Givoly", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_amount]" type="number" min="0" value="<?php echo esc_attr((string) ($settings["givoly_amount"] ?? "")); ?>" class="small-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e("Texte bouton don", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_button_label]" type="text" value="<?php echo esc_attr((string) ($settings["givoly_button_label"] ?? "")); ?>" class="regular-text" /></td></tr>
 					<tr><th scope="row"><?php esc_html_e("Texte invitation au don", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_cta_text]" type="text" value="<?php echo esc_attr((string) ($settings["givoly_cta_text"] ?? "")); ?>" class="regular-text" /></td></tr>
@@ -767,7 +762,7 @@ final class Shortcodes
         $settings = self::get_settings(false);
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e("Modules de la campagne", "plaidact-campaign-core"); ?></h1>
+            <h1><?php esc_html_e("Modules PLAID·ACT", "plaidact-campaign-core"); ?></h1>
             <p><?php esc_html_e("Activez ici les modules disponibles en shortcodes et en blocs Gutenberg. Les réglages techniques restent dans Réglages > PLAID·ACT.", "plaidact-campaign-core"); ?></p>
             <form method="post" action="options.php">
                 <?php settings_fields("plaidact_campaign_settings"); ?>
@@ -839,7 +834,7 @@ final class Shortcodes
         ?>
         <div class="wrap">
             <h1><?php esc_html_e("Signataires de la pétition", "plaidact-campaign-core"); ?></h1>
-            <p><?php esc_html_e("Consultez les signatures Petitioner de la campagne sans ouvrir ni modifier la pétition.", "plaidact-campaign-core"); ?></p>
+            <p><?php esc_html_e("Consultez les signatures Petitioner sans ouvrir ni modifier la pétition.", "plaidact-campaign-core"); ?></p>
             <?php if ($form_id <= 0 || !class_exists("AV_Petitioner_Submissions_Model")) : ?>
                 <div class="notice notice-warning"><p><?php esc_html_e("Aucun formulaire Petitioner publié ou module de signatures indisponible.", "plaidact-campaign-core"); ?></p></div>
             <?php else : ?>
@@ -908,7 +903,7 @@ final class Shortcodes
             return sprintf(
                 '<div class="plaidact-card plaidact-card--petition"><p><strong>%s</strong></p><p>%s</p></div>',
                 esc_html__("Pétition non configurée", "plaidact-campaign-core"),
-                esc_html__("Créez ou publiez un formulaire dans le module Petitioner embarqué, puis sélectionnez son ID dans Réglages > PLAID·ACT Campagne. L’ancien formulaire natif n’est plus rendu afin de garder un seul système de pétition.", "plaidact-campaign-core")
+                esc_html__("Créez ou publiez un formulaire dans le module Petitioner embarqué, puis sélectionnez son ID dans Réglages > PLAID·ACT. L’ancien formulaire natif n’est plus rendu afin de garder un seul système de pétition.", "plaidact-campaign-core")
             );
         }
 
@@ -930,13 +925,7 @@ final class Shortcodes
         }
 
         $query_args = [];
-        $campaign = sanitize_title((string) ($settings["givoly_campaign"] ?? ""));
         $amount = absint($settings["givoly_amount"] ?? 0);
-
-        if ("" !== $campaign) {
-            $query_args["campaign"] = $campaign;
-            $query_args["givoly_campaign"] = $campaign;
-        }
 
         if ($amount > 0) {
             $query_args["amount"] = $amount;
@@ -1028,10 +1017,10 @@ final class Shortcodes
     }
 
     /**
-     * Gets the active Petitioner goal, with campaign settings as fallback.
+     * Gets the active Petitioner goal, with PLAID·ACT settings as fallback.
      *
      * @param int          $form_id Petition form ID.
-     * @param array<mixed> $settings Campaign settings.
+     * @param array<mixed> $settings PLAID·ACT settings.
      * @return int
      */
     private static function get_petition_goal(int $form_id, array $settings): int
@@ -1196,7 +1185,7 @@ final class Shortcodes
     }
 
     /**
-     * Renders campaign partner cards.
+     * Renders partner cards.
      *
      * @param array<string,mixed> $atts Shortcode or block attributes.
      * @return string
@@ -1227,7 +1216,7 @@ final class Shortcodes
 
         ob_start();
         ?>
-        <section class="plaidact-campagne-partners plaidact-card plaidact-card--partners <?php echo esc_attr(self::get_campaign_design_class($settings)); ?>">
+        <section class="plaidact-partners plaidact-card plaidact-card--partners <?php echo esc_attr(self::get_campaign_design_class($settings)); ?>">
             <?php if (!empty($atts["title"])) : ?>
                 <h2><?php echo esc_html((string) $atts["title"]); ?></h2>
             <?php endif; ?>
@@ -1586,7 +1575,7 @@ final class Shortcodes
 				</form>
 			<?php else: ?>
 				<p><?php esc_html_e(
-        "Le formulaire est indisponible : ajoutez l’email du décideur dans Réglages > PLAID·ACT Campagne.",
+        "Le formulaire est indisponible : ajoutez l’email du décideur dans Réglages > PLAID·ACT.",
         "plaidact-campaign-core"
     ); ?></p>
 			<?php endif; ?>
@@ -1632,7 +1621,7 @@ final class Shortcodes
         $subject =
             (string) ($settings["decision_mail_subject"] ??
                 __(
-                    "Message citoyen depuis la campagne PLAID·ACT",
+                    "Message citoyen depuis PLAID·ACT",
                     "plaidact-campaign-core"
                 ));
         $body = sprintf(

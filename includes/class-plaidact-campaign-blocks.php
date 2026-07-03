@@ -1,6 +1,6 @@
 <?php
 /**
- * Gutenberg blocks for campaign shortcodes.
+ * Gutenberg blocks for PLAID·ACT shortcodes.
  *
  * @package PLAIDACT\CampaignCore
  */

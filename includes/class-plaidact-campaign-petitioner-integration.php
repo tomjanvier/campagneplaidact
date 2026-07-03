@@ -1,6 +1,6 @@
 <?php
 /**
- * Bundled Petitioner integration for campaign core.
+ * Bundled Petitioner integration for PLAID·ACT Core.
  *
  * @package PLAIDACT\CampaignCore
  */
@@ -12,7 +12,7 @@ if (!defined("ABSPATH")) {
 }
 
 /**
- * Synchronizes bundled Petitioner submissions with campaign features.
+ * Synchronizes bundled Petitioner submissions with PLAID·ACT features.
  */
 final class Petitioner_Integration
 {
@@ -36,7 +36,7 @@ final class Petitioner_Integration
     }
 
     /**
-     * Applies campaign integrations to a finalized Petitioner submission.
+     * Applies PLAID·ACT integrations to a finalized Petitioner submission.
      *
      * @param object $submission Finalized submission object.
      * @param int    $form_id Form ID.
@@ -94,9 +94,9 @@ final class Petitioner_Integration
     }
 
     /**
-     * Sends the campaign decision-maker email when Petitioner is not already doing it.
+     * Sends the decision-maker email when Petitioner is not already doing it.
      *
-     * @param array  $settings Campaign settings.
+     * @param array  $settings PLAID·ACT settings.
      * @param object $submission Submission object.
      * @param string $full_name Full name.
      * @param int    $form_id Form ID.

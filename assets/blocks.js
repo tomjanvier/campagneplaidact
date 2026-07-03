@@ -102,7 +102,7 @@
 							value: petitionId,
 							min: 0,
 							onChange: function (value) { props.setAttributes({ id: parseInt(value, 10) || 0 }); },
-							help: __('Laissez 0 pour utiliser la pétition configurée dans Campagne → Réglages.', 'plaidact-campaign-core'),
+							help: __('Laissez 0 pour utiliser la pétition configurée dans PLAID·ACT → Réglages.', 'plaidact-campaign-core'),
 						}),
 						el(TextControl, {
 							label: __('Titre', 'plaidact-campaign-core'),
@@ -130,7 +130,7 @@
 					title: props.attributes.title || __('Jauge de signatures', 'plaidact-campaign-core'),
 					description: petitionId
 						? __('Le site public affichera la progression de la pétition sélectionnée.', 'plaidact-campaign-core')
-						: __('Le site public affichera la progression de la pétition configurée pour la campagne.', 'plaidact-campaign-core'),
+						: __('Le site public affichera la progression de la pétition configurée.', 'plaidact-campaign-core'),
 					shortcode: '[plaid_petition_gauge' + (petitionId ? ' id="' + petitionId + '"' : '') + ' width="' + gaugeWidth + '"' + (gaugeHeight ? ' height="' + gaugeHeight + '"' : '') + ']',
 				})
 			);

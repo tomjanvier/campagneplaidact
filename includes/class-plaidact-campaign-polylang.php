@@ -12,7 +12,7 @@ if (!defined("ABSPATH")) {
 }
 
 /**
- * Handles Polylang compatibility for campaign tools.
+ * Handles Polylang compatibility for PLAID·ACT tools.
  */
 final class Polylang
 {
@@ -55,7 +55,7 @@ final class Polylang
             pll_register_string(
                 "plaidact_campaign_" . $key,
                 $value,
-                "PLAID·ACT Campaign Core",
+                "PLAID·ACT Core",
                 str_contains($value, "\n")
             );
         }
