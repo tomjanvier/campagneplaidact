@@ -1276,36 +1276,51 @@ final class Shortcodes
             (string) $atts["class"] . " " . (string) $atts["className"]
         );
         $action = esc_url(admin_url("admin-post.php"));
+        $status = isset($_GET["newsletter_subscribed"])
+            ? sanitize_text_field(wp_unslash($_GET["newsletter_subscribed"]))
+            : "";
+        $message = "";
+        $message_type = "";
+
+        if ("1" === $status) {
+            $message_type = "success";
+            $message = __(
+                "Merci, votre inscription a bien été prise en compte.",
+                "plaidact-campaign-core"
+            );
+        } elseif ("confirm" === $status) {
+            $message_type = "success";
+            $message = __(
+                "Merci ! Vérifiez votre boîte mail pour confirmer votre inscription.",
+                "plaidact-campaign-core"
+            );
+        } elseif ("0" === $status) {
+            $message_type = "error";
+            $message = __(
+                "Inscription impossible pour le moment. Réessayez plus tard.",
+                "plaidact-campaign-core"
+            );
+        }
+
         ob_start();
         ?>
 		<div class="plaidact-card plaidact-card--newsletter <?php echo esc_attr(trim(self::get_campaign_design_class($settings) . " " . $extra_class)); ?>" id="newsletter">
-			<h3><?php echo esc_html(
-       $newsletter_title !== "" ? $newsletter_title : (string) ($settings["newsletter_title"] ??
-           __("Newsletter", "plaidact-campaign-core"))
-   ); ?></h3>
-			<p><?php echo esc_html(
-       $newsletter_intro !== "" ? $newsletter_intro : (string) ($settings["newsletter_intro"] ??
-           __(
-               "Inscription à la newsletter PLAID·ACT via Brevo.",
-               "plaidact-campaign-core"
-           ))
-   ); ?></p>
-			<?php if (
-       isset($_GET["newsletter_subscribed"]) &&
-       "1" === sanitize_text_field(wp_unslash($_GET["newsletter_subscribed"]))
-   ): ?>
-				<p><strong><?php esc_html_e(
-        "Merci, votre inscription a bien été prise en compte.",
-        "plaidact-campaign-core"
-    ); ?></strong></p>
-			<?php elseif (
-       isset($_GET["newsletter_subscribed"]) &&
-       "0" === sanitize_text_field(wp_unslash($_GET["newsletter_subscribed"]))
-   ): ?>
-				<p><strong><?php esc_html_e(
-        "Inscription impossible pour le moment. Réessayez plus tard.",
-        "plaidact-campaign-core"
-    ); ?></strong></p>
+			<div class="plaidact-newsletter__content">
+				<p class="plaidact-newsletter__eyebrow"><?php esc_html_e("Newsletter PLAID·ACT", "plaidact-campaign-core"); ?></p>
+				<h3><?php echo esc_html(
+        $newsletter_title !== "" ? $newsletter_title : (string) ($settings["newsletter_title"] ??
+            __("Newsletter", "plaidact-campaign-core"))
+    ); ?></h3>
+				<p><?php echo esc_html(
+        $newsletter_intro !== "" ? $newsletter_intro : (string) ($settings["newsletter_intro"] ??
+            __(
+                "Inscription à la newsletter PLAID·ACT via Brevo.",
+                "plaidact-campaign-core"
+            ))
+    ); ?></p>
+			</div>
+			<?php if ($message): ?>
+				<p class="plaidact-newsletter-message plaidact-newsletter-message--<?php echo esc_attr($message_type); ?>" role="status"><?php echo esc_html($message); ?></p>
 			<?php endif; ?>
 			<form class="plaidact-newsletter-form" method="post" action="<?php echo $action; ?>">
 				<input type="hidden" name="action" value="plaidact_newsletter_submit" />
@@ -1316,11 +1331,23 @@ final class Shortcodes
         "plaidact_newsletter_submit_action",
         "plaidact_newsletter_nonce"
     ); ?>
-				<input type="email" name="email" required placeholder="<?php esc_attr_e(
-        "Votre email",
+				<label class="plaidact-newsletter-form__field plaidact-newsletter-form__field--name">
+					<span><?php esc_html_e("Prénom / nom", "plaidact-campaign-core"); ?></span>
+					<input type="text" name="name" autocomplete="name" placeholder="<?php esc_attr_e("Camille Dupont", "plaidact-campaign-core"); ?>" />
+				</label>
+				<label class="plaidact-newsletter-form__field plaidact-newsletter-form__field--email">
+					<span><?php esc_html_e("Email", "plaidact-campaign-core"); ?></span>
+					<input type="email" name="email" required autocomplete="email" placeholder="<?php esc_attr_e(
+        "camille@example.org",
         "plaidact-campaign-core"
     ); ?>" />
-				<button class="plaidact-button" type="submit"><?php echo esc_html(
+				</label>
+				<label class="plaidact-newsletter-form__honeypot" aria-hidden="true" tabindex="-1">
+					<span><?php esc_html_e("Laissez ce champ vide", "plaidact-campaign-core"); ?></span>
+					<input type="text" name="plaidact_company" autocomplete="off" tabindex="-1" />
+				</label>
+				<p class="plaidact-newsletter-form__privacy"><?php esc_html_e("En vous inscrivant, vous acceptez de recevoir les actualités de PLAID·ACT. Désinscription possible à tout moment.", "plaidact-campaign-core"); ?></p>
+				<button class="plaidact-button plaidact-newsletter-form__button" type="submit"><?php echo esc_html(
         $newsletter_button_label !== "" ? $newsletter_button_label : (string) ($settings["newsletter_button_label"] ??
             __("S’inscrire", "plaidact-campaign-core"))
     ); ?></button>
@@ -1361,13 +1388,19 @@ final class Shortcodes
             exit();
         }
         $email = sanitize_email(wp_unslash($_POST["email"] ?? ""));
+        $name = sanitize_text_field(wp_unslash($_POST["name"] ?? ""));
+        $honeypot = sanitize_text_field(wp_unslash($_POST["plaidact_company"] ?? ""));
         $status = "0";
+
+        if ("" !== $honeypot) {
+            self::redirect_with_status("newsletter_subscribed", "1", $language);
+        }
+
         if ($email) {
-            $status = is_wp_error(
-                self::subscribe_to_brevo_lists($email, "", $language, false, true)
-            )
+            $result = self::subscribe_to_brevo_lists($email, $name, $language, false, true);
+            $status = is_wp_error($result)
                 ? "0"
-                : "1";
+                : ("double_optin_sent" === $result ? "confirm" : "1");
         }
         self::redirect_with_status("newsletter_subscribed", $status, $language);
     }
@@ -1427,10 +1460,18 @@ final class Shortcodes
         $attributes = [];
         if ($name) {
             $attributes["FULLNAME"] = $name;
+            $name_parts = preg_split('/\s+/', trim($name), 2);
+            if (!empty($name_parts[0])) {
+                $attributes["FIRSTNAME"] = $name_parts[0];
+            }
+            if (!empty($name_parts[1])) {
+                $attributes["LASTNAME"] = $name_parts[1];
+            }
         }
         if ($language) {
             $attributes["LANGUAGE"] = $language;
         }
+        $attributes["SOURCE"] = "plaidact_newsletter";
         $attributes = (array) apply_filters(
             "plaidact_campaign_brevo_attributes",
             $attributes,
