@@ -642,3 +642,7 @@
 		width: 100%;
 	}
 }
+
+.plaidact-newsletter-form--email-only {
+	grid-template-columns: minmax(14rem, 1fr) auto;
+}

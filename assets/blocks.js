@@ -4,6 +4,7 @@
 	const InspectorControls = blockEditor.InspectorControls;
 	const PanelBody = components.PanelBody;
 	const TextControl = components.TextControl;
+	const ToggleControl = components.ToggleControl;
 	const RangeControl = components.RangeControl;
 	const __experimentalNumberControl = components.__experimentalNumberControl;
 	const NumberControl = __experimentalNumberControl || TextControl;
@@ -27,6 +28,7 @@
 			title: { type: 'string', default: '' },
 			intro: { type: 'string', default: '' },
 			buttonLabel: { type: 'string', default: '' },
+			hideName: { type: 'boolean', default: false },
 		},
 		edit: function (props) {
 			const attrs = props.attributes;
@@ -56,6 +58,12 @@
 							value: attrs.buttonLabel,
 							onChange: function (value) { props.setAttributes({ buttonLabel: value }); },
 							help: __('Laissez vide pour utiliser le libellé global.', 'plaidact-campaign-core'),
+						}),
+						el(ToggleControl, {
+							label: __('Masquer le champ prénom / nom', 'plaidact-campaign-core'),
+							checked: !!attrs.hideName,
+							onChange: function (value) { props.setAttributes({ hideName: !!value }); },
+							help: __('Le formulaire public ne demandera alors que l’adresse email.', 'plaidact-campaign-core'),
 						})
 					)
 				),

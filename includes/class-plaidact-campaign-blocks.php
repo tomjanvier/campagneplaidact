@@ -63,6 +63,10 @@ final class Blocks {
 						'type'    => 'string',
 						'default' => '',
 					),
+					'hideName'     => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
 					'className'    => array(
 						'type'    => 'string',
 						'default' => '',
