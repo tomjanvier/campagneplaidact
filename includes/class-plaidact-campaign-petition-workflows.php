@@ -1,6 +1,6 @@
 <?php
 /**
- * Shared Petitioner side effects for campaign signatures.
+ * Shared Petitioner side effects for petition signatures.
  *
  * @package PLAIDACT\CampaignCore
  */
@@ -12,7 +12,7 @@ if (!defined("ABSPATH")) {
 }
 
 /**
- * Centralizes shared campaign petition side effects.
+ * Centralizes shared petition side effects.
  */
 final class Petition_Workflows
 {
@@ -36,7 +36,7 @@ final class Petition_Workflows
     /**
      * Sends the admin notification email for a petition signature when configured.
      *
-     * @param array       $settings Campaign settings.
+     * @param array       $settings PLAID·ACT settings.
      * @param string      $name Signer display name.
      * @param string      $email Signer email.
      * @param string      $postcode Signer postal code.
@@ -63,14 +63,14 @@ final class Petition_Workflows
         }
 
         $message = sprintf(
-            "Nom: %s\nEmail: %s\nCode postal: %s\nTéléphone: %s\nCampagne: %s",
+            "Nom: %s\nEmail: %s\nCode postal: %s\nTéléphone: %s\nSite: %s",
             "" !== trim($name)
                 ? $name
                 : __("Nom indisponible", "plaidact-campaign-core"),
             sanitize_email($email),
             sanitize_text_field($postcode),
             sanitize_text_field($phone),
-            self::get_campaign_url($language)
+            self::get_site_url_for_language($language)
         );
 
         if ($form_id && $form_id > 0) {
@@ -87,7 +87,7 @@ final class Petition_Workflows
     /**
      * Sends the decision-maker email for a petition signature when configured.
      *
-     * @param array       $settings Campaign settings.
+     * @param array       $settings PLAID·ACT settings.
      * @param string      $name Signer display name.
      * @param string      $email Signer email.
      * @param string      $postcode Signer postal code.
@@ -119,7 +119,7 @@ final class Petition_Workflows
                 __("Nouvelle signature de pétition", "plaidact-campaign-core")),
             sprintf(
                 __(
-                    "%1$s\n\n---\nSignature : %2$s <%3$s>\nCode postal : %4$s\nCampagne : %5$s",
+                    "%1$s\n\n---\nSignature : %2$s <%3$s>\nCode postal : %4$s\nSite : %5$s",
                     "plaidact-campaign-core"
                 ),
                 $letter,
@@ -128,19 +128,19 @@ final class Petition_Workflows
                     : __("Nom indisponible", "plaidact-campaign-core"),
                 $sender_email,
                 sanitize_text_field($postcode),
-                self::get_campaign_url($language)
+                self::get_site_url_for_language($language)
             ),
             self::build_reply_to_headers($sender_name, $sender_email)
         );
     }
 
     /**
-     * Returns a language-aware campaign URL for notifications.
+     * Returns a language-aware site URL for notifications.
      *
      * @param string|null $language Optional language slug.
      * @return string
      */
-    private static function get_campaign_url(?string $language = null): string
+    private static function get_site_url_for_language(?string $language = null): string
     {
         return Polylang::home_url($language);
     }

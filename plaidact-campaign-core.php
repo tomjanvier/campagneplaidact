@@ -1,10 +1,9 @@
 <?php
 /**
- * Plugin Name: PLAID·ACT Campaign Core
- * Description: Noyau mutualisé pour le réseau Multisite PLAID·ACT (campagnes, pétitions, newsletter et shortcodes).
+ * Plugin Name: PLAID·ACT Core
+ * Description: Noyau PLAID·ACT (pétitions, newsletter et shortcodes).
  * Version: 2.0.0
  * Author: PLAID·ACT
- * Network: true
  * Requires at least: 6.5
  * Requires PHP: 8.1
  * Text Domain: plaidact-campaign-core
@@ -96,7 +95,7 @@ function plaidact_campaign_core_missing_petitioner_notice(): void
 
     echo '<div class="notice notice-warning"><p>';
     echo esc_html__(
-        "PLAID·ACT Campaign Core est actif, mais le module Petitioner embarqué est absent. Réinstallez le dossier vendor/petitioner pour réactiver les formulaires de pétition.",
+        "PLAID·ACT Core est actif, mais le module Petitioner embarqué est absent. Réinstallez le dossier vendor/petitioner pour réactiver les formulaires de pétition.",
         "plaidact-campaign-core"
     );
     echo "</p></div>";
@@ -115,7 +114,7 @@ require_once PLAIDACT_CORE_PATH .
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-campaign-blocks.php";
 
 /**
- * Activates bundled campaign modules.
+ * Activates bundled modules.
  *
  * @return void
  */
@@ -132,7 +131,7 @@ function plaidact_campaign_core_activate(): void
 }
 
 /**
- * Deactivates bundled campaign modules.
+ * Deactivates bundled modules.
  *
  * @return void
  */
@@ -147,7 +146,7 @@ function plaidact_campaign_core_deactivate(): void
 }
 
 /**
- * Uninstalls bundled campaign modules.
+ * Uninstalls bundled modules.
  *
  * @return void
  */

@@ -1,6 +1,6 @@
 <?php
 /**
- * CPT registration for campaign sites.
+ * CPT registration for PLAID·ACT content.
  *
  * @package PLAIDACT\CampaignCore
  */
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Registers campaign post types and partner metadata.
+ * Registers PLAID·ACT post types and partner metadata.
  */
 final class CPT {
 
@@ -33,7 +33,7 @@ final class CPT {
 	}
 
 	/**
-	 * Registers campaign post types.
+	 * Registers PLAID·ACT post types.
 	 *
 	 * @return void
 	 */
@@ -144,7 +144,7 @@ final class CPT {
 	}
 
 	/**
-	 * Registers campaign taxonomies.
+	 * Registers PLAID·ACT taxonomies.
 	 *
 	 * @return void
 	 */
