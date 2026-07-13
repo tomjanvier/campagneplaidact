@@ -79,6 +79,10 @@ final class Shortcodes
         );
 
         $settings = self::get_settings();
+        $newsletter_custom_css = trim((string) ($settings["newsletter_custom_css"] ?? ""));
+        if ("" !== $newsletter_custom_css) {
+            wp_add_inline_style("plaidact-campaign-shortcodes", $newsletter_custom_css);
+        }
         wp_enqueue_script(
             "plaidact-campaign-givoly",
             PLAIDACT_CORE_URL . "assets/campaign-givoly.js",
@@ -201,6 +205,7 @@ final class Shortcodes
                 "S’inscrire",
                 "plaidact-campaign-core"
             ),
+            "newsletter_custom_css" => "",
             "enable_petition" => "1",
             "enable_newsletter" => "1",
             "enable_send_campaign" => "1",
@@ -515,6 +520,9 @@ final class Shortcodes
             "newsletter_button_label" => sanitize_text_field(
                 (string) ($input["newsletter_button_label"] ?? "")
             ),
+            "newsletter_custom_css" => wp_strip_all_tags(
+                (string) ($input["newsletter_custom_css"] ?? "")
+            ),
             "enable_petition" => isset($input["enable_petition"]) ? (!empty($input["enable_petition"]) ? "1" : "0") : (string) $existing["enable_petition"],
             "enable_newsletter" => isset($input["enable_newsletter"]) ? (!empty($input["enable_newsletter"]) ? "1" : "0") : (string) $existing["enable_newsletter"],
             "enable_send_campaign" => isset($input["enable_send_campaign"]) ? (!empty($input["enable_send_campaign"]) ? "1" : "0") : (string) $existing["enable_send_campaign"],
@@ -730,6 +738,12 @@ final class Shortcodes
       ); ?></th><td><input name="plaidact_campaign_settings[newsletter_button_label]" type="text" value="<?php echo esc_attr(
     (string) $settings["newsletter_button_label"]
 ); ?>" class="regular-text" /></td></tr>
+						<tr><th scope="row"><?php esc_html_e(
+          "CSS personnalisé newsletter",
+          "plaidact-campaign-core"
+      ); ?></th><td><textarea name="plaidact_campaign_settings[newsletter_custom_css]" class="large-text code" rows="10" placeholder=".plaidact-card--newsletter { ... }"><?php echo esc_textarea(
+    (string) ($settings["newsletter_custom_css"] ?? "")
+); ?></textarea><p class="description"><?php esc_html_e("CSS injecté après les styles PLAID·ACT. Ciblez .plaidact-card--newsletter pour personnaliser uniquement le bloc newsletter.", "plaidact-campaign-core"); ?></p></td></tr>
 						<tr><th scope="row"><?php esc_html_e(
           "Libellé bouton partage email",
           "plaidact-campaign-core"
@@ -1265,6 +1279,8 @@ final class Shortcodes
                 "button_label" => "",
                 "class" => "",
                 "className" => "",
+                "hideName" => false,
+                "hide_name" => false,
             ],
             $atts,
             "plaid_newsletter_form"
@@ -1272,6 +1288,8 @@ final class Shortcodes
         $newsletter_title = trim((string) $atts["title"]);
         $newsletter_intro = trim((string) $atts["intro"]);
         $newsletter_button_label = trim((string) ($atts["buttonLabel"] ?: $atts["button_label"]));
+        $hide_name = filter_var($atts["hideName"], FILTER_VALIDATE_BOOLEAN)
+            || filter_var($atts["hide_name"], FILTER_VALIDATE_BOOLEAN);
         $extra_class = self::sanitize_css_classes(
             (string) $atts["class"] . " " . (string) $atts["className"]
         );
@@ -1322,7 +1340,7 @@ final class Shortcodes
 			<?php if ($message): ?>
 				<p class="plaidact-newsletter-message plaidact-newsletter-message--<?php echo esc_attr($message_type); ?>" role="status"><?php echo esc_html($message); ?></p>
 			<?php endif; ?>
-			<form class="plaidact-newsletter-form" method="post" action="<?php echo $action; ?>">
+			<form class="plaidact-newsletter-form <?php echo $hide_name ? esc_attr("plaidact-newsletter-form--email-only") : ""; ?>" method="post" action="<?php echo $action; ?>">
 				<input type="hidden" name="action" value="plaidact_newsletter_submit" />
 				<input type="hidden" name="plaidact_language" value="<?php echo esc_attr(
         (string) $language
@@ -1331,10 +1349,12 @@ final class Shortcodes
         "plaidact_newsletter_submit_action",
         "plaidact_newsletter_nonce"
     ); ?>
-				<label class="plaidact-newsletter-form__field plaidact-newsletter-form__field--name">
-					<span><?php esc_html_e("Prénom / nom", "plaidact-campaign-core"); ?></span>
-					<input type="text" name="name" autocomplete="name" placeholder="<?php esc_attr_e("Camille Dupont", "plaidact-campaign-core"); ?>" />
-				</label>
+				<?php if (!$hide_name): ?>
+					<label class="plaidact-newsletter-form__field plaidact-newsletter-form__field--name">
+						<span><?php esc_html_e("Prénom / nom", "plaidact-campaign-core"); ?></span>
+						<input type="text" name="name" autocomplete="name" placeholder="<?php esc_attr_e("Camille Dupont", "plaidact-campaign-core"); ?>" />
+					</label>
+				<?php endif; ?>
 				<label class="plaidact-newsletter-form__field plaidact-newsletter-form__field--email">
 					<span><?php esc_html_e("Email", "plaidact-campaign-core"); ?></span>
 					<input type="email" name="email" required autocomplete="email" placeholder="<?php esc_attr_e(
