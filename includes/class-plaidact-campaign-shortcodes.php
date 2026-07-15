@@ -90,6 +90,13 @@ final class Shortcodes
             plaidact_campaign_core_asset_version("assets/campaign-givoly.js"),
             true
         );
+        wp_enqueue_script(
+            "plaidact-organization-signature",
+            PLAIDACT_CORE_URL . "assets/campaign-organization-signature.js",
+            [],
+            plaidact_campaign_core_asset_version("assets/campaign-organization-signature.js"),
+            true
+        );
     }
 
     public static function register_admin_pages(): void
