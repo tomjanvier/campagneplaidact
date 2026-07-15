@@ -671,3 +671,8 @@
 	color: #ffffff;
 	filter: brightness(0.94);
 }
+
+.plaidact-petitioner-field--hidden,
+.petitioner__input[hidden] {
+	display: none !important;
+}

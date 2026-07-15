@@ -39,6 +39,122 @@ final class Petitioner_Integration
             10,
             3
         );
+        add_filter("av_petitioner_form_fields", [__CLASS__, "add_organization_signature_fields"], 10, 2);
+        add_filter("av_petitioner_field_order", [__CLASS__, "add_organization_signature_field_order"], 10, 2);
+        add_filter("av_petitioner_get_custom_property_types", [__CLASS__, "register_organization_signature_properties"]);
+        add_filter("av_petitioner_submission_data_pre_save", [__CLASS__, "normalize_organization_signature_submission"], 5, 2);
+    }
+
+
+    /**
+     * Adds organization signature fields to every Petitioner form.
+     *
+     * @param array $form_fields Existing form fields.
+     * @param int   $form_id Form ID.
+     * @return array
+     */
+    public static function add_organization_signature_fields(array $form_fields, int $form_id): array
+    {
+        $form_fields["sign_as_organization"] = [
+            "fieldKey" => "sign_as_organization",
+            "type" => "checkbox",
+            "fieldName" => __("Signature d'organisation", "plaidact-campaign-core"),
+            "label" => __("Je souhaite signer en tant qu'organisation", "plaidact-campaign-core"),
+            "defaultValue" => false,
+            "required" => false,
+            "removable" => false,
+        ];
+        $form_fields["organization_name"] = [
+            "fieldKey" => "organization_name",
+            "type" => "text",
+            "fieldName" => __("Nom de l'organisation", "plaidact-campaign-core"),
+            "label" => __("Nom de l'organisation", "plaidact-campaign-core"),
+            "placeholder" => __("Ex. Association locale", "plaidact-campaign-core"),
+            "required" => true,
+            "removable" => false,
+        ];
+        $form_fields["organization_logo"] = [
+            "fieldKey" => "organization_logo",
+            "type" => "url",
+            "fieldName" => __("Logo de l'organisation", "plaidact-campaign-core"),
+            "label" => __("Logo de l'organisation (URL)", "plaidact-campaign-core"),
+            "placeholder" => __("https://exemple.org/logo.png", "plaidact-campaign-core"),
+            "required" => false,
+            "removable" => false,
+        ];
+        $form_fields["organization_public"] = [
+            "fieldKey" => "organization_public",
+            "type" => "checkbox",
+            "fieldName" => __("Visibilité de l'organisation", "plaidact-campaign-core"),
+            "label" => __("J'accepte de rendre visible le nom/logo de mon organisation sur le site", "plaidact-campaign-core"),
+            "defaultValue" => false,
+            "required" => false,
+            "removable" => false,
+        ];
+
+        return $form_fields;
+    }
+
+    /**
+     * Places organization fields consistently in every Petitioner form.
+     *
+     * @param array $field_order Existing field order.
+     * @param int   $form_id Form ID.
+     * @return array
+     */
+    public static function add_organization_signature_field_order(array $field_order, int $form_id): array
+    {
+        $organization_fields = [
+            "sign_as_organization",
+            "organization_name",
+            "organization_logo",
+            "organization_public",
+        ];
+        $field_order = array_values(array_diff($field_order, $organization_fields));
+        $insert_after = array_search("email", $field_order, true);
+        $offset = false === $insert_after ? 0 : $insert_after + 1;
+
+        array_splice($field_order, $offset, 0, $organization_fields);
+
+        return $field_order;
+    }
+
+    /**
+     * Registers organization fields as Petitioner custom properties.
+     *
+     * @param array $property_types Existing custom property definitions.
+     * @return array
+     */
+    public static function register_organization_signature_properties(array $property_types): array
+    {
+        return array_merge($property_types, [
+            "sign_as_organization" => ["sanitize_callback" => "sanitize_text_field"],
+            "organization_name" => ["sanitize_callback" => "sanitize_text_field"],
+            "organization_logo" => ["sanitize_callback" => "esc_url_raw"],
+            "organization_public" => ["sanitize_callback" => "sanitize_text_field"],
+        ]);
+    }
+
+    /**
+     * Keeps required Petitioner core name columns populated for organization signatures.
+     *
+     * @param array $data Submission data.
+     * @param array $post_data Raw POST data.
+     * @return array
+     */
+    public static function normalize_organization_signature_submission(array $data, array $post_data): array
+    {
+        $sign_as_organization = !empty($post_data["petitioner_sign_as_organization"]);
+        $organization_name = isset($post_data["petitioner_organization_name"])
+            ? sanitize_text_field(wp_unslash($post_data["petitioner_organization_name"]))
+            : "";
+
+        if ($sign_as_organization && "" !== $organization_name) {
+            $data["fname"] = $organization_name;
+            $data["lname"] = "";
+        }
+
+        return $data;
     }
 
 
