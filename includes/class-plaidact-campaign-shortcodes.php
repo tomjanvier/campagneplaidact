@@ -145,6 +145,7 @@ final class Shortcodes
         return [
             "petition_goal" => 10000,
             "petition_form_id" => 0,
+            "petition_sign_url" => "",
             "notification_email" => get_option("admin_email"),
             "brevo_api_key" => "",
             "brevo_list_plaidact" => 0,
@@ -381,7 +382,7 @@ final class Shortcodes
      * @param string|null $language Optional language slug.
      * @return int
      */
-    private static function resolve_petitioner_form_id(
+    public static function resolve_petitioner_form_id(
         array $settings,
         ?string $language = null
     ): int {
@@ -443,6 +444,58 @@ final class Shortcodes
         return 1 === count($candidate_ids) ? (int) $candidate_ids[0] : 0;
     }
 
+
+    /**
+     * Returns every Petitioner form ID linked to the same multilingual petition group.
+     *
+     * @param int $form_id Resolved Petitioner form ID.
+     * @return array<int>
+     */
+    public static function get_linked_petitioner_form_ids(int $form_id): array
+    {
+        if ($form_id <= 0) {
+            return [];
+        }
+
+        $ids = [$form_id];
+
+        if (function_exists("pll_get_post_translations")) {
+            $translations = pll_get_post_translations($form_id);
+
+            if (is_array($translations)) {
+                foreach ($translations as $translated_id) {
+                    $translated_id = absint($translated_id);
+
+                    if ($translated_id > 0) {
+                        $ids[] = $translated_id;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique(array_map("absint", $ids)));
+    }
+
+    /**
+     * Builds the public URL used by the standalone petition counter CTA.
+     */
+    private static function get_petition_sign_url(int $form_id, array $settings, ?string $language): string
+    {
+        $custom_url = esc_url_raw((string) ($settings["petition_sign_url"] ?? ""));
+
+        if ("" !== $custom_url) {
+            return $custom_url;
+        }
+
+        $permalink = get_permalink($form_id);
+
+        if (is_string($permalink) && "" !== $permalink) {
+            return $permalink;
+        }
+
+        return Polylang::home_url($language);
+    }
+
     public static function sanitize_settings(array $input): array
     {
         $existing = wp_parse_args(
@@ -461,6 +514,7 @@ final class Shortcodes
         return [
             "petition_goal" => absint($input["petition_goal"] ?? $existing["petition_goal"] ?? 10000),
             "petition_form_id" => absint($input["petition_form_id"] ?? 0),
+            "petition_sign_url" => esc_url_raw((string) ($input["petition_sign_url"] ?? $existing["petition_sign_url"] ?? "")),
             "notification_email" => sanitize_email(
                 $input["notification_email"] ?? get_option("admin_email")
             ),
@@ -602,6 +656,7 @@ final class Shortcodes
     "Le module pétition embarqué prendra en charge la pétition. Avec Polylang, sa traduction sera résolue automatiquement.",
     "plaidact-campaign-core"
 ); ?></p></td></tr>
+                        <tr><th scope="row"><?php esc_html_e("URL page personnalisée de signature", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[petition_sign_url]" type="url" value="<?php echo esc_attr((string) ($settings["petition_sign_url"] ?? "")); ?>" class="regular-text" placeholder="https://example.org/signer" /><p class="description"><?php esc_html_e("Utilisée par le compteur [plaid_petition_gauge] pour le bouton Signer la pétition. Laissez vide pour utiliser la page de la pétition Petitioner traduite.", "plaidact-campaign-core"); ?></p></td></tr>
 						<tr><th scope="row"><?php esc_html_e(
           "Email notification",
           "plaidact-campaign-core"
@@ -824,12 +879,13 @@ final class Shortcodes
         $result = ["submissions" => [], "total" => 0];
 
         if ($form_id > 0 && class_exists("AV_Petitioner_Submissions_Model")) {
-            $result = \AV_Petitioner_Submissions_Model::get_form_submissions(
-                $form_id,
+            $result = self::get_linked_petition_submissions(
+                self::get_linked_petitioner_form_ids($form_id),
                 [
                     "per_page" => $per_page,
                     "offset" => ($page - 1) * $per_page,
                     "fields" => [
+                        "form_id",
                         "fname",
                         "lname",
                         "email",
@@ -852,9 +908,10 @@ final class Shortcodes
             <?php if ($form_id <= 0 || !class_exists("AV_Petitioner_Submissions_Model")) : ?>
                 <div class="notice notice-warning"><p><?php esc_html_e("Aucun formulaire Petitioner publié ou module de signatures indisponible.", "plaidact-campaign-core"); ?></p></div>
             <?php else : ?>
-                <p><strong><?php esc_html_e("Formulaire", "plaidact-campaign-core"); ?> :</strong> #<?php echo esc_html((string) $form_id); ?> — <strong><?php esc_html_e("Total", "plaidact-campaign-core"); ?> :</strong> <?php echo esc_html((string) $total); ?></p>
+                <p><strong><?php esc_html_e("Formulaires liés", "plaidact-campaign-core"); ?> :</strong> #<?php echo esc_html(implode(", #", self::get_linked_petitioner_form_ids($form_id))); ?> — <strong><?php esc_html_e("Total", "plaidact-campaign-core"); ?> :</strong> <?php echo esc_html((string) $total); ?></p>
                 <table class="widefat striped">
                     <thead><tr>
+                        <th><?php esc_html_e("Pétition", "plaidact-campaign-core"); ?></th>
                         <th><?php esc_html_e("Nom", "plaidact-campaign-core"); ?></th>
                         <th><?php esc_html_e("Email", "plaidact-campaign-core"); ?></th>
                         <th><?php esc_html_e("Code postal", "plaidact-campaign-core"); ?></th>
@@ -866,6 +923,7 @@ final class Shortcodes
                     <tbody>
                     <?php foreach ((array) ($result["submissions"] ?? []) as $submission) : ?>
                         <tr>
+                            <td>#<?php echo esc_html((string) ($submission->form_id ?? $form_id)); ?></td>
                             <td><?php echo esc_html(trim(($submission->fname ?? "") . " " . ($submission->lname ?? ""))); ?></td>
                             <td><a href="mailto:<?php echo esc_attr((string) ($submission->email ?? "")); ?>"><?php echo esc_html((string) ($submission->email ?? "")); ?></a></td>
                             <td><?php echo esc_html((string) ($submission->postal_code ?? "")); ?></td>
@@ -1003,6 +1061,7 @@ final class Shortcodes
 
         $goal = self::get_petition_goal($form_id, $settings);
         $signatures = self::get_petition_signature_count($form_id);
+        $sign_url = self::get_petition_sign_url($form_id, $settings, $language);
         $progress = $goal > 0 ? min(100, (int) round(($signatures / $goal) * 100)) : 0;
         $title = trim((string) $atts["title"]);
         $width = max(12, min(96, (float) $atts["width"]));
@@ -1017,7 +1076,7 @@ final class Shortcodes
         );
 
         return sprintf(
-            '<aside class="petitioner plaidact-petition-gauge %6$s" style="%7$s" aria-label="%1$s">%2$s<div class="plaidact-petition-gauge__stats"><span class="plaidact-petition-gauge__stat"><strong>%3$s</strong> <span>%8$s</span></span><span class="plaidact-petition-gauge__stat plaidact-petition-gauge__stat--end"><strong>%4$s</strong> <span>%9$s</span></span></div><span class="plaidact-petition-gauge__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="%5$d"><span class="plaidact-petition-gauge__bar"></span></span></aside>',
+            '<aside class="petitioner plaidact-petition-gauge plaidact-petition-gauge--cta %6$s" style="%7$s" aria-label="%1$s">%2$s<div class="plaidact-petition-gauge__stats"><span class="plaidact-petition-gauge__stat"><strong>%3$s</strong> <span>%8$s</span></span><span class="plaidact-petition-gauge__stat plaidact-petition-gauge__stat--end"><strong>%4$s</strong> <span>%9$s</span></span></div><span class="plaidact-petition-gauge__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="%5$d"><span class="plaidact-petition-gauge__bar"></span></span><a class="plaidact-petition-gauge__button wp-element-button" href="%10$s">%11$s</a></aside>',
             esc_attr($title ?: __("Progression de la pétition", "plaidact-campaign-core")),
             $title !== "" ? sprintf('<h3 class="petitioner__title plaidact-petition-gauge__title">%s</h3>', esc_html($title)) : "",
             esc_html(number_format_i18n($signatures)),
@@ -1025,8 +1084,10 @@ final class Shortcodes
             $progress,
             esc_attr(self::get_campaign_design_class($settings)),
             esc_attr($style),
-            esc_html__("signatures", "plaidact-campaign-core"),
-            esc_html__("objectif", "plaidact-campaign-core")
+            esc_html__("signataires", "plaidact-campaign-core"),
+            esc_html__("objectif", "plaidact-campaign-core"),
+            esc_url($sign_url),
+            esc_html__("Signer la pétition", "plaidact-campaign-core")
         );
     }
 
@@ -1055,7 +1116,13 @@ final class Shortcodes
     private static function get_petition_signature_count(int $form_id): int
     {
         if (class_exists("AV_Petitioner_Submissions_Model")) {
-            return max(0, (int) \AV_Petitioner_Submissions_Model::get_submission_count($form_id));
+            $count = 0;
+
+            foreach (self::get_linked_petitioner_form_ids($form_id) as $linked_form_id) {
+                $count += max(0, (int) \AV_Petitioner_Submissions_Model::get_submission_count($linked_form_id));
+            }
+
+            return $count;
         }
 
         if (shortcode_exists("petitioner-submission-count")) {
@@ -1063,6 +1130,59 @@ final class Shortcodes
         }
 
         return 0;
+    }
+
+
+    /**
+     * Retrieves submissions across all translated Petitioner forms in one paginated list.
+     *
+     * @param array<int> $form_ids Linked Petitioner form IDs.
+     * @param array<string,mixed> $settings Query settings.
+     * @return array{submissions:array,total:int}
+     */
+    private static function get_linked_petition_submissions(array $form_ids, array $settings): array
+    {
+        global $wpdb;
+
+        if (!class_exists("AV_Petitioner_Submissions_Model")) {
+            return ["submissions" => [], "total" => 0];
+        }
+
+        $form_ids = array_values(array_filter(array_map("absint", $form_ids)));
+
+        if (empty($form_ids)) {
+            return ["submissions" => [], "total" => 0];
+        }
+
+        $allowed_fields = \AV_Petitioner_Submissions_Model::$ALLOWED_FIELDS;
+        $fields = $settings["fields"] ?? "*";
+
+        if ("*" !== $fields) {
+            $fields = implode(", ", array_intersect((array) $fields, $allowed_fields));
+            $fields = "" !== $fields ? $fields : "*";
+        }
+
+        $per_page = absint($settings["per_page"] ?? 10);
+        $offset = absint($settings["offset"] ?? 0);
+        $placeholders = implode(",", array_fill(0, count($form_ids), "%d"));
+        $table = \AV_Petitioner_Submissions_Model::table_name();
+        $where = "form_id IN ($placeholders)";
+
+        if (!empty($settings["confirmed_only"])) {
+            $where .= " AND approval_status = %s";
+        }
+
+        $params = $form_ids;
+        if (!empty($settings["confirmed_only"])) {
+            $params[] = "Confirmed";
+        }
+
+        $count_sql = "SELECT COUNT(*) FROM $table WHERE $where";
+        $total = (int) $wpdb->get_var($wpdb->prepare($count_sql, $params));
+        $rows_sql = "SELECT $fields FROM $table WHERE $where ORDER BY submitted_at DESC LIMIT %d OFFSET %d";
+        $rows = $wpdb->get_results($wpdb->prepare($rows_sql, array_merge($params, [$per_page, $offset])));
+
+        return ["submissions" => $rows ?: [], "total" => $total];
     }
 
     public static function render_petition_signers(array $atts = []): string
@@ -1075,17 +1195,7 @@ final class Shortcodes
             return "";
         }
 
-        $list = "";
-        if (shortcode_exists("petitioner-submissions")) {
-            $list = do_shortcode(sprintf(
-                '[petitioner-submissions id="%d" style="simple" fields="name" per_page="12" show_pagination="true"]',
-                $form_id
-            ));
-        }
-
-        if ("" === trim((string) $list)) {
-            $list = self::render_petition_signers_fallback($form_id);
-        }
+        $list = self::render_petition_signers_fallback($form_id);
 
         if ("" === trim((string) $list)) {
             return "";
@@ -1106,14 +1216,10 @@ final class Shortcodes
             return "";
         }
 
-        $result = \AV_Petitioner_Submissions_Model::get_form_submissions($form_id, [
+        $result = self::get_linked_petition_submissions(self::get_linked_petitioner_form_ids($form_id), [
             "per_page" => 12,
             "fields" => ["fname", "lname", "submitted_at", "hide_name", "approval_status"],
-            "query" => [[
-                "field" => "approval_status",
-                "operator" => "equals",
-                "value" => "Confirmed",
-            ]],
+            "confirmed_only" => true,
         ]);
 
         $submissions = (array) ($result["submissions"] ?? []);

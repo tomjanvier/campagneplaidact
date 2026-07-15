@@ -33,6 +33,43 @@ final class Petitioner_Integration
             10,
             2
         );
+        add_filter(
+            "av_petitioner_check_duplicate_email",
+            [__CLASS__, "check_duplicate_email_across_translations"],
+            10,
+            3
+        );
+    }
+
+
+    /**
+     * Treats translated Petitioner forms as one petition for duplicate checks.
+     *
+     * @param bool   $is_duplicate Existing duplicate status.
+     * @param string $email Submitted email.
+     * @param int    $form_id Current form ID.
+     * @return bool
+     */
+    public static function check_duplicate_email_across_translations(
+        bool $is_duplicate,
+        string $email,
+        int $form_id
+    ): bool {
+        if ($is_duplicate || !class_exists("AV_Petitioner_Submissions_Model")) {
+            return $is_duplicate;
+        }
+
+        foreach (Shortcodes::get_linked_petitioner_form_ids($form_id) as $linked_form_id) {
+            if ($linked_form_id === $form_id) {
+                continue;
+            }
+
+            if (\AV_Petitioner_Submissions_Model::check_duplicate_email($email, $linked_form_id)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

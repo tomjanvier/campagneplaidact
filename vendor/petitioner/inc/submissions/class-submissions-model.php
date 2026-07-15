@@ -543,6 +543,15 @@ class AV_Petitioner_Submissions_Model
             $form_id
         ));
 
-        return $email_findings > 0;
+        $is_duplicate = $email_findings > 0;
+
+        /**
+         * Filters whether an email has already signed a petition.
+         *
+         * @param bool   $is_duplicate Whether the email is already present.
+         * @param string $email        Email address being submitted.
+         * @param int    $form_id      Current Petitioner form ID.
+         */
+        return (bool) apply_filters('av_petitioner_check_duplicate_email', $is_duplicate, $email, $form_id);
     }
 }
