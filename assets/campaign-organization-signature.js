@@ -10,8 +10,9 @@
 
 	function initOrganizationSignature(form) {
 		var organizationToggle = form.querySelector('[name="petitioner_sign_as_organization"]');
+		var personalityToggle = form.querySelector('[name="petitioner_sign_as_personality"]');
 
-		if (!organizationToggle) {
+		if (!organizationToggle && !personalityToggle) {
 			return;
 		}
 
@@ -24,9 +25,13 @@
 			form.querySelector('[name="petitioner_organization_logo"]'),
 			form.querySelector('[name="petitioner_organization_public"]')
 		];
+		var personalityFields = [
+			form.querySelector('[name="petitioner_signer_title"]'),
+			form.querySelector('[name="petitioner_signer_function"]')
+		];
 		var originallyRequired = new WeakMap();
 
-		personFields.concat(organizationFields).forEach(function (input) {
+		personFields.concat(organizationFields, personalityFields).forEach(function (input) {
 			if (input) {
 				originallyRequired.set(input, input.required);
 			}
@@ -47,10 +52,12 @@
 		}
 
 		function syncFields() {
-			var signsAsOrganization = organizationToggle.checked;
+			var signsAsOrganization = organizationToggle ? organizationToggle.checked : false;
+			var signsAsPersonality = personalityToggle ? personalityToggle.checked : false;
 
 			setGroupVisibility(personFields, !signsAsOrganization);
 			setGroupVisibility(organizationFields, signsAsOrganization);
+			setGroupVisibility(personalityFields, signsAsPersonality && !signsAsOrganization);
 
 			personFields.forEach(function (input) {
 				setRequired(input, !signsAsOrganization && originallyRequired.get(input));
@@ -59,9 +66,18 @@
 			organizationFields.forEach(function (input) {
 				setRequired(input, signsAsOrganization && originallyRequired.get(input));
 			});
+
+			personalityFields.forEach(function (input) {
+				setRequired(input, signsAsPersonality && !signsAsOrganization && originallyRequired.get(input));
+			});
 		}
 
-		organizationToggle.addEventListener('change', syncFields);
+		if (organizationToggle) {
+			organizationToggle.addEventListener('change', syncFields);
+		}
+		if (personalityToggle) {
+			personalityToggle.addEventListener('change', syncFields);
+		}
 		syncFields();
 	}
 
