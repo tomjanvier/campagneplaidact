@@ -263,8 +263,10 @@ class AV_Petitioner_Submissions_Model
         $allowed_fields = apply_filters('av_petitioner_query_allowed_fields', $allowed_fields);
 
         $relation = strtoupper($relation) === 'OR' ? 'OR' : 'AND';
-        $where = ['form_id = %d'];
-        $params = [$form_id];
+        $form_ids = array_values(array_filter(array_map('absint', (array) apply_filters('av_petitioner_submission_count_form_ids', [$form_id], $form_id))));
+        $form_ids = !empty($form_ids) ? $form_ids : [absint($form_id)];
+        $where = ['form_id IN (' . implode(',', array_fill(0, count($form_ids), '%d')) . ')'];
+        $params = $form_ids;
 
         $conditions = [];
 
