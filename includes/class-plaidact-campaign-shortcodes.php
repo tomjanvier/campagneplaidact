@@ -1392,6 +1392,8 @@ final class Shortcodes
                 "button_label" => "",
                 "class" => "",
                 "className" => "",
+                "formClass" => "",
+                "form_class" => "",
                 "hideName" => false,
                 "hide_name" => false,
             ],
@@ -1405,6 +1407,14 @@ final class Shortcodes
             || filter_var($atts["hide_name"], FILTER_VALIDATE_BOOLEAN);
         $extra_class = self::sanitize_css_classes(
             (string) $atts["class"] . " " . (string) $atts["className"]
+        );
+        $form_extra_class = self::sanitize_css_classes(
+            (string) $atts["formClass"] . " " . (string) $atts["form_class"]
+        );
+        $form_classes = self::sanitize_css_classes(
+            "plaidact-newsletter-form stp-newsletter-form " .
+            ($hide_name ? "plaidact-newsletter-form--email-only " : "") .
+            $form_extra_class
         );
         $action = esc_url(admin_url("admin-post.php"));
         $status = isset($_GET["newsletter_subscribed"])
@@ -1453,7 +1463,7 @@ final class Shortcodes
 			<?php if ($message): ?>
 				<p class="plaidact-newsletter-message plaidact-newsletter-message--<?php echo esc_attr($message_type); ?>" role="status"><?php echo esc_html($message); ?></p>
 			<?php endif; ?>
-			<form class="plaidact-newsletter-form <?php echo $hide_name ? esc_attr("plaidact-newsletter-form--email-only") : ""; ?>" method="post" action="<?php echo $action; ?>">
+			<form class="<?php echo esc_attr($form_classes); ?>" method="post" action="<?php echo $action; ?>">
 				<input type="hidden" name="action" value="plaidact_newsletter_submit" />
 				<input type="hidden" name="plaidact_language" value="<?php echo esc_attr(
         (string) $language
@@ -1495,6 +1505,10 @@ final class Shortcodes
      *
      * Themes can render the extension-managed Brevo form with:
      * do_action('plaidact_newsletter_form', ['class' => 'my-theme-newsletter']);
+     *
+     * The rendered <form> always includes the stp-newsletter-form class so themes
+     * can style their newsletter form while keeping the PLAID·ACT/Brevo submit
+     * handler. Additional form classes can be passed with formClass/form_class.
      *
      * @param array<string,mixed> $atts Rendering attributes.
      * @return void

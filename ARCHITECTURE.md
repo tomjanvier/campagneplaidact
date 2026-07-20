@@ -16,7 +16,7 @@ Le dépôt est organisé autour d’un seul plugin WordPress : `plaidact-campaig
 
 - Les pages sont composées manuellement avec les shortcodes (`[petition_form]`, `[plaid_newsletter_form]`, `[plaid_partners]`, `[plaid_send_campaign]`, `[plaid_social_wall]`) ou avec les blocs Gutenberg PLAID·ACT.
 - Les blocs newsletter, jauge de signatures et partenaires réutilisent les callbacks serveur pour garder un seul rendu public.
-- Le bloc newsletter peut aussi être appelé par un thème via `do_action('plaidact_newsletter_form', ['class' => 'ma-classe']);`.
+- Le bloc newsletter peut aussi être appelé par un thème via `do_action('plaidact_newsletter_form', ['class' => 'ma-classe']);`. Le `<form>` généré reçoit la classe `stp-newsletter-form` (et accepte `formClass`/`form_class`) pour réutiliser les styles du thème tout en envoyant les contacts vers Brevo.
 - Les partenaires sont accessibles depuis le menu **PLAID·ACT** du back office.
 - Les modules activables sont : pétition, newsletter, envoi aux décideurs, répertoire, brèves, agenda, out/sorties, social wall, articles, partenaires et rapport PDF.
 
