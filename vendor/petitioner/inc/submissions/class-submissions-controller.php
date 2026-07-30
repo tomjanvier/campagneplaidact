@@ -138,33 +138,6 @@ class AV_Petitioner_Submissions_Controller
             wp_die();
         }
 
-        /**
-         * petitioner_after_submission
-         * 
-         * Fires an action after a submission is processed.
-         *
-         * This hook allows developers to perform custom actions or extend functionality
-         * after a submission has been successfully handled.
-         *
-         * @since 0.2.7
-         * 
-         * @param int $submission_id The ID of the processed submission.
-         * @param int $form_id The ID of the form associated with the submission.
-         */
-        try {
-            do_action('petitioner_after_submission', $submission_id, $form_id);
-        } catch (Throwable $error) {
-            av_ptr_error_log(
-                'Petitioner post-submission integration error for submission ID ' .
-                $submission_id . ': ' . $error->getMessage()
-            );
-        }
-
-        // Only finalize if the starting state is fully confirmed (bypasses manual moderation and emails)
-        if (isset($data['approval_status']) && $data['approval_status'] === 'Confirmed') {
-            self::trigger_finalized_hook($submission_id);
-        }
-
         $mailer_settings = array(
             'target_email'              => get_post_meta($form_id, '_petitioner_email', true),
             'target_cc_emails'          => get_post_meta($form_id, '_petitioner_cc_emails', true),
@@ -182,17 +155,84 @@ class AV_Petitioner_Submissions_Controller
             'from_name'                 => get_post_meta($form_id, '_petitioner_from_name', true),
         );
 
+        $scheduled = wp_schedule_single_event(
+            time() + 1,
+            'petitioner_process_submission_side_effects',
+            [$submission_id, (int) $form_id, $data, $mailer_settings],
+            true
+        );
+
+        if (is_wp_error($scheduled) || $scheduled === false) {
+            av_ptr_error_log(
+                'Petitioner submission warning: Failed to schedule side effects for submission ID ' .
+                $submission_id . '.'
+            );
+        }
+
+        wp_send_json_success([
+            'title'   => AV_Petitioner_Labels::get('success_message_title', $form_id),
+            'message' => AV_Petitioner_Labels::get('success_message', $form_id),
+        ]);
+
+        wp_die();
+    }
+
+    /**
+     * Runs integrations and emails after the browser has received a successful
+     * signature response. External services must not hold the AJAX request open.
+     *
+     * @param int   $submission_id Inserted submission ID.
+     * @param int   $form_id Petition form ID.
+     * @param array $data Stored submission data.
+     * @param array $mailer_settings Petitioner mail settings.
+     * @return void
+     */
+    public static function process_submission_side_effects(
+        $submission_id,
+        $form_id,
+        $data,
+        $mailer_settings
+    ) {
+        $submission_id = absint($submission_id);
+        $form_id = absint($form_id);
+
+        if (!$submission_id || !$form_id || !is_array($data) || !is_array($mailer_settings)) {
+            av_ptr_error_log('Petitioner side effects error: Invalid scheduled arguments.');
+            return;
+        }
+
         /**
-         * Filter the mailer settings before sending emails.
+         * Fires after a submission has been stored.
          *
-         * This allows modification of the mailer settings (e.g. adding/removing recipients)
-         * before the emails are sent.
+         * @since 0.2.7
          *
-         * @param array $mailer_settings Associative array of mailer settings.
-         * @param array $submission_data Associative array of submission data.
-         * @return array Modified mailer settings.
+         * @param int $submission_id Inserted submission ID.
+         * @param int $form_id Petition form ID.
          */
-        $mailer_settings = apply_filters('av_petitioner_mailer_settings', $mailer_settings, $data);
+        try {
+            do_action('petitioner_after_submission', $submission_id, $form_id);
+        } catch (Throwable $error) {
+            av_ptr_error_log(
+                'Petitioner post-submission integration error for submission ID ' .
+                $submission_id . ': ' . $error->getMessage()
+            );
+        }
+
+        if (($data['approval_status'] ?? '') === 'Confirmed') {
+            self::trigger_finalized_hook($submission_id);
+        }
+
+        /**
+         * Allows integrations to modify mail settings outside the frontend request.
+         *
+         * @param array $mailer_settings Petitioner mail settings.
+         * @param array $data Stored submission data.
+         */
+        $mailer_settings = apply_filters(
+            'av_petitioner_mailer_settings',
+            $mailer_settings,
+            $data
+        );
 
         try {
             $mailer = new AV_Petitioner_Mailer($mailer_settings);
@@ -207,16 +247,10 @@ class AV_Petitioner_Submissions_Controller
 
         if ($send_emails === false) {
             av_ptr_error_log(
-                'Petitioner submission warning: Failed to send emails for submission ID ' . $submission_id . '.'
+                'Petitioner submission warning: Failed to send emails for submission ID ' .
+                $submission_id . '.'
             );
         }
-
-        wp_send_json_success([
-            'title'   => AV_Petitioner_Labels::get('success_message_title', $form_id),
-            'message' => AV_Petitioner_Labels::get('success_message', $form_id),
-        ]);
-
-        wp_die();
     }
 
     /**
