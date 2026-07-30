@@ -87,6 +87,15 @@ class AV_Petitioner_Setup
 			'AV_Petitioner_Submissions_Controller',
 			'api_handle_form_submit',
 		]);
+		add_action(
+			'petitioner_process_submission_side_effects',
+			[
+				'AV_Petitioner_Submissions_Controller',
+				'process_submission_side_effects',
+			],
+			10,
+			4
+		);
 		add_action('wp_ajax_petitioner_fetch_submissions', [
 			'AV_Petitioner_Submissions_Controller',
 			'api_fetch_form_submissions',

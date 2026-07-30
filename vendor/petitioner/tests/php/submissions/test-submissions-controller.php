@@ -236,4 +236,41 @@ class Test_Submissions_Controller extends BaseTestCase
 			AV_Petitioner_Submissions_Model::get_submission_by_id($submission_id)
 		);
 	}
+
+	public function test_scheduled_side_effect_failure_does_not_remove_submission()
+	{
+		$submission_id = AV_Petitioner_Submissions_Model::create_submission([
+			'form_id'         => 456,
+			'fname'           => 'Alex',
+			'lname'           => 'Martin',
+			'email'           => 'alex@example.org',
+			'country'         => 'France',
+			'submitted_at'    => current_time('mysql'),
+			'approval_status' => 'Confirmed',
+		]);
+
+		$this->assertNotFalse($submission_id);
+
+		$callback = static function () {
+			throw new RuntimeException('Integration indisponible');
+		};
+		add_action('petitioner_after_submission', $callback, 10, 2);
+
+		AV_Petitioner_Submissions_Controller::process_submission_side_effects(
+			$submission_id,
+			456,
+			['approval_status' => 'Confirmed'],
+			[
+				'form_id' => 456,
+				'submission_id' => $submission_id,
+				'user_email' => 'alex@example.org',
+				'user_name' => 'Alex Martin',
+			]
+		);
+
+		remove_action('petitioner_after_submission', $callback, 10);
+		$this->assertNotNull(
+			AV_Petitioner_Submissions_Model::get_submission_by_id($submission_id)
+		);
+	}
 }
