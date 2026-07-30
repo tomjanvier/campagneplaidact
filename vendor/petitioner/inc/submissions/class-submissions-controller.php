@@ -51,22 +51,6 @@ class AV_Petitioner_Submissions_Controller
         // handle captcha
         AV_Petitioner_Captcha::validate_captcha($form_id);
 
-        // akismet
-        $akismet_is_spam = AV_Petitioner_Akismet::check_with_akismet(
-            $email,
-            $fname,
-            $lname,
-            $country,
-            $form_id
-        );
-
-        if ($akismet_is_spam) {
-            wp_send_json_error([
-                'title'     => AV_Petitioner_Labels::get('could_not_submit'),
-                'message'   => AV_Petitioner_Labels::get('flagged_as_spam'),
-            ]);
-        }
-
         // Insert into the custom table
 
         $email_exists = AV_Petitioner_Submissions_Model::check_duplicate_email($email, $form_id);
@@ -154,11 +138,16 @@ class AV_Petitioner_Submissions_Controller
             'from_field'                => get_post_meta($form_id, '_petitioner_from_field', true),
             'from_name'                 => get_post_meta($form_id, '_petitioner_from_name', true),
         );
+        $request_context = [
+            'user_ip' => sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? '')),
+            'user_agent' => sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'] ?? '')),
+            'referrer' => esc_url_raw(wp_unslash($_SERVER['HTTP_REFERER'] ?? '')),
+        ];
 
         $scheduled = wp_schedule_single_event(
             time() + 1,
             'petitioner_process_submission_side_effects',
-            [$submission_id, (int) $form_id, $data, $mailer_settings],
+            [$submission_id, (int) $form_id, $data, $mailer_settings, $request_context],
             true
         );
 
@@ -185,19 +174,41 @@ class AV_Petitioner_Submissions_Controller
      * @param int   $form_id Petition form ID.
      * @param array $data Stored submission data.
      * @param array $mailer_settings Petitioner mail settings.
+     * @param array $request_context Original request metadata for spam checks.
      * @return void
      */
     public static function process_submission_side_effects(
         $submission_id,
         $form_id,
         $data,
-        $mailer_settings
+        $mailer_settings,
+        $request_context = []
     ) {
         $submission_id = absint($submission_id);
         $form_id = absint($form_id);
 
         if (!$submission_id || !$form_id || !is_array($data) || !is_array($mailer_settings)) {
             av_ptr_error_log('Petitioner side effects error: Invalid scheduled arguments.');
+            return;
+        }
+
+        $akismet_is_spam = AV_Petitioner_Akismet::check_with_akismet(
+            (string) ($data['email'] ?? ''),
+            (string) ($data['fname'] ?? ''),
+            (string) ($data['lname'] ?? ''),
+            (string) ($data['country'] ?? ''),
+            $form_id,
+            is_array($request_context) ? $request_context : []
+        );
+
+        if ($akismet_is_spam) {
+            AV_Petitioner_Submissions_Model::update_submission(
+                $submission_id,
+                ['approval_status' => 'Declined']
+            );
+            av_ptr_error_log(
+                'Petitioner submission marked as spam by Akismet: ' . $submission_id . '.'
+            );
             return;
         }
 

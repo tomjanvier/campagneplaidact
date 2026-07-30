@@ -12,7 +12,14 @@ if (!defined('ABSPATH')) {
  */
 class AV_Petitioner_Akismet
 {
-    public static function check_with_akismet($email, $fname, $lname, $country, $form_id)
+    public static function check_with_akismet(
+        $email,
+        $fname,
+        $lname,
+        $country,
+        $form_id,
+        $request_context = []
+    )
     {
         $enable_akismet = get_option('petitioner_enable_akismet');
 
@@ -33,9 +40,9 @@ class AV_Petitioner_Akismet
 
         $query = [
             'blog'                 => $blog,
-            'user_ip'              => $_SERVER['REMOTE_ADDR'],
-            'user_agent'           => $_SERVER['HTTP_USER_AGENT'],
-            'referrer'             => $_SERVER['HTTP_REFERER'] ?? '',
+            'user_ip'              => $request_context['user_ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''),
+            'user_agent'           => $request_context['user_agent'] ?? ($_SERVER['HTTP_USER_AGENT'] ?? ''),
+            'referrer'             => $request_context['referrer'] ?? ($_SERVER['HTTP_REFERER'] ?? ''),
             'comment_type'         => 'signup',
             'comment_author'       => $full_name,
             'comment_author_email' => $email,
