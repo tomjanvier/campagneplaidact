@@ -219,7 +219,8 @@ export default class PetitionerForm {
 		try {
 			const formData = new FormData(this.formEl as HTMLFormElement);
 			const freshNonce = await this.getFreshNonce();
-			formData.append('petitioner_nonce', freshNonce);
+			formData.set('petitioner_nonce', freshNonce);
+			formData.set('action', 'petitioner_form_submit');
 			const response = await fetch(this.actionPath, {
 				method: 'POST',
 				body: formData,
@@ -231,7 +232,23 @@ export default class PetitionerForm {
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
 
-			const res = (await response.json()) as ApiResponse;
+			const responseText = await response.text();
+			let res: ApiResponse;
+
+			try {
+				res = JSON.parse(responseText) as ApiResponse;
+			} catch {
+				throw new Error('The server returned a non-JSON response.');
+			}
+
+			if (
+				typeof res.success !== 'boolean' ||
+				!res.data ||
+				typeof res.data.title !== 'string' ||
+				typeof res.data.message !== 'string'
+			) {
+				throw new Error('The server returned an invalid response.');
+			}
 
 			if (res.success) {
 				this.showResponseMSG(res.data, true);
