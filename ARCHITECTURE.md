@@ -6,7 +6,8 @@ Le dépôt est organisé autour d’un seul plugin WordPress : `plaidact-campaig
 
 ## Responsabilités du plugin
 
-- Déclare les contenus PLAID·ACT (`plaid_breve`, `plaid_agenda_event`, `plaid_partner`, `plaid_social_embed`).
+- Déclare les contenus PLAID·ACT (`plaid_newsletter`, `plaid_breve`, `plaid_agenda_event`, `plaid_partner`, `plaid_social_embed`).
+- `plaid_newsletter` publie les newsletters dans Gutenberg avec une archive publique. Lors de la mise à niveau 2.1.0, les anciens contenus `breves` sont migrés vers `plaid_breve` sans changer leurs IDs ni leurs URL, puis les anciennes requêtes du thème sont redirigées vers le type canonique.
 - Déclare les taxonomies métier utiles aux contenus.
 - Gère les métadonnées partenaires et social wall.
 - Expose les réglages PLAID·ACT et les toggles d’activation des modules frontend.
