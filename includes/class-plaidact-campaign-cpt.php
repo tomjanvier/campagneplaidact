@@ -24,12 +24,63 @@ final class CPT {
 	public static function boot(): void {
 		add_action( 'init', array( __CLASS__, 'register_post_types' ) );
 		add_action( 'init', array( __CLASS__, 'register_taxonomies' ) );
+		add_action( 'rest_api_init', array( __CLASS__, 'register_breve_export_fields' ) );
 		add_action( 'init', array( __CLASS__, 'register_partner_meta' ) );
 		add_action( 'init', array( __CLASS__, 'register_social_embed_meta' ) );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'register_partner_metabox' ) );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'register_social_embed_metabox' ) );
 		add_action( 'save_post_plaid_partner', array( __CLASS__, 'save_partner_url' ) );
 		add_action( 'save_post_plaid_social_embed', array( __CLASS__, 'save_social_embed_meta' ) );
+	}
+
+	/**
+	 * Adds human-readable brief fields to REST exports.
+	 *
+	 * WordPress exposes the editor content as a nested object and topics as term
+	 * IDs by default. Export tools consuming the REST API therefore need flat,
+	 * immediately usable values for these two fields.
+	 *
+	 * @return void
+	 */
+	public static function register_breve_export_fields(): void {
+		register_rest_field(
+			'plaid_breve',
+			'texte',
+			array(
+				'get_callback' => static function ( array $post ): string {
+					return (string) get_post_field( 'post_content', (int) $post['id'], 'raw' );
+				},
+				'schema'       => array(
+					'description' => __( 'Texte brut de la brève.', 'plaidact-campaign-core' ),
+					'type'        => 'string',
+					'context'     => array( 'view', 'edit', 'embed' ),
+					'readonly'    => true,
+				),
+			)
+		);
+
+		register_rest_field(
+			'plaid_breve',
+			'thematiques',
+			array(
+				'get_callback' => static function ( array $post ): array {
+					$terms = wp_get_post_terms(
+						(int) $post['id'],
+						'plaid_breve_topic',
+						array( 'fields' => 'names' )
+					);
+
+					return is_wp_error( $terms ) ? array() : $terms;
+				},
+				'schema'       => array(
+					'description' => __( 'Noms des thématiques de la brève.', 'plaidact-campaign-core' ),
+					'type'        => 'array',
+					'items'       => array( 'type' => 'string' ),
+					'context'     => array( 'view', 'edit', 'embed' ),
+					'readonly'    => true,
+				),
+			)
+		);
 	}
 
 	/**
