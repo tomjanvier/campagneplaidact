@@ -9,6 +9,8 @@ export type PetitionerFormSettings = {
 	labels?: {
 		emailConfirmedSuccess?: string;
 		emailConfirmedError?: string;
+		unexpectedErrorTitle?: string;
+		unexpectedErrorMessage?: string;
 	};
 };
 

@@ -242,14 +242,22 @@ export default class PetitionerForm {
 			this.handleSubmissionComplete(formData, res.success);
 		} catch (error) {
 			console.error('Error:', error);
-			alert('An unexpected error occurred. Please try again later.');
+			const labels = window.petitionerFormSettings?.labels || {};
+			this.showResponseMSG({
+				title:
+					labels.unexpectedErrorTitle ||
+					'Could not submit the form.',
+				message:
+					labels.unexpectedErrorMessage ||
+					'An unexpected error occurred. Please try again later.',
+			});
 			this.handleSubmissionComplete();
 		}
 	}
 
 	private handleSubmissionComplete(formData?: FormData, isSuccess: boolean = false): void {
 		this.wrapper?.classList.remove('petitioner--loading');
-		this.formEl?.reset();
+		if (isSuccess) this.formEl?.reset();
 		this.captchaValidated = false; // ✅ Reset for next submission
 
 		if (formData) {

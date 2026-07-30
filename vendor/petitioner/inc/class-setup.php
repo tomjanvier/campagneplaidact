@@ -6,6 +6,7 @@ if (!defined('ABSPATH')) {
 
 class AV_Petitioner_Setup
 {
+	const DB_SCHEMA_VERSION = '2';
 	public static $FRONTEND_FORM_NONCE_LABEL = 'petitioner_form_nonce';
 
 	public function __construct()
@@ -151,6 +152,7 @@ class AV_Petitioner_Setup
 	{
 		add_option('petitioner_plugin_version', AV_PETITIONER_PLUGIN_VERSION);
 		AV_Petitioner_Submissions_Model::create_db_table();
+		update_option('petitioner_db_schema_version', self::DB_SCHEMA_VERSION);
 
 		AV_Petitioner_Form_Migrator::migrate_all_forms_to_builder();
 	}
@@ -168,12 +170,14 @@ class AV_Petitioner_Setup
 		);
 
 		// Check if the plugin is updated
-		$current_version = get_option(
-			'petitioner_plugin_version',
-			AV_PETITIONER_PLUGIN_VERSION
-		);
+		$current_version = get_option('petitioner_plugin_version', '');
+		$current_schema_version = get_option('petitioner_db_schema_version', '');
 
-		if (empty($current_version)) {
+		if (
+			empty($current_version) ||
+			version_compare($current_version, AV_PETITIONER_PLUGIN_VERSION, '<') ||
+			$current_schema_version !== self::DB_SCHEMA_VERSION
+		) {
 			// Fresh install setup
 			// Update the database schema or perform any other necessary updates
 			AV_Petitioner_Submissions_Model::create_db_table();
@@ -181,15 +185,7 @@ class AV_Petitioner_Setup
 				'petitioner_plugin_version',
 				AV_PETITIONER_PLUGIN_VERSION
 			);
-		} elseif (
-			version_compare($current_version, AV_PETITIONER_PLUGIN_VERSION, '<')
-		) {
-			// Update the database schema or perform any other necessary updates
-			AV_Petitioner_Submissions_Model::create_db_table();
-			update_option(
-				'petitioner_plugin_version',
-				AV_PETITIONER_PLUGIN_VERSION
-			);
+			update_option('petitioner_db_schema_version', self::DB_SCHEMA_VERSION);
 		}
 	}
 
@@ -207,6 +203,7 @@ class AV_Petitioner_Setup
 	public static function plugin_uninstall()
 	{
 		delete_option('petitioner_plugin_version');
+		delete_option('petitioner_db_schema_version');
 	}
 
 	/**
@@ -316,6 +313,12 @@ class AV_Petitioner_Setup
 				),
 				'emailConfirmedError' => sanitize_text_field(
 					AV_Petitioner_Labels::get('email_confirmed_error')
+				),
+				'unexpectedErrorTitle' => sanitize_text_field(
+					AV_Petitioner_Labels::get('could_not_submit')
+				),
+				'unexpectedErrorMessage' => sanitize_text_field(
+					AV_Petitioner_Labels::get('error_generic')
 				),
 			],
 		]);
