@@ -16,8 +16,8 @@ class AV_Petitioner_Akismet
     {
         $enable_akismet = get_option('petitioner_enable_akismet');
 
-        // skip if the plugin or the integration are not enabled
-        if (!function_exists('akismet_http_post') || !$enable_akismet) {
+        // Skip when the Petitioner integration is not enabled.
+        if (!$enable_akismet) {
             return false;
         }
 
@@ -43,10 +43,34 @@ class AV_Petitioner_Akismet
             'comment_content'      => 'Country: ' . $country . '. Form ID: ' . $form_id,
         ];
 
-        $path = '/1.1/comment-check';
-        $response = akismet_http_post(http_build_query($query), $akismet_api_key . '.rest.akismet.com', $path);
+        $endpoint = sprintf(
+            'https://%s.rest.akismet.com/1.1/comment-check',
+            rawurlencode($akismet_api_key)
+        );
+        $response = wp_remote_post($endpoint, [
+            'timeout' => 3,
+            'redirection' => 0,
+            'headers' => [
+                'Content-Type' => 'application/x-www-form-urlencoded; charset=' . get_option('blog_charset'),
+                'User-Agent' => sprintf(
+                    'WordPress/%s | Petitioner/%s',
+                    get_bloginfo('version'),
+                    AV_PETITIONER_PLUGIN_VERSION
+                ),
+            ],
+            'body' => $query,
+        ]);
 
-        if (! empty($response[1]) && trim($response[1]) === 'true') {
+        // Spam checking must never prevent a legitimate signature when Akismet
+        // is slow or unavailable. Fail open and keep the honeypot protection.
+        if (is_wp_error($response)) {
+            av_ptr_error_log(
+                'Petitioner Akismet warning: ' . $response->get_error_message()
+            );
+            return false;
+        }
+
+        if (trim(wp_remote_retrieve_body($response)) === 'true') {
             return true;
         }
 
