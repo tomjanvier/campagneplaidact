@@ -727,6 +727,10 @@ final class Shortcodes
                         <p><a class="button" href="<?php echo esc_url(admin_url('edit.php?post_type=petitioner-petition&page=petition-settings')); ?>"><?php esc_html_e("Ouvrir les réglages Petitioner", "plaidact-campaign-core"); ?></a></p>
                         <p class="description"><?php esc_html_e("Le shortcode PLAID·ACT ne duplique plus ces champs : il applique automatiquement les variables Petitioner au rendu public, puis laisse le CSS personnalisé de Petitioner surcharger le tout.", "plaidact-campaign-core"); ?></p>
                     </td></tr>
+                    <tr><th scope="row"><?php esc_html_e("Email de confirmation de signature", "plaidact-campaign-core"); ?></th><td>
+                        <p><?php esc_html_e("Pour modifier cet email, ouvrez la pétition concernée, puis Réglages avancés. Activez « Remplacer l’email de confirmation ? » et personnalisez son sujet et son contenu.", "plaidact-campaign-core"); ?></p>
+                        <p class="description"><?php esc_html_e("Si la confirmation par email est activée, conservez impérativement la variable {{confirmation_link}} dans le message afin que la signature puisse être validée.", "plaidact-campaign-core"); ?></p>
+                    </td></tr>
                     <tr><th scope="row"><?php esc_html_e(
          "Signataires publics",
          "plaidact-campaign-core"
@@ -1260,6 +1264,15 @@ final class Shortcodes
             "error_generic" => __("Une erreur est survenue. Réessayez.", "plaidact-campaign-core"),
             "error_required" => __("Ce champ est obligatoire.", "plaidact-campaign-core"),
             "already_signed" => __("Vous avez déjà signé cette pétition !", "plaidact-campaign-core"),
+            "invalid_nonce" => __("La session du formulaire a expiré. Rechargez la page puis réessayez.", "plaidact-campaign-core"),
+            "flagged_as_spam" => __("Votre signature a été identifiée comme indésirable. Vérifiez vos informations puis réessayez.", "plaidact-campaign-core"),
+            "confirm_email" => __("Confirmer mon adresse email", "plaidact-campaign-core"),
+            "email_confirmed_success" => __("Merci, votre adresse email et votre signature sont confirmées !", "plaidact-campaign-core"),
+            "email_confirmed_error" => __("Impossible de confirmer votre adresse email. Le lien a peut-être déjà été utilisé ou a expiré.", "plaidact-campaign-core"),
+            "ty_email_subject" => __("Merci d’avoir signé la pétition !", "plaidact-campaign-core"),
+            "ty_email" => __("<p>Bonjour {{user_name}},</p><p>Merci d’avoir signé la pétition.</p>", "plaidact-campaign-core"),
+            "ty_email_subject_confirm" => __("Confirmez votre signature de la pétition", "plaidact-campaign-core"),
+            "ty_email_confirm" => __("<p>Bonjour {{user_name}},</p><p>Merci d’avoir signé la pétition.</p><p>Pour valider définitivement votre signature, cliquez sur le lien ci-dessous :</p><p>{{confirmation_link}}</p>", "plaidact-campaign-core"),
             "success_message_title" => __("Merci !", "plaidact-campaign-core"),
             "success_message" => __("Votre signature a bien été prise en compte.", "plaidact-campaign-core"),
             "your_name_here" => __("{Votre nom apparaîtra ici}", "plaidact-campaign-core"),

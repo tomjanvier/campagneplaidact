@@ -209,4 +209,31 @@ class Test_Submissions_Controller extends BaseTestCase
         $status = AV_Petitioner_Submissions_Controller::get_default_status(true, 'Pending');
         $this->assertEquals('Pending', $status);
     }
+
+	public function test_finalized_integration_failure_does_not_break_submission_flow()
+	{
+		$submission_id = AV_Petitioner_Submissions_Model::create_submission([
+			'form_id'         => 123,
+			'fname'           => 'Camille',
+			'lname'           => 'Dupont',
+			'email'           => 'camille@example.org',
+			'country'         => 'France',
+			'submitted_at'    => current_time('mysql'),
+			'approval_status' => 'Confirmed',
+		]);
+
+		$this->assertNotFalse($submission_id);
+
+		$callback = static function () {
+			throw new RuntimeException('Brevo indisponible');
+		};
+		add_action('petitioner_submission_finalized', $callback, 10, 2);
+
+		AV_Petitioner_Submissions_Controller::trigger_finalized_hook($submission_id);
+
+		remove_action('petitioner_submission_finalized', $callback, 10);
+		$this->assertNotNull(
+			AV_Petitioner_Submissions_Model::get_submission_by_id($submission_id)
+		);
+	}
 }

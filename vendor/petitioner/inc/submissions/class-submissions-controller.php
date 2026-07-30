@@ -126,6 +126,18 @@ class AV_Petitioner_Submissions_Controller
 
         $submission_id = AV_Petitioner_Submissions_Model::create_submission($data);
 
+        // Stop here if persistence failed. Continuing with hooks or emails using a
+        // false submission ID can cause a fatal error and turn this useful JSON
+        // response into an opaque HTTP 500 response on the frontend.
+        if ($submission_id === false) {
+            av_ptr_error_log('Petitioner submission error: Failed to save submission.');
+            wp_send_json_error([
+                'title'   => AV_Petitioner_Labels::get('could_not_submit'),
+                'message' => AV_Petitioner_Labels::get('error_generic'),
+            ]);
+            wp_die();
+        }
+
         /**
          * petitioner_after_submission
          * 
@@ -139,13 +151,18 @@ class AV_Petitioner_Submissions_Controller
          * @param int $submission_id The ID of the processed submission.
          * @param int $form_id The ID of the form associated with the submission.
          */
-        do_action('petitioner_after_submission', $submission_id, $form_id);
+        try {
+            do_action('petitioner_after_submission', $submission_id, $form_id);
+        } catch (Throwable $error) {
+            av_ptr_error_log(
+                'Petitioner post-submission integration error for submission ID ' .
+                $submission_id . ': ' . $error->getMessage()
+            );
+        }
 
-        if ($submission_id !== false) {
-            // Only finalize if the starting state is fully confirmed (bypasses manual moderation and emails)
-            if (isset($data['approval_status']) && $data['approval_status'] === 'Confirmed') {
-                self::trigger_finalized_hook($submission_id);
-            }
+        // Only finalize if the starting state is fully confirmed (bypasses manual moderation and emails)
+        if (isset($data['approval_status']) && $data['approval_status'] === 'Confirmed') {
+            self::trigger_finalized_hook($submission_id);
         }
 
         $mailer_settings = array(
@@ -177,31 +194,27 @@ class AV_Petitioner_Submissions_Controller
          */
         $mailer_settings = apply_filters('av_petitioner_mailer_settings', $mailer_settings, $data);
 
-        $mailer = new AV_Petitioner_Mailer($mailer_settings);
-
-        $send_emails = $mailer->send_emails();
-
-        // Check if the insert was successful
-        if ($submission_id === false) {
-            wp_send_json_error([
-                'title'   => AV_Petitioner_Labels::get('could_not_submit'),
-                'message' => AV_Petitioner_Labels::get('error_generic'),
-            ]);
-
+        try {
+            $mailer = new AV_Petitioner_Mailer($mailer_settings);
+            $send_emails = $mailer->send_emails();
+        } catch (Throwable $error) {
+            $send_emails = false;
             av_ptr_error_log(
-                'Petitioner submission error: Failed to save submission.'
+                'Petitioner mail error for submission ID ' . $submission_id . ': ' .
+                $error->getMessage()
             );
-        } else {
-            if ($send_emails === false) {
-                av_ptr_error_log(
-                    'Petitioner submission warning: Failed to send emails for submission ID ' . $submission_id . '.'
-                );
-            }
-            wp_send_json_success([
-                'title'     => AV_Petitioner_Labels::get('success_message_title', $form_id),
-                'message'   => AV_Petitioner_Labels::get('success_message', $form_id),
-            ]);
         }
+
+        if ($send_emails === false) {
+            av_ptr_error_log(
+                'Petitioner submission warning: Failed to send emails for submission ID ' . $submission_id . '.'
+            );
+        }
+
+        wp_send_json_success([
+            'title'   => AV_Petitioner_Labels::get('success_message_title', $form_id),
+            'message' => AV_Petitioner_Labels::get('success_message', $form_id),
+        ]);
 
         wp_die();
     }
@@ -848,7 +861,16 @@ class AV_Petitioner_Submissions_Controller
              * @param object $submission The submission object.
              * @param int $form_id       The ID of the form associated with the submission.
              */
-            do_action('petitioner_submission_finalized', $submission, $submission->form_id);
+            try {
+                do_action('petitioner_submission_finalized', $submission, $submission->form_id);
+            } catch (Throwable $error) {
+                // CRM, newsletter and notification integrations must not turn a
+                // successfully stored signature into a failed AJAX request.
+                av_ptr_error_log(
+                    'Petitioner finalized integration error for submission ID ' .
+                    $submission_id . ': ' . $error->getMessage()
+                );
+            }
         }
     }
 

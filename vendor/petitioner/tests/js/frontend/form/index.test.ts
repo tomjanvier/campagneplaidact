@@ -80,6 +80,8 @@ const PETITIONER_FORM_SETTINGS = {
 		emailConfirmedSuccess: 'Thank you for confirming your email!',
 		emailConfirmedError:
 			"We couldn't confirm your email address. It may have already been confirmed, or the link has expired.",
+		unexpectedErrorTitle: 'Impossible d’envoyer le formulaire.',
+		unexpectedErrorMessage: 'Une erreur est survenue. Réessayez.',
 	},
 };
 
@@ -247,6 +249,37 @@ describe('PetitionerForm', () => {
 
 			expect(title?.textContent).toEqual(ERROR_TITLE);
 			expect(msg?.textContent).toEqual(ERROR_MSG);
+		});
+
+		it('Network errors are localized and keep the entered values', async () => {
+			server.use(
+				http.post(
+					'http://localhost:1337/wp-admin/admin-ajax.php',
+					() => new HttpResponse(null, { status: 500 })
+				)
+			);
+
+			const form = wrapper.querySelector('form') as HTMLFormElement;
+			const fnameInput = wrapper.querySelector('#petitioner_fname') as HTMLInputElement;
+			const emailInput = wrapper.querySelector('#petitioner_email') as HTMLInputElement;
+
+			await userEvent.type(fnameInput, 'Camille');
+			await userEvent.type(emailInput, 'camille@example.org');
+			form.dispatchEvent(
+				new Event('submit', { bubbles: true, cancelable: true })
+			);
+
+			await vi.waitFor(() => {
+				expect(
+					wrapper.querySelector('.petitioner__response > h3')?.textContent
+				).toBe('Impossible d’envoyer le formulaire.');
+			});
+
+			expect(
+				wrapper.querySelector('.petitioner__response > p')?.textContent
+			).toBe('Une erreur est survenue. Réessayez.');
+			expect(fnameInput.value).toBe('Camille');
+			expect(emailInput.value).toBe('camille@example.org');
 		});
 	});
 });
