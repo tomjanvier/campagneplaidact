@@ -8,8 +8,10 @@ Le dépôt est directement installable comme extension WordPress : la racine Git
 
 ## Fonctionnalités regroupées
 
-- CPT `plaid_breve`, `plaid_agenda_event`, `plaid_partner` et `plaid_social_embed`.
+- CPT `plaid_newsletter`, `plaid_breve`, `plaid_agenda_event`, `plaid_partner` et `plaid_social_embed`.
 - Taxonomies de classification (`plaid_breve_topic`, `plaid_partner_type`).
+- Publication des newsletters avec Gutenberg, archive publique `/newsletters/`, pages individuelles `/newsletter/{slug}/` et prise en charge de Polylang.
+- Migration automatique et non destructive de l’ancien CPT `breves` vers `plaid_breve` : les IDs, contenus, médias, métadonnées, langues et URL `/breves/{slug}/` sont conservés, puis le menu en double est supprimé.
 - Module `Petitioner` embarqué dans `vendor/petitioner` et chargé par le core.
 - Design des pétitions configurable dans **Petitioner → Settings** ; les couleurs et le CSS personnalisé de Petitioner alimentent aussi les shortcodes PLAID·ACT.
 - Shortcodes : `[petition_form]`, `[plaid_newsletter_form]`, `[plaid_partners]`, `[plaid_send_campaign]`, `[plaid_social_wall]`. Le formulaire newsletter rendu par `[plaid_newsletter_form]` porte aussi la classe `stp-newsletter-form` et soumet les inscriptions au flux Brevo configuré dans **Réglages → PLAID·ACT**.

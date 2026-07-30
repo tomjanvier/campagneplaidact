@@ -26,7 +26,7 @@ final class Polylang
         add_action("init", [__CLASS__, "register_strings"]);
         add_filter(
             "pll_get_post_types",
-            [__CLASS__, "register_petitioner_post_type"],
+            [__CLASS__, "register_translatable_post_types"],
             10,
             2
         );
@@ -62,7 +62,25 @@ final class Polylang
     }
 
     /**
-     * Makes the bundled Petitioner CPT translatable in Polylang.
+     * Makes PLAID·ACT editorial content translatable in Polylang.
+     *
+     * @param array $post_types Registered Polylang post types.
+     * @param bool  $is_settings Whether Polylang is building the settings screen.
+     * @return array
+     */
+    public static function register_translatable_post_types(
+        array $post_types,
+        bool $is_settings
+    ): array {
+        $post_types["petitioner-petition"] = "petitioner-petition";
+        $post_types["plaid_breve"] = "plaid_breve";
+        $post_types["plaid_newsletter"] = "plaid_newsletter";
+
+        return $post_types;
+    }
+
+    /**
+     * Backward-compatible alias for integrations using the former callback.
      *
      * @param array $post_types Registered Polylang post types.
      * @param bool  $is_settings Whether Polylang is building the settings screen.
@@ -72,9 +90,10 @@ final class Polylang
         array $post_types,
         bool $is_settings
     ): array {
-        $post_types["petitioner-petition"] = "petitioner-petition";
-
-        return $post_types;
+        return self::register_translatable_post_types(
+            $post_types,
+            $is_settings
+        );
     }
 
     /**

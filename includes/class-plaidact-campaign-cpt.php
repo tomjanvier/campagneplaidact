@@ -17,6 +17,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class CPT {
 
 	/**
+	 * Content schema version used for one-time migrations and rewrite rules.
+	 */
+	private const CONTENT_SCHEMA_VERSION = '2.1.0';
+
+	/**
+	 * Option storing the completed content schema version.
+	 */
+	private const CONTENT_SCHEMA_OPTION = 'plaidact_core_content_schema_version';
+
+	/**
+	 * Previous brief post type registered by the legacy PLAID·ACT theme.
+	 */
+	private const LEGACY_BREVE_POST_TYPE = 'breves';
+
+	/**
+	 * Canonical brief post type owned by this plugin.
+	 */
+	private const BREVE_POST_TYPE = 'plaid_breve';
+
+	/**
 	 * Hooks WordPress actions.
 	 *
 	 * @return void
@@ -24,6 +44,10 @@ final class CPT {
 	public static function boot(): void {
 		add_action( 'init', array( __CLASS__, 'register_post_types' ) );
 		add_action( 'init', array( __CLASS__, 'register_taxonomies' ) );
+		add_action( 'init', array( __CLASS__, 'migrate_legacy_breves' ), 90 );
+		add_action( 'init', array( __CLASS__, 'unregister_legacy_breve_post_type' ), 1000 );
+		add_action( 'init', array( __CLASS__, 'maybe_flush_rewrite_rules' ), 1100 );
+		add_action( 'pre_get_posts', array( __CLASS__, 'map_legacy_breve_query' ) );
 		add_action( 'rest_api_init', array( __CLASS__, 'register_breve_export_fields' ) );
 		add_action( 'init', array( __CLASS__, 'register_partner_meta' ) );
 		add_action( 'init', array( __CLASS__, 'register_social_embed_meta' ) );
@@ -90,7 +114,7 @@ final class CPT {
 	 */
 	public static function register_post_types(): void {
 		register_post_type(
-			'plaid_breve',
+			self::BREVE_POST_TYPE,
 			array(
 				'labels'       => array(
 					'name'               => __( 'Brèves', 'plaidact-campaign-core' ),
@@ -107,13 +131,47 @@ final class CPT {
 				'public'       => true,
 				'show_in_rest' => true,
 				'menu_icon'    => 'dashicons-megaphone',
-				'menu_position'=> 21,
-				'has_archive'  => false,
-				'rewrite'      => array( 'slug' => 'breves' ),
-				'supports'     => array( 'title', 'editor', 'excerpt', 'thumbnail' ),
+				'menu_position'=> 22,
+				'has_archive'  => 'breves',
+				'rewrite'      => array(
+					'slug'       => 'breves',
+					'with_front' => false,
+				),
+				'supports'     => array( 'title', 'editor', 'excerpt', 'thumbnail', 'author', 'revisions' ),
 			)
 		);
 
+		register_post_type(
+			'plaid_newsletter',
+			array(
+				'labels'       => array(
+					'name'               => __( 'Newsletters', 'plaidact-campaign-core' ),
+					'singular_name'      => __( 'Newsletter', 'plaidact-campaign-core' ),
+					'add_new'            => __( 'Ajouter', 'plaidact-campaign-core' ),
+					'add_new_item'       => __( 'Ajouter une newsletter', 'plaidact-campaign-core' ),
+					'edit_item'          => __( 'Modifier la newsletter', 'plaidact-campaign-core' ),
+					'new_item'           => __( 'Nouvelle newsletter', 'plaidact-campaign-core' ),
+					'view_item'          => __( 'Voir la newsletter', 'plaidact-campaign-core' ),
+					'view_items'         => __( 'Voir les newsletters', 'plaidact-campaign-core' ),
+					'search_items'       => __( 'Rechercher une newsletter', 'plaidact-campaign-core' ),
+					'not_found'          => __( 'Aucune newsletter trouvée', 'plaidact-campaign-core' ),
+					'not_found_in_trash' => __( 'Aucune newsletter dans la corbeille', 'plaidact-campaign-core' ),
+					'all_items'          => __( 'Toutes les newsletters', 'plaidact-campaign-core' ),
+					'archives'           => __( 'Archives des newsletters', 'plaidact-campaign-core' ),
+				),
+				'public'       => true,
+				'show_in_rest' => true,
+				'rest_base'    => 'newsletters',
+				'menu_icon'    => 'dashicons-email-alt2',
+				'menu_position'=> 21,
+				'has_archive'  => 'newsletters',
+				'rewrite'      => array(
+					'slug'       => 'newsletter',
+					'with_front' => false,
+				),
+				'supports'     => array( 'title', 'editor', 'excerpt', 'thumbnail', 'author', 'revisions' ),
+			)
+		);
 
 		register_post_type(
 			'plaid_agenda_event',
@@ -134,7 +192,7 @@ final class CPT {
 				'show_ui'      => true,
 				'show_in_rest' => true,
 				'menu_icon'    => 'dashicons-calendar-alt',
-				'menu_position'=> 22,
+				'menu_position'=> 23,
 				'has_archive'  => false,
 				'rewrite'      => array( 'slug' => 'agenda' ),
 				'supports'     => array( 'title', 'editor', 'excerpt', 'thumbnail', 'custom-fields' ),
@@ -192,6 +250,119 @@ final class CPT {
 			)
 		);
 
+	}
+
+	/**
+	 * Migrates legacy `breves` posts to the canonical `plaid_breve` type.
+	 *
+	 * Post IDs, publication dates, content, media, metadata and Polylang term
+	 * relationships are preserved. Using wp_update_post() also resolves a rare
+	 * slug collision safely instead of overwriting an existing brief.
+	 *
+	 * @return void
+	 */
+	public static function migrate_legacy_breves(): void {
+		if ( self::CONTENT_SCHEMA_VERSION === get_option( self::CONTENT_SCHEMA_OPTION ) ) {
+			return;
+		}
+
+		global $wpdb;
+
+		$legacy_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s ORDER BY ID ASC",
+				self::LEGACY_BREVE_POST_TYPE
+			)
+		);
+
+		$migration_complete = true;
+
+		foreach ( array_map( 'absint', $legacy_ids ) as $post_id ) {
+			$result = wp_update_post(
+				array(
+					'ID'        => $post_id,
+					'post_type' => self::BREVE_POST_TYPE,
+				),
+				true
+			);
+
+			if ( is_wp_error( $result ) ) {
+				$migration_complete = false;
+			}
+		}
+
+		if ( $migration_complete ) {
+			update_option( self::CONTENT_SCHEMA_OPTION, self::CONTENT_SCHEMA_VERSION, false );
+		}
+	}
+
+	/**
+	 * Removes the obsolete duplicate menu once legacy posts have been migrated.
+	 *
+	 * The old theme may still register `breves` on init. Running late leaves the
+	 * canonical post type as the only editor while preserving its `/breves/`
+	 * URLs and archive.
+	 *
+	 * @return void
+	 */
+	public static function unregister_legacy_breve_post_type(): void {
+		if ( self::CONTENT_SCHEMA_VERSION !== get_option( self::CONTENT_SCHEMA_OPTION ) ) {
+			return;
+		}
+
+		if ( post_type_exists( self::LEGACY_BREVE_POST_TYPE ) ) {
+			unregister_post_type( self::LEGACY_BREVE_POST_TYPE );
+		}
+	}
+
+	/**
+	 * Keeps older theme queries working after the post type migration.
+	 *
+	 * @param \WP_Query $query Query being prepared.
+	 * @return void
+	 */
+	public static function map_legacy_breve_query( \WP_Query $query ): void {
+		$post_type = $query->get( 'post_type' );
+
+		if ( self::LEGACY_BREVE_POST_TYPE === $post_type ) {
+			$query->set( 'post_type', self::BREVE_POST_TYPE );
+			return;
+		}
+
+		if ( ! is_array( $post_type ) || ! in_array( self::LEGACY_BREVE_POST_TYPE, $post_type, true ) ) {
+			return;
+		}
+
+		$post_types = array_map(
+			static function ( $type ): string {
+				$type = (string) $type;
+
+				return self::LEGACY_BREVE_POST_TYPE === $type ? self::BREVE_POST_TYPE : $type;
+			},
+			$post_type
+		);
+
+		$query->set( 'post_type', array_values( array_unique( $post_types ) ) );
+	}
+
+	/**
+	 * Refreshes permalink rules once after this content schema is installed.
+	 *
+	 * @return void
+	 */
+	public static function maybe_flush_rewrite_rules(): void {
+		if ( self::CONTENT_SCHEMA_VERSION !== get_option( self::CONTENT_SCHEMA_OPTION ) ) {
+			return;
+		}
+
+		$rewrite_version = get_option( 'plaidact_core_rewrite_schema_version' );
+
+		if ( self::CONTENT_SCHEMA_VERSION === $rewrite_version ) {
+			return;
+		}
+
+		flush_rewrite_rules( false );
+		update_option( 'plaidact_core_rewrite_schema_version', self::CONTENT_SCHEMA_VERSION, false );
 	}
 
 	/**
