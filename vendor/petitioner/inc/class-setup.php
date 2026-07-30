@@ -94,7 +94,7 @@ class AV_Petitioner_Setup
 				'process_submission_side_effects',
 			],
 			10,
-			4
+			5
 		);
 		add_action('wp_ajax_petitioner_fetch_submissions', [
 			'AV_Petitioner_Submissions_Controller',

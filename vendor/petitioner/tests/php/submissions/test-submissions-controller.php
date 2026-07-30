@@ -265,7 +265,8 @@ class Test_Submissions_Controller extends BaseTestCase
 				'submission_id' => $submission_id,
 				'user_email' => 'alex@example.org',
 				'user_name' => 'Alex Martin',
-			]
+			],
+			[]
 		);
 
 		remove_action('petitioner_after_submission', $callback, 10);
