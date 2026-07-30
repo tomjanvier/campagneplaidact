@@ -14,6 +14,10 @@ class Test_Captcha extends BaseTestCase
         if (!isset($_SERVER['REMOTE_ADDR'])) {
             $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         }
+
+        update_option('petitioner_recaptcha_secret_key', 'recaptcha-secret');
+        update_option('petitioner_hcaptcha_secret_key', 'hcaptcha-secret');
+        update_option('petitioner_turnstile_secret_key', 'turnstile-secret');
     }
 
     public function tear_down()
@@ -22,6 +26,9 @@ class Test_Captcha extends BaseTestCase
         
         // Clean up any filters
         remove_all_filters('pre_http_request');
+        delete_option('petitioner_recaptcha_secret_key');
+        delete_option('petitioner_hcaptcha_secret_key');
+        delete_option('petitioner_turnstile_secret_key');
     }
 
     // ============================================
@@ -262,8 +269,10 @@ class Test_Captcha extends BaseTestCase
         // Ensure no secret key is set
         delete_option('petitioner_recaptcha_secret_key');
 
-        add_filter('pre_http_request', function($preempt, $args, $url) {
+        $request_was_sent = false;
+        add_filter('pre_http_request', function($preempt, $args, $url) use (&$request_was_sent) {
             if (strpos($url, 'google.com/recaptcha') !== false) {
+                $request_was_sent = true;
                 return [
                     'response' => ['code' => 200],
                     'body' => json_encode(['success' => false, 'error-codes' => ['missing-input-secret']])
@@ -274,7 +283,7 @@ class Test_Captcha extends BaseTestCase
 
         $result = AV_Petitioner_Captcha::verify_captcha('test_token', 'recaptcha');
         
-        // Should still make the request, but API will return failure
         $this->assertFalse($result['success']);
+        $this->assertFalse($request_was_sent);
     }
 }

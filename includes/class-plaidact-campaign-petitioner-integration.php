@@ -272,17 +272,29 @@ final class Petitioner_Integration
             return $is_duplicate;
         }
 
-        foreach (Shortcodes::get_linked_petitioner_form_ids($form_id) as $linked_form_id) {
-            if ($linked_form_id === $form_id) {
-                continue;
-            }
+        static $checking_translations = false;
 
-            if (\AV_Petitioner_Submissions_Model::check_duplicate_email($email, $linked_form_id)) {
-                return true;
-            }
+        if ($checking_translations) {
+            return $is_duplicate;
         }
 
-        return false;
+        $checking_translations = true;
+
+        try {
+            foreach (Shortcodes::get_linked_petitioner_form_ids($form_id) as $linked_form_id) {
+                if ($linked_form_id === $form_id) {
+                    continue;
+                }
+
+                if (\AV_Petitioner_Submissions_Model::check_duplicate_email($email, $linked_form_id)) {
+                    return true;
+                }
+            }
+
+            return false;
+        } finally {
+            $checking_translations = false;
+        }
     }
 
     /**

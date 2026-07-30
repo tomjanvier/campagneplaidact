@@ -38,47 +38,46 @@ class AV_Petitioner_Captcha
      */
     public static function enqueue_scripts()
     {
-        // Captcha
-        $is_recaptcha_enabled   = get_option('petitioner_enable_recaptcha', false);
-        $is_hcaptcha_enabled    = get_option('petitioner_enable_hcaptcha', false);
-        $is_turnstile_enabled   = get_option('petitioner_enable_turnstile', false);
+        $active_provider        = self::get_active_provider();
+        $active_type            = $active_provider['type'] ?? '';
         $recaptcha_site_key     = get_option('petitioner_recaptcha_site_key');
         $hcaptcha_site_key      = get_option('petitioner_hcaptcha_site_key');
         $turnstile_site_key     = get_option('petitioner_turnstile_site_key');
+        $provider_is_configured = $active_provider
+            && !empty($active_provider['site_key'])
+            && !empty($active_provider['secret_key']);
 
-        // Enqueue the appropriate captcha script based on the settings
-        // only one can be enabled at a time
-        if ($is_recaptcha_enabled && !empty($recaptcha_site_key)) {
+        // Only one provider is active, matching server-side validation.
+        if ($provider_is_configured && $active_type === 'recaptcha') {
             wp_enqueue_script('petitioner-google-recaptcha-v3', 'https://www.google.com/recaptcha/api.js?render=' . esc_attr($recaptcha_site_key), [], null, true);
-        } else if ($is_hcaptcha_enabled && !empty($hcaptcha_site_key)) {
+        } else if ($provider_is_configured && $active_type === 'hcaptcha') {
             wp_enqueue_script('hcaptcha', 'https://js.hcaptcha.com/1/api.js', [], null, true);
-        } else if ($is_turnstile_enabled && !empty($turnstile_site_key)) {
+        } else if ($provider_is_configured && $active_type === 'turnstile') {
             wp_enqueue_script('petitioner-turnstile', 'https://challenges.cloudflare.com/turnstile/v0/api.js', [], null, true);
         }
 
         wp_localize_script('petitioner-script', 'petitionerCaptcha', [
             'recaptchaSiteKey'  => $recaptcha_site_key,
             'hcaptchaSiteKey'   => $hcaptcha_site_key,
-            'enableRecaptcha'   => $is_recaptcha_enabled,
-            'enableHcaptcha'    => $is_hcaptcha_enabled,
-            'enableTurnstile'   => $is_turnstile_enabled,
+            'enableRecaptcha'   => $provider_is_configured && $active_type === 'recaptcha',
+            'enableHcaptcha'    => $provider_is_configured && $active_type === 'hcaptcha',
+            'enableTurnstile'   => $provider_is_configured && $active_type === 'turnstile',
             'turnstileSiteKey'  => $turnstile_site_key,
         ]);
     }
 
     public static function render_inputs()
     {
-        $is_recaptcha_enabled               = get_option('petitioner_enable_recaptcha', false);
-        $is_hcaptcha_enabled                = get_option('petitioner_enable_hcaptcha', false);
-        $is_turnstile_enabled               = get_option('petitioner_enable_turnstile', false);
+        $active_provider = self::get_active_provider();
+        $active_type = $active_provider['type'] ?? '';
 
 ?>
-        <?php if ($is_turnstile_enabled): ?>
+        <?php if ($active_type === 'turnstile'): ?>
             <span class="petitioner-turnstile-container"></span>
             <input type="hidden" name="petitioner-turnstile-response" id="petitioner-turnstile-response">
         <?php endif; ?>
 
-        <?php if ($is_recaptcha_enabled): ?>
+        <?php if ($active_type === 'recaptcha'): ?>
             <input type="hidden" name="petitioner-g-recaptcha-response" id="petitioner-g-recaptcha-response">
             <p class="petitioner-disclaimer-text">
                 <?php
@@ -97,7 +96,7 @@ class AV_Petitioner_Captcha
             </p>
         <?php endif; ?>
 
-        <?php if ($is_hcaptcha_enabled): ?>
+        <?php if ($active_type === 'hcaptcha'): ?>
             <span class="petitioner-h-captcha-container"></span>
             <input type="hidden" name="petitioner-h-captcha-response" class="petitioner-h-captcha-response">
             <p class="petitioner-disclaimer-text">
@@ -121,54 +120,72 @@ class AV_Petitioner_Captcha
 
     public static function validate_captcha($captcha_response)
     {
+        $active_provider = self::get_active_provider();
 
-        $recaptcha_enabled  = get_option('petitioner_enable_recaptcha', false);
-        $hcaptcha_enabled   = get_option('petitioner_enable_hcaptcha', false);
-        $turnstile_enabled  = get_option('petitioner_enable_turnstile', false);
-
-        if ($recaptcha_enabled) {
-            $recaptcha_response = isset($_POST['petitioner-g-recaptcha-response']) ? sanitize_text_field(wp_unslash($_POST['petitioner-g-recaptcha-response'])) : '';
-
-            $recaptcha_result = self::verify_captcha($recaptcha_response, 'recaptcha');
-
-            if (!$recaptcha_result['success']) {
-                wp_send_json_error([
-                    'title'     => AV_Petitioner_Labels::get('captcha_verification_failed_title'),
-                    'message'   => $recaptcha_result['message'],
-                ]);
-                wp_die();
-            }
+        if (!$active_provider) {
+            return true;
         }
 
-        if ($hcaptcha_enabled) {
-            $hcaptcha_response = isset($_POST['petitioner-h-captcha-response']) ? sanitize_text_field(wp_unslash($_POST['petitioner-h-captcha-response'])) : '';
+        $field = $active_provider['response_field'];
+        $response = isset($_POST[$field])
+            ? sanitize_text_field(wp_unslash($_POST[$field]))
+            : '';
+        $result = self::verify_captcha($response, $active_provider['type']);
 
-            $hcaptcha_result = self::verify_captcha($hcaptcha_response, 'hcaptcha');
-
-            if (!$hcaptcha_result['success']) {
-                wp_send_json_error([
-                    'title'     => AV_Petitioner_Labels::get('captcha_verification_failed_title'),
-                    'message'   => $hcaptcha_result['message'],
-                ]);
-                wp_die();
-            }
-        }
-
-        if ($turnstile_enabled) {
-            $turnstile_response = isset($_POST['petitioner-turnstile-response']) ? sanitize_text_field(wp_unslash($_POST['petitioner-turnstile-response'])) : '';
-
-            $turnstile_result = self::verify_captcha($turnstile_response, 'turnstile');
-
-            if (!$turnstile_result['success']) {
-                wp_send_json_error([
-                    'title'     => AV_Petitioner_Labels::get('captcha_verification_failed_title'),
-                    'message'   => $turnstile_result['message'],
-                ]);
-                wp_die();
-            }
+        if (!$result['success']) {
+            wp_send_json_error([
+                'title' => AV_Petitioner_Labels::get('captcha_verification_failed_title'),
+                'message' => $result['message'],
+            ]);
+            wp_die();
         }
 
         return true;
+    }
+
+    /**
+     * Return the first enabled CAPTCHA provider.
+     *
+     * The same provider must be used by rendering, JavaScript and validation.
+     * This also keeps submissions deterministic if multiple settings are
+     * accidentally enabled.
+     *
+     * @return array|null
+     */
+    private static function get_active_provider()
+    {
+        $providers = [
+            'recaptcha' => [
+                'site_key_option' => 'petitioner_recaptcha_site_key',
+                'secret_key_option' => 'petitioner_recaptcha_secret_key',
+                'response_field' => 'petitioner-g-recaptcha-response',
+            ],
+            'hcaptcha' => [
+                'site_key_option' => 'petitioner_hcaptcha_site_key',
+                'secret_key_option' => 'petitioner_hcaptcha_secret_key',
+                'response_field' => 'petitioner-h-captcha-response',
+            ],
+            'turnstile' => [
+                'site_key_option' => 'petitioner_turnstile_site_key',
+                'secret_key_option' => 'petitioner_turnstile_secret_key',
+                'response_field' => 'petitioner-turnstile-response',
+            ],
+        ];
+
+        foreach ($providers as $type => $provider) {
+            if (!get_option('petitioner_enable_' . $type, false)) {
+                continue;
+            }
+
+            return [
+                'type' => $type,
+                'site_key' => get_option($provider['site_key_option'], ''),
+                'secret_key' => get_option($provider['secret_key_option'], ''),
+                'response_field' => $provider['response_field'],
+            ];
+        }
+
+        return null;
     }
 
     /**
@@ -208,6 +225,13 @@ class AV_Petitioner_Captcha
         $provider = $providers[$captcha_type];
         $captcha_secret = get_option($provider['secret_key_option'], '');
 
+        if (empty($captcha_secret)) {
+            return [
+                'success' => false,
+                'message' => AV_Petitioner_Labels::get('captcha_verification_failed'),
+            ];
+        }
+
         // Handle missing response
         if (empty($captcha_response)) {
             return [
@@ -218,6 +242,8 @@ class AV_Petitioner_Captcha
 
         // Send request to verification API
         $api_response = wp_remote_post($provider['verify_url'], [
+            'timeout' => 5,
+            'redirection' => 0,
             'body' => [
                 'secret'   => $captcha_secret,
                 'response' => $captcha_response,

@@ -203,6 +203,9 @@ describe('PetitionerForm', () => {
 			});
 
 			expect(capturedFormData?.get('petitioner_nonce')).toBe(NONCE);
+			expect(capturedFormData?.get('action')).toBe(
+				'petitioner_form_submit'
+			);
 		});
 
 		it('Success messages are shown correctly on submit', async () => {
@@ -256,6 +259,37 @@ describe('PetitionerForm', () => {
 				http.post(
 					'http://localhost:1337/wp-admin/admin-ajax.php',
 					() => new HttpResponse(null, { status: 500 })
+				)
+			);
+
+			const form = wrapper.querySelector('form') as HTMLFormElement;
+			const fnameInput = wrapper.querySelector('#petitioner_fname') as HTMLInputElement;
+			const emailInput = wrapper.querySelector('#petitioner_email') as HTMLInputElement;
+
+			await userEvent.type(fnameInput, 'Camille');
+			await userEvent.type(emailInput, 'camille@example.org');
+			form.dispatchEvent(
+				new Event('submit', { bubbles: true, cancelable: true })
+			);
+
+			await vi.waitFor(() => {
+				expect(
+					wrapper.querySelector('.petitioner__response > h3')?.textContent
+				).toBe('Impossible d’envoyer le formulaire.');
+			});
+
+			expect(
+				wrapper.querySelector('.petitioner__response > p')?.textContent
+			).toBe('Une erreur est survenue. Réessayez.');
+			expect(fnameInput.value).toBe('Camille');
+			expect(emailInput.value).toBe('camille@example.org');
+		});
+
+		it('Non-JSON server responses use the localized error', async () => {
+			server.use(
+				http.post(
+					'http://localhost:1337/wp-admin/admin-ajax.php',
+					() => new HttpResponse('<html>Server error</html>')
 				)
 			);
 

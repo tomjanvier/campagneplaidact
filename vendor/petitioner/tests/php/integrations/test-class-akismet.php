@@ -1,6 +1,8 @@
 <?php
 
-class Test_AV_Petitioner_Akismet extends WP_UnitTestCase
+use WorDBless\BaseTestCase;
+
+class Test_AV_Petitioner_Akismet extends BaseTestCase
 {
     public function tearDown(): void
     {
