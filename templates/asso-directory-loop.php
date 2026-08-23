@@ -41,33 +41,21 @@ $pagination_key = isset( $pagination_key ) && '' !== $pagination_key ? sanitize_
 			<?php endif; ?>
 		</div>
 		<div class="plaidact-asso-alpha" aria-label="<?php esc_attr_e( 'Filtrer par lettre', 'plaidact-campaign-core' ); ?>">
-			<?php foreach ( range( 'A', 'Z' ) as $letter ) : ?>
-				<?php
+			<?php
+			$active_cause = '' !== $fixed_cause ? $fixed_cause : (string) $filters['cause'];
+			$available_letters = Plugin::get_available_asso_letters( $active_cause );
+			foreach ( range( 'A', 'Z' ) as $letter ) :
 				$letter_url = add_query_arg( [
 					'asso_letter' => $letter,
 					'asso_s'      => (string) $filters['s'],
-					'asso_cause'  => '' !== $fixed_cause ? $fixed_cause : (string) $filters['cause'],
-				] );
-				$has_posts_for_letter = new WP_Query( [
-					'post_type'           => 'associations',
-					'post_status'         => 'publish',
-					'posts_per_page'      => 1,
-					'fields'              => 'ids',
-					'no_found_rows'       => true,
-					'post_title_like'     => $letter . '%',
-					'tax_query'           => '' !== $fixed_cause || '' !== (string) $filters['cause'] ? [ [
-						'taxonomy' => $asso_taxonomy,
-						'field'    => 'slug',
-						'terms'    => '' !== $fixed_cause ? $fixed_cause : (string) $filters['cause'],
-					] ] : [],
+					'asso_cause'  => $active_cause,
 				] );
 				?>
-				<?php if ( $has_posts_for_letter->have_posts() ) : ?>
+				<?php if ( in_array( $letter, $available_letters, true ) ) : ?>
 					<a class="<?php echo ( (string) $filters['letter'] === $letter ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( $letter_url ); ?>"><?php echo esc_html( $letter ); ?></a>
 				<?php else : ?>
 					<span class="is-disabled"><?php echo esc_html( $letter ); ?></span>
 				<?php endif; ?>
-				<?php wp_reset_postdata(); ?>
 			<?php endforeach; ?>
 		</div>
 		<?php remove_filter( 'posts_where', [ Plugin::class, 'filter_asso_title_like' ], 10 ); ?>

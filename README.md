@@ -34,3 +34,21 @@ Le dépôt est directement installable comme extension WordPress : la racine Git
 - Le dépôt est centré sur un plugin unique et sa racine GitHub est la racine installable de l’extension.
 - Le thème actif fournit l’enveloppe WordPress (`get_header()` / `get_footer()`), tandis que les modules sont rendus via shortcodes et blocs Gutenberg.
 - `Petitioner` reste embarqué comme module interne et n’a pas vocation à être activé séparément.
+
+## Journal des optimisations (2.3.0)
+
+- **Correctif** : le shortcode `[plaid_social_wall]` ne déclenche plus d’avertissement PHP (variable `$settings` non définie) et affiche désormais le titre/description configurés dans les réglages, avec attributs `title`/`description` en option.
+- **Modules** : les toggles de **PLAID·ACT → Modules** sont maintenant appliqués aux shortcodes (`petition_form`, `plaid_petition_gauge`, `petition_signers`, `plaid_newsletter_form`, `plaid_send_campaign`, `plaid_partners`, `plaid_social_wall`). Par défaut tous les modules restent actifs.
+- **Performance** : la navigation A→Z du répertoire des associations exécute une seule requête au lieu de 26 par affichage ; le compteur de signatures agrège toutes les pétitions traduites en une seule requête SQL ; les scripts pétition (Givoly, signature d’organisation) ne se chargent plus que sur les pages qui contiennent réellement un élément de pétition, en `defer` ; caches statiques ajoutés (versions d’assets, formulaires liés, compteur).
+- **Sécurité** : honeypot + limiteur de débit par IP sur l’envoi au décideur ; extraction ZIP durcie contre le zip-slip avec limites de fichiers/taille ; en-têtes de téléchargement renforcés (`nosniff`, nom de fichier échappé) ; normalisation des listes de contacts pour tolérer les anciennes données.
+- **Compatibilité** : paramètre `$escape` explicite sur `fgetcsv`/`fputcsv` (dépréciation PHP 8.4) ; les tags de cause des fiches associations pointent vers la page courante au lieu d’une URL codée en dur.
+
+## Refonte de l’intégration Petitioner (2.3.0)
+
+- **Source unique de vérité** : les 7 champs de signature enrichie (organisation / personnalité publique) sont désormais décrits une seule fois sous forme déclarative (type, groupe, obligation, libellés fr/en/es). Le rendu public, l’éditeur Petitioner, l’ordre des champs et les propriétés personnalisées en dérivent tous — plus aucune duplication.
+- **Réglage dédié** : la signature d’organisation se désactive dans Réglages → PLAID·ACT (« Signature d’organisation »), ou via le filtre `plaidact_campaign_enhanced_signature_enabled`.
+- **i18n propre** : langue cible (fr/en/es via Polylang puis locale du site) résolue une seule fois par requête au lieu de 21 appels `determine_locale()` par formulaire rendu.
+- **Séparation des responsabilités** : toute la logique métier (compteur SQL agrégé, requêtes signataires, règles multilingues, effets de bord Brevo/décideur/notification) vit dans `Petitioner_Integration` ; les shortcodes ne font que du rendu et appellent son API (`get_signature_count()`, `query_submissions()`).
+- **Robustesse** : la synchronisation Brevo n’écrit plus d’erreur « non configuré » dans chaque fiche signataire quand Brevo est désactivé ; gardes sur les identifiants de signature ; liste blanche stricte des colonnes SQL.
+- **JS durci** : initialisation idempotente de la bascule organisation/personne + prise en charge des formulaires injectés dynamiquement (MutationObserver borné).
+- **Tests** : nouvelle suite `Test_Plaidact_Enhanced_Signature` (10 tests) couvrant champs, ordre, palette de l’éditeur, identité organisation, compteur agrégé, pagination et sécurité de la liste blanche ; tests exécutables avec MySQL/SQLite, marqués « skipped » avec message explicite si le stockage local WorDBless ne persiste pas les tables personnalisées.

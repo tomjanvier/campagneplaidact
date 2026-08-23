@@ -28,6 +28,48 @@ Le dépôt est organisé autour d’un seul plugin WordPress : `plaidact-campaig
 - Il ne doit pas être activé comme plugin autonome.
 - Les couleurs et le CSS public se règlent directement dans **Petitioner → Settings**.
 
+### Couche d'intégration (`includes/class-plaidact-campaign-petitioner-integration.php`)
+
+Toute la logique métier liée au moteur passe par cette classe, jamais par une
+modification directe du vendor. Elle s'appuie uniquement sur les filtres et
+actions publics de Petitioner :
+
+- **Signature enrichie** : champs « organisation » et « titre/fonction »
+  ajoutés après l'email via `av_petitioner_form_fields`, ordre garanti via
+  `av_petitioner_field_order`, stockage JSON via
+  `av_petitioner_get_custom_property_types`. Les libellés trilingues
+  (fr/en/es) dérivent d'une définition déclarative unique ; la langue cible
+  est résolue une seule fois par requête.
+- **Réglage** : la fonctionnalité se désactive dans Réglages → PLAID·ACT
+  (« Signature d'organisation »), ou en code via le filtre
+  `plaidact_campaign_enhanced_signature_enabled`.
+- **Multilinguisme** : doublons et compteurs traitent les formulaires
+  traduits d'une même pétition comme une entité unique
+  (`av_petitioner_check_duplicate_email`,
+  `av_petitioner_submission_count_form_ids`).
+- **Effets de bord** : à la confirmation d'une signature
+  (`petitioner_submission_finalized`, déjà exécutée hors requête AJAX par le
+  moteur), l'intégration notifie l'équipe, envoie l'email au décideur si
+  Petitioner ne le fait pas, et synchronise Brevo — sans écrire de statut
+  d'erreur quand Brevo n'est pas configuré.
+- **API interne** consommée par les shortcodes et l'admin :
+  - `Petitioner_Integration::is_available()` : moteur embarqué présent ?
+  - `::get_signature_count($form_id)` : signatures confirmées toutes
+    traductions confondues, en une requête SQL agrégée ;
+  - `::query_submissions($form_ids, $args)` : liste paginée des signataires
+    (jauge, liste publique, page admin Signataires).
+
+Les shortcodes (`includes/class-plaidact-campaign-shortcodes.php`) délègent
+toute cette logique à l'intégration : ils restent responsables du rendu seul.
+
+### Tests
+
+Les tests PHPUnit vivent dans `vendor/petitioner/tests/php/integrations/`
+(WorDBless). Le moteur par défaut de WorDBless (« dbless ») simule options et
+contenus mais pas les tables personnalisées : les tests qui insèrent de vraies
+signatures se marquent alors « skipped » avec un message explicite ; sur MySQL
+ou SQLite ils s'exécutent intégralement.
+
 ## Notes
 
 - Si Polylang est actif, les chaînes textuelles configurées dans les réglages restent traduisibles.

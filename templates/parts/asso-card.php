@@ -21,7 +21,7 @@ $card = $card ?? [];
 		<?php endif; ?>
 		<div class="plaidact-asso-tags">
 			<?php foreach ( array_slice( $card['cause_terms'], 0, 3 ) as $term ) : ?>
-				<a href="<?php echo esc_url( add_query_arg( 'asso_cause', $term->slug, 'https://plaidact.org/repertoire/' ) ); ?>"><?php echo esc_html( $term->name ); ?></a>
+				<a href="<?php echo esc_url( add_query_arg( 'asso_cause', $term->slug ) ); ?>"><?php echo esc_html( $term->name ); ?></a>
 			<?php endforeach; ?>
 		</div>
 		<div class="plaidact-asso-card__actions">
