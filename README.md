@@ -1,6 +1,6 @@
 # PLAID·ACT Core
 
-Plugin WordPress unique pour gérer les contenus PLAID·ACT : pétitions, newsletter, shortcodes et blocs Gutenberg sont regroupés dans `plaidact-campaign-core`.
+Plugin WordPress unique pour gérer les contenus PLAID·ACT : pétitions, newsletter, répertoires, shortcodes et blocs Gutenberg sont regroupés dans `plaidact-campaign-core`.
 
 ## Objectif
 
@@ -8,13 +8,15 @@ Le dépôt est directement installable comme extension WordPress : la racine Git
 
 ## Fonctionnalités regroupées
 
-- CPT `plaid_newsletter`, `plaid_breve`, `plaid_agenda_event`, `plaid_partner` et `plaid_social_embed`.
+- CPT `plaid_newsletter`, `plaid_breve`, `plaid_agenda_event`, `plaid_partner`, `plaid_social_embed` et `associations`.
 - Taxonomies de classification (`plaid_breve_topic`, `plaid_partner_type`).
 - Publication des newsletters avec Gutenberg, archive publique `/newsletters/`, pages individuelles `/newsletter/{slug}/` et prise en charge de Polylang.
 - Migration automatique et non destructive de l’ancien CPT `breves` vers `plaid_breve` : les IDs, contenus, médias, métadonnées, langues et URL `/breves/{slug}/` sont conservés, puis le menu en double est supprimé.
+- Répertoire des associations rétrocompatible avec les fiches historiques `associations`, leurs catégories, leurs champs ACF et leurs URLs `/association/{slug}/`. Le shortcode `[plaidact_asso_directory]` affiche la recherche et les filtres ; un import/export CSV additif est disponible dans **Répertoire Asso → Import CSV** et ne vide jamais les contenus ou champs existants.
+- Base de contacts autonome conservant les listes existantes dans les options WordPress historiques. Elle se gère depuis **Répertoire contacts** et s’affiche avec `[plaidact_contact_directory]` (l’ancien alias `[plaidact_fluentcrm_directory]` reste accepté). Les imports CSV ajoutent les nouveaux contacts sans supprimer ni remplacer ceux déjà enregistrés.
 - Module `Petitioner` embarqué dans `vendor/petitioner` et chargé par le core.
 - Design des pétitions configurable dans **Petitioner → Settings** ; les couleurs et le CSS personnalisé de Petitioner alimentent aussi les shortcodes PLAID·ACT.
-- Shortcodes : `[petition_form]`, `[plaid_newsletter_form]`, `[plaid_partners]`, `[plaid_send_campaign]`, `[plaid_social_wall]`. Le formulaire newsletter rendu par `[plaid_newsletter_form]` porte aussi la classe `stp-newsletter-form` et soumet les inscriptions au flux Brevo configuré dans **Réglages → PLAID·ACT**.
+- Shortcodes : `[petition_form]`, `[plaid_newsletter_form]`, `[plaid_partners]`, `[plaidact_asso_directory]`, `[plaidact_contact_directory]`, `[plaid_send_campaign]`, `[plaid_social_wall]`. Le formulaire newsletter rendu par `[plaid_newsletter_form]` porte aussi la classe `stp-newsletter-form` et soumet les inscriptions au flux Brevo configuré dans **Réglages → PLAID·ACT**.
 - Blocs Gutenberg dynamiques pour la newsletter, la jauge de signatures et les partenaires.
 - Menu **PLAID·ACT → Modules** pour choisir les parties du plugin à activer : pétition Petitioner, newsletter, envoi aux décideurs, répertoire, brèves, agenda, out/sorties, social wall, articles, partenaires et rapport PDF.
 - Compatibilité Polylang pour les chaînes métier et la résolution des formulaires traduits.
