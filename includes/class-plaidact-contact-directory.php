@@ -238,12 +238,57 @@ final class PlaidAct_Contact_Directory {
 			if ( $list_id !== (int) $list['id'] ) {
 				continue;
 			}
-			$list['contacts']   = $rows;
+			$list['contacts']   = $this->merge_contacts_preserving_existing(
+				isset( $list['contacts'] ) && is_array( $list['contacts'] ) ? $list['contacts'] : array(),
+				$rows
+			);
 			$list['updated_at'] = time();
 			break;
 		}
 		unset( $list );
 		update_option( self::OPTION_CONTACT_LISTS, $lists, false );
+	}
+
+	/**
+	 * Adds new CSV contacts without removing or overwriting existing records.
+	 * A normalized email is preferred as the identity; name and first name are
+	 * used only when no email is available.
+	 *
+	 * @param array<int,array<string,mixed>> $existing Existing saved contacts.
+	 * @param array<int,array<string,mixed>> $incoming Imported contacts.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function merge_contacts_preserving_existing( array $existing, array $incoming ): array {
+		$merged = array_values( $existing );
+		$known  = array();
+
+		foreach ( $existing as $contact ) {
+			$known[ $this->contact_identity( $contact ) ] = true;
+		}
+
+		foreach ( $incoming as $contact ) {
+			$identity = $this->contact_identity( $contact );
+			if ( isset( $known[ $identity ] ) ) {
+				continue;
+			}
+			$merged[]          = $contact;
+			$known[ $identity ] = true;
+		}
+
+		return $merged;
+	}
+
+	/** @param array<string,mixed> $contact */
+	private function contact_identity( array $contact ): string {
+		$email = mb_strtolower( trim( (string) ( $contact['email'] ?? '' ) ) );
+		if ( '' !== $email ) {
+			return 'email:' . $email;
+		}
+
+		return 'name:' . mb_strtolower(
+			trim( (string) ( $contact['nom'] ?? '' ) ) . '|' .
+			trim( (string) ( $contact['prenom'] ?? '' ) )
+		);
 	}
 
 	private function parse_csv_contacts( string $tmp_path ): array {

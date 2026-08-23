@@ -1503,16 +1503,18 @@ Linktree|https://linktr.ee/acat"',
 			$post = get_page_by_path( $slug, OBJECT, self::ASSO_POST_TYPE );
 		}
 
-		$postarr = [
-			'post_type'   => self::ASSO_POST_TYPE,
-			'post_status' => 'publish',
-			'post_title'  => sanitize_text_field( (string) $data['title'] ),
-			'post_content'=> '',
-		];
 		if ( $post instanceof WP_Post ) {
-			$postarr['ID'] = $post->ID;
-			return (int) wp_update_post( $postarr );
+			// An import may enrich an existing record, but must never reset its
+			// content, status, dates, author, excerpt, slug or media.
+			return $post->ID;
 		}
+
+		$postarr = [
+			'post_type'    => self::ASSO_POST_TYPE,
+			'post_status'  => 'publish',
+			'post_title'   => sanitize_text_field( (string) $data['title'] ),
+			'post_content' => '',
+		];
 		if ( '' !== $slug ) {
 			$postarr['post_name'] = $slug;
 		}
@@ -1523,14 +1525,24 @@ Linktree|https://linktr.ee/acat"',
 	private static function sync_asso_meta( int $post_id, array $data ): void {
 		$meta_keys = [ 'url_web', 'url_don', 'url_contact', 'resume_court', 'social_links_csv' ];
 		foreach ( $meta_keys as $key ) {
-			if ( isset( $data[ $key ] ) ) {
+			$current = \plaidact_campaign_core_get_field( $key, $post_id );
+			if (
+				isset( $data[ $key ] ) &&
+				'' !== trim( (string) $data[ $key ] ) &&
+				'' === trim( (string) $current )
+			) {
 				\plaidact_campaign_core_update_field( $key, $data[ $key ], $post_id );
 			}
 		}
 
 		foreach ( self::SOCIAL_NETWORKS as $slug => $_label ) {
 			$key = 'social_' . $slug;
-			if ( isset( $data[ $key ] ) ) {
+			$current = \plaidact_campaign_core_get_field( $key, $post_id );
+			if (
+				isset( $data[ $key ] ) &&
+				'' !== trim( (string) $data[ $key ] ) &&
+				'' === trim( (string) $current )
+			) {
 				\plaidact_campaign_core_update_field( $key, $data[ $key ], $post_id );
 			}
 		}
@@ -1581,12 +1593,17 @@ Linktree|https://linktr.ee/acat"',
 			}
 		}
 		if ( ! empty( $term_ids ) ) {
-			wp_set_object_terms( $post_id, $term_ids, self::ASSO_TAXONOMY, false );
+			// Add imported causes without removing existing taxonomy relations.
+			wp_set_object_terms( $post_id, $term_ids, self::ASSO_TAXONOMY, true );
 		}
 	}
 
 	/** @param array<string,string> $data @param array<string,string> $logos_map */
 	private static function sync_asso_logo( int $post_id, array $data, array $logos_map ): void {
+		if ( has_post_thumbnail( $post_id ) ) {
+			return;
+		}
+
 		$logo_url = esc_url_raw( trim( (string) ( $data['logo_url'] ?? '' ) ) );
 		$logo_file = trim( (string) ( $data['logo_file'] ?? '' ) );
 		$source = $logo_url;

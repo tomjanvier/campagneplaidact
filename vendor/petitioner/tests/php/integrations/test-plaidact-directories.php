@@ -60,4 +60,39 @@ final class Test_Plaidact_Directories extends BaseTestCase
         $this->assertTrue(shortcode_exists('plaidact_contact_directory'));
         $this->assertTrue(shortcode_exists('plaidact_fluentcrm_directory'));
     }
+
+    public function test_boot_does_not_change_existing_contact_data(): void
+    {
+        $saved = [
+            [
+                'id' => 42,
+                'name' => 'Liste existante',
+                'contacts' => [['nom' => 'Durand', 'prenom' => 'Alice', 'email' => 'alice@example.org']],
+            ],
+        ];
+        update_option('plaidact_contact_directory_lists', $saved, false);
+
+        PlaidAct_Contact_Directory::init();
+
+        $this->assertSame($saved, get_option('plaidact_contact_directory_lists'));
+    }
+
+    public function test_contact_import_merge_preserves_existing_rows(): void
+    {
+        $directory = PlaidAct_Contact_Directory::init();
+        $method = new ReflectionMethod($directory, 'merge_contacts_preserving_existing');
+        $method->setAccessible(true);
+
+        $existing = [['nom' => 'Durand', 'prenom' => 'Alice', 'email' => 'alice@example.org', 'notes' => 'À garder']];
+        $incoming = [
+            ['nom' => 'Durand', 'prenom' => 'Alice', 'email' => 'alice@example.org', 'notes' => 'Ne remplace pas'],
+            ['nom' => 'Martin', 'prenom' => 'Sam', 'email' => 'sam@example.org'],
+        ];
+
+        $merged = $method->invoke($directory, $existing, $incoming);
+
+        $this->assertCount(2, $merged);
+        $this->assertSame('À garder', $merged[0]['notes']);
+        $this->assertSame('sam@example.org', $merged[1]['email']);
+    }
 }
