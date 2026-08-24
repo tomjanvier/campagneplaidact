@@ -2,6 +2,10 @@
 
 Plugin WordPress unique pour gérer les contenus PLAID·ACT : pétitions, newsletter, répertoires, shortcodes et blocs Gutenberg sont regroupés dans `plaidact-campaign-core`.
 
+## Instructions pour les contributeurs et agents
+
+**La lecture complète de [AGENTS.md](AGENTS.md) est obligatoire avant toute analyse ou modification du dépôt.** Ces instructions définissent la stack, l'architecture, les conventions de développement, les règles de sécurité, les validations attendues et les garanties de conservation des données. Elles s'appliquent à toute contribution humaine comme automatisée, y compris la validation et la création de pull requests.
+
 ## Objectif
 
 Le dépôt est directement installable comme extension WordPress : la racine GitHub correspond à la racine du plugin. Clonez ou copiez ce dépôt dans `wp-content/plugins/plaidact-campaign-core/`, activez l’extension, puis choisissez les modules utiles dans ses réglages.
