@@ -123,6 +123,7 @@ require_once PLAIDACT_CORE_PATH .
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-campaign-blocks.php";
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-association-directory.php";
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-contact-directory.php";
+require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-actyl.php";
 
 /**
  * Makes the association field group bundled with the plugin available to ACF.
@@ -239,5 +240,9 @@ function plaidact_campaign_core_init(): void
     \Plaidact\CampaignCore\Blocks::boot();
     \Plaidact\CampaignCore\Association_Directory::init();
     \PlaidAct_Contact_Directory::init();
+
+    // Synchronisation Actyl : singleton désactivé par défaut, sans effet
+    // réseau tant que la connexion n'est pas configurée et validée.
+    PLAIDACT_Actyl::init();
 }
 add_action("plugins_loaded", "plaidact_campaign_core_init");

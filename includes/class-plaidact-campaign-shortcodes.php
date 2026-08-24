@@ -950,10 +950,14 @@ final class Shortcodes
          "Quand Polylang est actif, les champs textuels ci-dessus sont enregistrés comme chaînes traduisibles dans Polylang > Traductions des chaînes.",
          "plaidact-campaign-core"
      ); ?></p>
-					<?php submit_button(); ?>
-				</form>
-		</div>
-		<?php
+ 					<?php submit_button(); ?>
+ 				</form>
+ 		</div>
+ 		<?php
+        // Point d'ancrage pour les sections de réglages additionnelles
+        // (ex. connexion Actyl) : rendu après le formulaire principal, avec
+        // leur propre formulaire et leur propre option.
+        do_action("plaidact_campaign_settings_page_end");
     }
 
     public static function render_modules_page(): void
@@ -1872,6 +1876,15 @@ final class Shortcodes
             $status = is_wp_error($result)
                 ? "0"
                 : ("double_optin_sent" === $result ? "confirm" : "1");
+
+            if (!is_wp_error($result)) {
+                /**
+                 * Signale une inscription newsletter aboutie (Brevo accepté ou
+                 * double opt-in envoyé) pour les intégrations optionnelles,
+                 * sans coupler leur code au flux Brevo.
+                 */
+                do_action("plaidact_newsletter_subscribed", $email, $name, $language);
+            }
         }
         self::redirect_with_status("newsletter_subscribed", $status, $language);
     }

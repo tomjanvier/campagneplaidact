@@ -39,6 +39,64 @@ Le dépôt est directement installable comme extension WordPress : la racine Git
 - Le thème actif fournit l’enveloppe WordPress (`get_header()` / `get_footer()`), tandis que les modules sont rendus via shortcodes et blocs Gutenberg.
 - `Petitioner` reste embarqué comme module interne et n’a pas vocation à être activé séparément.
 
+## Intégration Actyl
+
+Le plugin peut pousser en temps réel vers une instance [Actyl](*plateforme de plaidoyer*) les signatures confirmées et les inscriptions newsletter, via son API REST `/api/v1/*`.
+
+### Configuration
+
+1. Dans **Actyl → Réglages**, créer un token API (`actyl_…`).
+2. Dans **WordPress → Réglages → PLAID·ACT**, section **Connexion Actyl** :
+   - renseigner l'URL de l'instance (HTTPS uniquement) et le token ;
+   - cocher « Activer la synchronisation » puis enregistrer ;
+   - cliquer sur **« Tester la connexion »** : le résultat s'affiche inline (succès vert / code HTTP ou message réseau précis). La synchronisation ne démarre qu'après ce test réussi ; toute modification d'URL ou de token en exige un nouveau.
+3. Pour chaque pétition à synchroniser, ouvrir la pétition dans Petitioner et renseigner le **slug de campagne Actyl** dans la metabox « Connexion Actyl ». Vide = aucune donnée envoyée pour cette pétition.
+
+Comportements garantis :
+
+- désactivé par défaut : aucune requête sortante sans configuration complète + ping réussi ;
+- envois non bloquants (timeout 5 s), échecs silencieux côté visiteur, tout est tracé dans le **journal** (100 derniers événements : horodatage, endpoint, code HTTP) consultable dans la page de réglages ;
+- panne d'Actyl (erreur réseau ou 5xx) : relance unique automatique via WP-Cron après 10 minutes ; pas de relance sur erreur définitive (4xx) ;
+- l'API étant idempotente par email, aucun doublon n'est possible.
+
+### Rattrapage des signatures existantes
+
+Dans la section Connexion Actyl, le bouton **« Synchroniser les signatures existantes »** repousse toutes les signatures antérieures par lots de 20, avec barre de progression, reprise automatique là où il s'est arrêté (curseur `plaidact_actyl_backfill_cursor`) et bouton « Recommencer depuis zéro ». Équivalent en ligne de commande :
+
+```bash
+wp plaidact actyl-backfill                  # toutes les pétitions liées
+wp plaidact actyl-backfill --petition=12    # une seule pétition
+wp plaidact actyl-backfill --reset=1        # réinitialise le curseur
+```
+
+### Dons Givoly
+
+Givoly ne permet pas de capture fiable côté serveur depuis WordPress : le plugin n'envoie donc jamais de don de sa propre initiative. Un hook documenté est mis à disposition des modules qui obtiennent la confirmation autrement :
+
+```php
+do_action("plaidact_actyl_record_donation", [
+    "email"        => "donateur@exemple.fr",
+    "full_name"    => "Jean Martin",          // facultatif
+    "amount"       => 50,                     // en unités, ou :
+    "amount_cents" => 5000,                   // prioritaire si présent
+    "label"        => "Don campagne zones humides",
+    "occurred_at"  => "2026-08-24T12:00:00Z", // défaut : maintenant
+]);
+```
+
+Le don part uniquement si la synchro est active ; il enrichit le contact en catégorie DONOR côté Actyl.
+
+### Test manuel de bout en bout
+
+1. Créer un token dans **Actyl → Réglages**, créer (ou relever) le slug d'une campagne publiée.
+2. Dans WordPress : Réglages → PLAID·ACT → Connexion Actyl → URL + token → enregistrer → **Tester la connexion** → bandeau vert attendu, état « Synchro active ».
+3. Ouvrir la pétition côté Petitioner, renseigner le slug de campagne, mettre à jour.
+4. Signer la pétition depuis le site public (email non déjà utilisé).
+5. Dans Actyl : vérifier en moins de 5 secondes la signature dans l'onglet **Signataires** de la campagne correspondante, et le contact dans la base **Soutiens** (tags `wordpress` + slug de la pétition WordPress).
+6. Re-soumettre le même email : le compteur ne double pas (mise à jour idempotente).
+7. Arrêter l'instance Actyl, signer à nouveau : le site continue de fonctionner normalement, le journal enregistre l'échec réseau, puis après redémarrage d'Actyl la relance automatique (+10 min) fait apparaître la signature.
+8. Soumettre le formulaire `[plaid_newsletter_form]` : le contact apparaît dans Actyl avec source `newsletter`, catégorie SUPPORTER et tag `newsletter-site`.
+
 ## Journal des optimisations (2.3.0)
 
 - **Correctif** : le shortcode `[plaid_social_wall]` ne déclenche plus d’avertissement PHP (variable `$settings` non définie) et affiche désormais le titre/description configurés dans les réglages, avec attributs `title`/`description` en option.
