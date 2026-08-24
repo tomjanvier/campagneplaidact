@@ -405,6 +405,18 @@
 	border-bottom: 0;
 }
 
+/* Logo des organisations dans la liste publique des signataires. */
+.plaidact-petition-signers__org-logo {
+	width: 2.25rem;
+	height: 2.25rem;
+	flex: 0 0 auto;
+	object-fit: contain;
+	border-radius: 0.375rem;
+	background: #fff;
+	padding: 0.2rem;
+	border: 1px solid rgb(15 23 42 / 12%);
+}
+
 .plaidact-petition-signers__fallback span {
 	color: #6b7280;
 	font-size: 0.9rem;

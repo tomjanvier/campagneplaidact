@@ -40,24 +40,36 @@ actions publics de Petitioner :
   `av_petitioner_get_custom_property_types`. Les libellés trilingues
   (fr/en/es) dérivent d'une définition déclarative unique ; la langue cible
   est résolue une seule fois par requête.
-- **Réglage** : la fonctionnalité se désactive dans Réglages → PLAID·ACT
-  (« Signature d'organisation »), ou en code via le filtre
-  `plaidact_campaign_enhanced_signature_enabled`.
+- **Réglages à trois niveaux** : filtre de code
+  (`plaidact_campaign_enhanced_signature_enabled`) > métabox par pétition
+  (`_plaidact_enhanced_signature` : suivre la globale / activer / désactiver)
+  > réglage global PLAID·ACT. Par défaut, les pétitions existantes suivent le
+  réglage global et ne changent jamais de comportement après mise à jour.
+- **Rétrocompatibilité** : le filtre de champs normalise les entrées legacy
+  (null, chaîne illisible) sans erreur fatale — le migrateur du moteur
+  convertit normalement les anciens formats en priorité 5 ; un champ
+  homonyme déjà configuré par l'administrateur n'est jamais écrasé ; les
+  signatures antérieures à l'intégration (propriétés personnalisées vides)
+  conservent l'affichage historique. Le décodage local des propriétés
+  (`get_submission_custom_properties()`) rend les organisations lisibles y
+  compris sur les lignes SQL brutes transmises par le hook finalized.
 - **Multilinguisme** : doublons et compteurs traitent les formulaires
   traduits d'une même pétition comme une entité unique
   (`av_petitioner_check_duplicate_email`,
   `av_petitioner_submission_count_form_ids`).
 - **Effets de bord** : à la confirmation d'une signature
   (`petitioner_submission_finalized`, déjà exécutée hors requête AJAX par le
-  moteur), l'intégration notifie l'équipe, envoie l'email au décideur si
-  Petitioner ne le fait pas, et synchronise Brevo — sans écrire de statut
-  d'erreur quand Brevo n'est pas configuré.
+  moteur), l'intégration notifie l'équipe (contexte organisation inclus),
+  envoie l'email au décideur si Petitioner ne le fait pas, et synchronise
+  Brevo — sans écrire de statut d'erreur quand Brevo n'est pas configuré.
 - **API interne** consommée par les shortcodes et l'admin :
   - `Petitioner_Integration::is_available()` : moteur embarqué présent ?
   - `::get_signature_count($form_id)` : signatures confirmées toutes
     traductions confondues, en une requête SQL agrégée ;
   - `::query_submissions($form_ids, $args)` : liste paginée des signataires
-    (jauge, liste publique, page admin Signataires).
+    (jauge, liste publique, page admin Signataires, export CSV) ;
+  - `::get_submission_organization($submission)` : informations
+    d'organisation décodées d'une signature, ou null.
 
 Les shortcodes (`includes/class-plaidact-campaign-shortcodes.php`) délègent
 toute cette logique à l'intégration : ils restent responsables du rendu seul.

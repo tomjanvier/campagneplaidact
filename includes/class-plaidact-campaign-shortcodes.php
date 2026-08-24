@@ -71,6 +71,10 @@ final class Shortcodes
             __CLASS__,
             "handle_send_campaign_mail",
         ]);
+        add_action("admin_post_plaidact_export_signers_csv", [
+            __CLASS__,
+            "handle_signers_csv_export",
+        ]);
     }
 
 
@@ -1038,7 +1042,13 @@ final class Shortcodes
             <?php if ($form_id <= 0 || !class_exists("AV_Petitioner_Submissions_Model")) : ?>
                 <div class="notice notice-warning"><p><?php esc_html_e("Aucun formulaire Petitioner publié ou module de signatures indisponible.", "plaidact-campaign-core"); ?></p></div>
             <?php else : ?>
-                <p><strong><?php esc_html_e("Formulaires liés", "plaidact-campaign-core"); ?> :</strong> #<?php echo esc_html(implode(", #", self::get_linked_petitioner_form_ids($form_id))); ?> — <strong><?php esc_html_e("Total", "plaidact-campaign-core"); ?> :</strong> <?php echo esc_html((string) $total); ?></p>
+                <p>
+                    <strong><?php esc_html_e("Formulaires liés", "plaidact-campaign-core"); ?> :</strong> #<?php echo esc_html(implode(", #", self::get_linked_petitioner_form_ids($form_id))); ?> — <strong><?php esc_html_e("Total", "plaidact-campaign-core"); ?> :</strong> <?php echo esc_html((string) $total); ?>
+                    <a class="button" style="float:right" href="<?php echo esc_url(wp_nonce_url(
+                        admin_url("admin-post.php?action=plaidact_export_signers_csv"),
+                        "plaidact_export_signers_csv"
+                    )); ?>"><?php esc_html_e("Exporter tout en CSV (toutes traductions)", "plaidact-campaign-core"); ?></a>
+                </p>
                 <table class="widefat striped">
                     <thead><tr>
                         <th><?php esc_html_e("Pétition", "plaidact-campaign-core"); ?></th>
@@ -1200,6 +1210,9 @@ final class Shortcodes
                 "title" => __("Progression de la pétition", "plaidact-campaign-core"),
                 "width" => 34,
                 "height" => 0,
+                // Objectif imposé par l'appel : utile pour les pétitions
+                // antérieures aux paliers d'objectifs, sans toucher au réglage.
+                "goal" => 0,
             ],
             $atts,
             "plaid_petition_gauge"
@@ -1214,7 +1227,10 @@ final class Shortcodes
             return "";
         }
 
-        $goal = self::get_petition_goal($form_id, $settings);
+        $goal_override = absint($atts["goal"] ?? 0);
+        $goal = $goal_override > 0
+            ? $goal_override
+            : self::get_petition_goal($form_id, $settings);
         $signatures = self::get_petition_signature_count($form_id);
         $sign_url = self::get_petition_sign_url($form_id, $settings, $language);
         $progress = $goal > 0 ? min(100, (int) round(($signatures / $goal) * 100)) : 0;
@@ -1299,6 +1315,133 @@ final class Shortcodes
         return Petitioner_Integration::query_submissions($form_ids, $args);
     }
 
+    /**
+     * Exporte l'intégralité des signataires (toutes traductions confondues)
+     * en CSV, depuis la page admin « Signataires ».
+     *
+     * L'export natif de Petitioner est limité à un seul formulaire : cet
+     * export couvre le groupe multilingue complet et ajoute les colonnes
+     * d'organisation lorsque présentes.
+     *
+     * @return void
+     */
+    public static function handle_signers_csv_export(): void
+    {
+        if (!current_user_can("manage_options")) {
+            wp_die(esc_html__("Accès refusé.", "plaidact-campaign-core"));
+        }
+
+        check_admin_referer("plaidact_export_signers_csv");
+
+        $settings = self::get_settings(false);
+        $form_id = self::resolve_petitioner_form_id($settings);
+        $linked_ids = self::get_linked_petitioner_form_ids($form_id);
+
+        if ($form_id <= 0 || [] === $linked_ids) {
+            wp_die(esc_html__("Aucune pétition à exporter.", "plaidact-campaign-core"));
+        }
+
+        // Export exhaustif par lots : évite de charger toute la table en
+        // mémoire sur les pétitions à dizaines de milliers de signatures.
+        $batch_size = 1000;
+        $headers_sent = false;
+
+        header("Content-Type: text/csv; charset=utf-8");
+        header('Content-Disposition: attachment; filename="signataires-petition.csv"');
+        header("X-Content-Type-Options: nosniff");
+
+        $output = fopen("php://output", "w");
+
+        if (false === $output) {
+            wp_die(esc_html__("Impossible de générer le fichier CSV.", "plaidact-campaign-core"));
+        }
+
+        for ($offset = 0; true; $offset += $batch_size) {
+            $result = Petitioner_Integration::query_submissions($linked_ids, [
+                "per_page" => $batch_size,
+                "offset" => $offset,
+                "fields" => [
+                    "form_id",
+                    "fname",
+                    "lname",
+                    "email",
+                    "country",
+                    "postal_code",
+                    "phone",
+                    "newsletter",
+                    "hide_name",
+                    "approval_status",
+                    "submitted_at",
+                    "custom_properties",
+                ],
+            ]);
+
+            if (!$headers_sent) {
+                fputcsv($output, [
+                    "petition_id",
+                    "prenom",
+                    "nom",
+                    "email",
+                    "pays",
+                    "code_postal",
+                    "telephone",
+                    "newsletter",
+                    "anonyme",
+                    "statut",
+                    "date",
+                    "type_signature",
+                    "organisation",
+                    "logo_organisation",
+                    "organisation_publique",
+                    "titre_signataire",
+                    "fonction_signataire",
+                ], ",", '"', "\\");
+                $headers_sent = true;
+            }
+
+            if (empty($result["submissions"])) {
+                break;
+            }
+
+            foreach ($result["submissions"] as $submission) {
+                $organization = Petitioner_Integration::get_submission_organization($submission);
+
+                fputcsv(
+                    $output,
+                    [
+                        (string) ($submission->form_id ?? ""),
+                        (string) ($submission->fname ?? ""),
+                        (string) ($submission->lname ?? ""),
+                        (string) ($submission->email ?? ""),
+                        (string) ($submission->country ?? ""),
+                        (string) ($submission->postal_code ?? ""),
+                        (string) ($submission->phone ?? ""),
+                        !empty($submission->newsletter) ? "1" : "0",
+                        !empty($submission->hide_name) ? "1" : "0",
+                        (string) ($submission->approval_status ?? ""),
+                        (string) ($submission->submitted_at ?? ""),
+                        null !== $organization ? "organisation" : "individu",
+                        $organization["name"] ?? "",
+                        $organization["logo"] ?? "",
+                        isset($organization["is_public"]) && $organization["is_public"] ? "1" : "0",
+                        $organization["title"] ?? "",
+                        $organization["function"] ?? "",
+                    ],
+                    ",",
+                    '"',
+                    "\\"
+                );
+            }
+
+            if (count($result["submissions"]) < $batch_size) {
+                break;
+            }
+        }
+
+        fclose($output);
+        exit;
+    }
+
     public static function render_petition_signers(array $atts = []): string
     {
         if (!self::is_module_enabled("enable_petition")) {
@@ -1334,11 +1477,24 @@ final class Shortcodes
             return "";
         }
 
-        $result = self::get_linked_petition_submissions(self::get_linked_petitioner_form_ids($form_id), [
-            "per_page" => 12,
-            "fields" => ["fname", "lname", "submitted_at", "hide_name", "approval_status"],
-            "confirmed_only" => true,
-        ]);
+        $result = Petitioner_Integration::query_submissions(
+            self::get_linked_petitioner_form_ids($form_id),
+            [
+                "per_page" => 12,
+                // custom_properties est nécessaire pour reconnaître les
+                // signatures portées par une organisation (les anciennes
+                // signatures n'en ont pas : comportement historique conservé).
+                "fields" => [
+                    "fname",
+                    "lname",
+                    "submitted_at",
+                    "hide_name",
+                    "approval_status",
+                    "custom_properties",
+                ],
+                "confirmed_only" => true,
+            ]
+        );
 
         $submissions = (array) ($result["submissions"] ?? []);
         if (empty($submissions)) {
@@ -1347,17 +1503,50 @@ final class Shortcodes
 
         $items = "";
         foreach ($submissions as $submission) {
-            $name = !empty($submission->hide_name)
-                ? __("Anonyme", "plaidact-campaign-core")
-                : trim((string) ($submission->fname ?? "") . " " . substr((string) ($submission->lname ?? ""), 0, 1));
-            if ("" === trim($name)) {
-                $name = __("Signataire", "plaidact-campaign-core");
+            $organization = Petitioner_Integration::get_submission_organization($submission);
+
+            if (null !== $organization) {
+                if (!$organization["is_public"]) {
+                    // Organisation sans consentement d'affichage :
+                    // anonymisée comme pour un signataire classique.
+                    $name = __("Organisation", "plaidact-campaign-core");
+                    $logo_html = "";
+                } else {
+                    $name = "" !== $organization["name"]
+                        ? $organization["name"]
+                        : __("Organisation", "plaidact-campaign-core");
+
+                    $identity = trim(
+                        $organization["title"] . " " . $organization["function"]
+                    );
+                    $logo_html = "" !== $organization["logo"]
+                        ? sprintf(
+                            '<img class="plaidact-petition-signers__org-logo" src="%s" alt="" loading="lazy" decoding="async" />',
+                            esc_url($organization["logo"])
+                        )
+                        : "";
+
+                    if ("" !== $identity) {
+                        $name .= " — " . $identity;
+                    }
+                }
+            } else {
+                $logo_html = "";
+                $name = !empty($submission->hide_name)
+                    ? __("Anonyme", "plaidact-campaign-core")
+                    : trim((string) ($submission->fname ?? "") . " " . substr((string) ($submission->lname ?? ""), 0, 1));
+
+                if ("" === trim($name)) {
+                    $name = __("Signataire", "plaidact-campaign-core");
+                }
             }
 
             $items .= sprintf(
-                '<li><strong>%1$s</strong><span>%2$s</span></li>',
+                '<li>%4$s<strong>%1$s</strong><span>%2$s</span></li>',
                 esc_html($name),
-                esc_html((string) ($submission->submitted_at ?? ""))
+                esc_html((string) ($submission->submitted_at ?? "")),
+                "", // Réservé à un usage futur (attributs de li).
+                $logo_html
             );
         }
 

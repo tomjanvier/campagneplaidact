@@ -43,6 +43,8 @@ final class Petition_Workflows
      * @param string      $phone Signer phone number.
      * @param string|null $language Optional language slug.
      * @param int|null    $form_id Optional bundled Petitioner form ID.
+     * @param array<int,string> $context_lines Optional extra lines appended
+     *                                          to the message (e.g. organization details).
      * @return void
      */
     public static function maybe_notify_admin(
@@ -52,7 +54,8 @@ final class Petition_Workflows
         string $postcode = "",
         string $phone = "",
         ?string $language = null,
-        ?int $form_id = null
+        ?int $form_id = null,
+        array $context_lines = []
     ): void {
         $notification_email = sanitize_email(
             (string) ($settings["notification_email"] ?? "")
@@ -75,6 +78,14 @@ final class Petition_Workflows
 
         if ($form_id && $form_id > 0) {
             $message .= "\nFormulaire: " . $form_id;
+        }
+
+        foreach ($context_lines as $line) {
+            $line = trim((string) $line);
+
+            if ("" !== $line) {
+                $message .= "\n" . $line;
+            }
         }
 
         wp_mail(

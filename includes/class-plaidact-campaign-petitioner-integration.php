@@ -46,6 +46,12 @@ final class Petitioner_Integration
     ];
 
     /**
+     * Clé méta du choix par pétition : « » (suivre le réglage global),
+     * « on » (forcée) ou « off » (désactivée).
+     */
+    private const PER_FORM_META_KEY = "_plaidact_enhanced_signature";
+
+    /**
      * Indique si le module Petitioner embarqué est présent et chargé.
      *
      * @return bool
@@ -78,6 +84,10 @@ final class Petitioner_Integration
         // Stockage des valeurs saisies par le signataire.
         add_filter("av_petitioner_get_custom_property_types", [__CLASS__, "register_signature_properties"]);
         add_filter("av_petitioner_submission_data_pre_save", [__CLASS__, "normalize_submission_identity"], 5, 2);
+
+        // Réglage fin par pétition (métabox sur l'écran d'édition Petitioner).
+        add_action("add_meta_boxes", [__CLASS__, "register_signature_metabox"]);
+        add_action("save_post_petitioner-petition", [__CLASS__, "save_signature_metabox"], 10, 2);
 
         // Règles métier multilingues (une pétition = N traductions).
         add_filter(
@@ -223,20 +233,39 @@ final class Petitioner_Integration
     }
 
     /**
-     * Indique si la signature d'organisation/personnalité est active.
+     * Indique si la signature d'organisation/personnalité est active pour
+     * un formulaire donné.
      *
-     * Ordre de priorité : filtre de code > réglage PLAID·ACT (activé par
-     * défaut). Le filtre accepte true/false pour forcer l'état sans toucher
-     * aux options, ou null pour suivre le réglage.
+     * Ordre de priorité :
+     *  1. le filtre de code `plaidact_campaign_enhanced_signature_enabled`
+     *     (true/false force l'état partout, null laisse la main) ;
+     *  2. le réglage propre à la pétition (métabox : suivre la globale,
+     *     activer, désactiver) — garantit que les campagnes existantes
+     *     restent stables quelle que soit l'évolution du réglage global ;
+     *  3. le réglage global PLAID·ACT (« Signature d'organisation »,
+     *     activé par défaut).
      *
+     * @param int|null $form_id Formulaire concerné, si connu.
      * @return bool
      */
-    public static function is_enhanced_signature_enabled(): bool
+    public static function is_enhanced_signature_enabled(?int $form_id = null): bool
     {
         $forced = apply_filters("plaidact_campaign_enhanced_signature_enabled", null);
 
         if (is_bool($forced)) {
             return $forced;
+        }
+
+        if ($form_id && $form_id > 0) {
+            $per_form = get_post_meta($form_id, self::PER_FORM_META_KEY, true);
+
+            if ("on" === $per_form) {
+                return true;
+            }
+
+            if ("off" === $per_form) {
+                return false;
+            }
         }
 
         $settings = Shortcodes::get_settings(false);
@@ -336,22 +365,33 @@ final class Petitioner_Integration
      * Filtre av_petitioner_form_fields(_admin) : ajoute les champs de
      * signature enrichie à la configuration du formulaire.
      *
-     * @param array $form_fields Champs existants (indexés par fieldKey).
+     * Défensif sur le type d'entrée : le moteur convertit normalement les
+     * anciens formats via AV_Petitioner_Form_Migrator (priorité 5), mais on
+     * normalise malgré tout pour ne jamais casser le rendu d'une vieille
+     * pétition au format inattendu.
+     *
+     * @param mixed $form_fields Champs existants (indexés par fieldKey).
      * @param int   $form_id     ID du formulaire rendu.
      * @return array
      */
-    public static function add_signature_fields(array $form_fields, int $form_id): array
+    public static function add_signature_fields($form_fields, int $form_id): array
     {
-        if (!self::is_enhanced_signature_enabled()) {
+        $form_fields = is_array($form_fields) ? $form_fields : [];
+
+        if (!self::is_enhanced_signature_enabled($form_id)) {
             return $form_fields;
         }
 
         foreach (self::SIGNATURE_FIELD_KEYS as $field_key) {
-            // On n'écrase jamais un champ défini par l'administrateur.
-            $config = self::build_field_config($field_key);
+            // On n'écrase jamais un champ défini par l'administrateur :
+            // une pétition existante qui aurait déjà un champ homonyme
+            // conserve sa propre configuration.
+            if (!isset($form_fields[$field_key])) {
+                $config = self::build_field_config($field_key);
 
-            if ([] !== $config && !isset($form_fields[$field_key])) {
-                $form_fields[$field_key] = $config;
+                if ([] !== $config) {
+                    $form_fields[$field_key] = $config;
+                }
             }
         }
 
@@ -366,10 +406,16 @@ final class Petitioner_Integration
      * @param int   $form_id     ID du formulaire rendu.
      * @return array
      */
-    public static function insert_signature_fields_after_email(array $field_order, int $form_id): array
+    public static function insert_signature_fields_after_email($field_order, int $form_id): array
     {
-        if (!self::is_enhanced_signature_enabled()) {
-            return $field_order;
+        if (!self::is_enhanced_signature_enabled($form_id)) {
+            return is_array($field_order) ? $field_order : [];
+        }
+
+        if (!is_array($field_order)) {
+            // Ordre absent ou illisible (vieille pétition) : le moteur
+            // retombera sur l'ordre du tableau de champs.
+            $field_order = [];
         }
 
         // Retire les clés présentes pour éviter tout doublon avant insertion.
@@ -476,6 +522,111 @@ final class Petitioner_Integration
         }
 
         return $data;
+    }
+
+    /* ---------------------------------------------------------------------
+     * Réglage par pétition (métabox)
+     * ---------------------------------------------------------------------
+     *
+     * Les campagnes déjà en ligne doivent rester stables : ce métabox permet
+     * de forcer l'activation ou la désactivation de la signature enrichie
+     * pour une pétition donnée, sans toucher au réglage global ni aux autres
+     * pétitions. Valeur par défaut : suivre le réglage global — les anciennes
+     * pétitions ne changent donc jamais de comportement après mise à jour.
+     */
+
+    /**
+     * Déclare le métabox « Signature organisation & personnalité » sur
+     * l'écran d'édition des pétitions Petitioner.
+     *
+     * @return void
+     */
+    public static function register_signature_metabox(): void
+    {
+        add_meta_box(
+            "plaidact_enhanced_signature",
+            __("Signature organisation & personnalité", "plaidact-campaign-core"),
+            [__CLASS__, "render_signature_metabox"],
+            "petitioner-petition",
+            "side",
+            "default"
+        );
+    }
+
+    /**
+     * Affiche les trois choix du métabox (global / activée / désactivée).
+     *
+     * @param \WP_Post $post Pétition en cours d'édition.
+     * @return void
+     */
+    public static function render_signature_metabox(\WP_Post $post): void
+    {
+        wp_nonce_field(
+            "plaidact_enhanced_signature_save",
+            "plaidact_enhanced_signature_nonce"
+        );
+
+        $current = (string) get_post_meta($post->ID, self::PER_FORM_META_KEY, true);
+
+        $choices = [
+            "" => __("Suivre le réglage global", "plaidact-campaign-core"),
+            "on" => __("Activer sur cette pétition", "plaidact-campaign-core"),
+            "off" => __("Désactiver sur cette pétition", "plaidact-campaign-core"),
+        ];
+
+        echo '<p class="description">' . esc_html__(
+            "Ajoute sous l’email les champs « signer en tant qu’organisation » et « titre et fonction ».",
+            "plaidact-campaign-core"
+        ) . '</p>';
+
+        foreach ($choices as $value => $label) {
+            printf(
+                '<p><label><input type="radio" name="%1$s" value="%2$s" %3$s /> %4$s</label></p>',
+                esc_attr("plaidact_enhanced_signature"),
+                esc_attr($value),
+                checked($current, $value, false),
+                esc_html($label)
+            );
+        }
+    }
+
+    /**
+     * Enregistre le choix du métabox à la sauvegarde de la pétition.
+     *
+     * @param int     $post_id ID de la pétition.
+     * @param mixed   $post    Objet poste (fourni par save_post_{type}).
+     * @return void
+     */
+    public static function save_signature_metabox(int $post_id, $post = null): void
+    {
+        if (
+            !isset($_POST["plaidact_enhanced_signature_nonce"]) ||
+            !wp_verify_nonce(
+                sanitize_text_field(wp_unslash($_POST["plaidact_enhanced_signature_nonce"])),
+                "plaidact_enhanced_signature_save"
+            )
+        ) {
+            return;
+        }
+
+        if (
+            (defined("DOING_AUTOSAVE") && DOING_AUTOSAVE) ||
+            !current_user_can("edit_post", $post_id)
+        ) {
+            return;
+        }
+
+        $value = isset($_POST["plaidact_enhanced_signature"])
+            ? sanitize_key(wp_unslash($_POST["plaidact_enhanced_signature"]))
+            : "";
+
+        // Seules les trois valeurs attendues sont persistées ; tout le reste
+        // revient à « suivre le réglage global » (méta supprimée).
+        if (in_array($value, ["on", "off"], true)) {
+            update_post_meta($post_id, self::PER_FORM_META_KEY, $value);
+        } else {
+            delete_post_meta($post_id, self::PER_FORM_META_KEY);
+        }
     }
 
     /* ---------------------------------------------------------------------
@@ -733,8 +884,10 @@ final class Petitioner_Integration
         $language = Polylang::post_language($form_id);
         $settings = Shortcodes::get_settings(true, $language);
         $display_name = self::build_display_name($submission);
+        $organization = self::get_submission_organization($submission);
 
-        // 1. Notification de l'équipe campagne.
+        // 1. Notification de l'équipe campagne, enrichie pour les signatures
+        //    portées par une organisation (nom, logo, visibilité acceptée).
         Petition_Workflows::maybe_notify_admin(
             $settings,
             $display_name,
@@ -742,7 +895,8 @@ final class Petitioner_Integration
             (string) ($submission->postal_code ?? ""),
             (string) ($submission->phone ?? ""),
             $language,
-            $form_id
+            $form_id,
+            self::build_organization_context_lines($organization)
         );
 
         // 2. Email au décideur, sauf si le moteur gère déjà cet envoi
@@ -759,6 +913,122 @@ final class Petitioner_Integration
 
         // 3. Synchronisation Brevo (liste pétition + newsletter si opt-in).
         self::sync_signer_to_brevo($submission, $display_name, $language, $settings);
+    }
+
+    /**
+     * Décode les propriétés personnalisées d'une signature.
+     *
+     * Le hook petitioner_submission_finalized transmet la ligne SQL brute :
+     * contrairement aux listes du moteur, elle n'est PAS hydratée par
+     * AV_Petitioner_Custom_Properties. Ce décodage local rend donc les
+     * champs d'organisation disponibles — y compris pour relire des
+     * signatures antérieures à l'intégration (colonne vide ou absente).
+     *
+     * @param object|array $submission Ligne de signature (objet ou tableau).
+     * @return array<string,mixed>
+     */
+    public static function get_submission_custom_properties($submission): array
+    {
+        $raw = is_object($submission)
+            ? ($submission->custom_properties ?? "")
+            : ($submission["custom_properties"] ?? "");
+
+        if (!is_string($raw) || "" === trim($raw)) {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * Extrait les informations d'organisation d'une signature, ou null.
+     *
+     * Tolérant aux anciennes données : propriétés manquantes, valeurs vides
+     * ou formats de case à cocher hétérogènes (« on », « 1 », true…).
+     *
+     * @param object|array $submission Ligne de signature.
+     * @return array{name:string,logo:string,is_public:bool,title:string,function:string}|null
+     */
+    public static function get_submission_organization($submission): ?array
+    {
+        $properties = self::get_submission_custom_properties($submission);
+
+        $signs_as_organization = !empty($properties["sign_as_organization"]);
+        $name = sanitize_text_field((string) ($properties["organization_name"] ?? ""));
+
+        if (!$signs_as_organization && "" === $name) {
+            // Anciennes signatures sans bloc organisation : comportement
+            // historique conservé (identité personnelle).
+            return null;
+        }
+
+        if ("" === $name) {
+            return null;
+        }
+
+        return [
+            "name" => $name,
+            "logo" => esc_url_raw((string) ($properties["organization_logo"] ?? "")),
+            "is_public" => self::is_checkbox_checked($properties["organization_public"] ?? ""),
+            "title" => sanitize_text_field((string) ($properties["signer_title"] ?? "")),
+            "function" => sanitize_text_field((string) ($properties["signer_function"] ?? "")),
+        ];
+    }
+
+    /**
+     * Normalise les différentes valeurs possibles d'une case à cocher
+     * enregistrée en propriété personnalisée.
+     *
+     * @param mixed $value Valeur brute stockée.
+     * @return bool
+     */
+    private static function is_checkbox_checked($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        $value = strtolower(trim((string) $value));
+
+        return in_array($value, ["on", "1", "true", "yes"], true);
+    }
+
+    /**
+     * Construit les lignes de contexte « organisation » ajoutées à
+     * l'email de notification de l'équipe campagne.
+     *
+     * @param array|null $organization Organisation détectée, sinon null.
+     * @return array<int,string>
+     */
+    private static function build_organization_context_lines(?array $organization): array
+    {
+        if (null === $organization) {
+            return [];
+        }
+
+        $lines = [
+            __("Type", "plaidact-campaign-core") . ": " . __("Organisation", "plaidact-campaign-core"),
+            __("Nom de l’organisation", "plaidact-campaign-core") . ": " . $organization["name"],
+        ];
+
+        if ("" !== $organization["logo"]) {
+            $lines[] = __("Logo", "plaidact-campaign-core") . ": " . $organization["logo"];
+        }
+
+        $lines[] = __("Affichage public accepté", "plaidact-campaign-core") . ": " .
+            ($organization["is_public"]
+                ? __("Oui", "plaidact-campaign-core")
+                : __("Non", "plaidact-campaign-core"));
+
+        $identity = trim($organization["title"] . " " . $organization["function"]);
+
+        if ("" !== $identity) {
+            $lines[] = __("Titre / fonction du signataire", "plaidact-campaign-core") . ": " . $identity;
+        }
+
+        return $lines;
     }
 
     /**

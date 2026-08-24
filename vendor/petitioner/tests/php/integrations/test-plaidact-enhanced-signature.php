@@ -104,6 +104,111 @@ final class Test_Plaidact_Enhanced_Signature extends BaseTestCase
         );
     }
 
+    public function test_per_petition_setting_overrides_the_global_one(): void
+    {
+        // Global désactivé : une pétition peut malgré tout activer la signature enrichie.
+        update_option('plaidact_campaign_settings', ['petition_org_signature' => '0']);
+        Shortcodes::reset_settings_cache();
+        update_post_meta(77, '_plaidact_enhanced_signature', 'on');
+
+        $fields = Petitioner_Integration::add_signature_fields(['email' => []], 77);
+
+        $this->assertArrayHasKey('sign_as_organization', $fields);
+        $this->assertArrayNotHasKey('sign_as_organization', Petitioner_Integration::add_signature_fields(['email' => []], 78));
+
+        // Global activé : une pétition peut malgré tout désactiver la fonctionnalité.
+        update_option('plaidact_campaign_settings', ['petition_org_signature' => '1']);
+        Shortcodes::reset_settings_cache();
+        update_post_meta(79, '_plaidact_enhanced_signature', 'off');
+
+        $untouched = ['fname' => [], 'email' => [], 'submit' => []];
+
+        $this->assertSame($untouched, Petitioner_Integration::add_signature_fields($untouched, 79));
+        $this->assertTrue(Petitioner_Integration::is_enhanced_signature_enabled(80));
+    }
+
+    public function test_form_fields_filter_survives_legacy_null_input(): void
+    {
+        // Vieille pétition au format illisible : le filtre ne doit jamais
+        // provoquer d'erreur fatale et doit retomber sur un tableau vide.
+        $result = Petitioner_Integration::add_signature_fields(null, 12);
+
+        $this->assertSame([], array_diff(self::EXPECTED_FIELD_KEYS, array_keys($result)));
+
+        $order = Petitioner_Integration::insert_signature_fields_after_email(null, 12);
+
+        $this->assertSame(self::EXPECTED_FIELD_KEYS, $order);
+    }
+
+    public function test_existing_admin_field_is_never_overridden(): void
+    {
+        $custom = [
+            'organization_name' => [
+                'type' => 'text',
+                'label' => 'Libellé personnalisé par l’administrateur',
+                'required' => false,
+            ],
+        ];
+
+        $fields = Petitioner_Integration::add_signature_fields($custom, 12);
+
+        $this->assertSame($custom['organization_name'], $fields['organization_name']);
+    }
+
+    public function test_organization_detection_supports_old_and_new_signatures(): void
+    {
+        // Ancienne signature sans propriétés personnalisées : aucune organisation.
+        $legacy = new stdClass();
+        $legacy->fname = 'Camille';
+        $legacy->custom_properties = '';
+
+        $this->assertNull(Petitioner_Integration::get_submission_organization($legacy));
+
+        // Colonne totalement absente (très anciennes lignes).
+        $bare = new stdClass();
+        $bare->fname = 'Camille';
+
+        $this->assertNull(Petitioner_Integration::get_submission_organization($bare));
+
+        // Signature d'organisation complète, case cochée « on ».
+        $org = new stdClass();
+        $org->fname = 'ACAT France';
+        $org->custom_properties = wp_json_encode([
+            'sign_as_organization' => 'on',
+            'organization_name' => 'ACAT France',
+            'organization_logo' => 'https://example.org/logo.png',
+            'organization_public' => 'on',
+            'signer_title' => '',
+            'signer_function' => '',
+        ]);
+
+        $detected = Petitioner_Integration::get_submission_organization($org);
+
+        $this->assertNotNull($detected);
+        $this->assertSame('ACAT France', $detected['name']);
+        $this->assertTrue($detected['is_public']);
+
+        // Variante de case à cocher (« 1 ») et consentement refusé.
+        $hidden = new stdClass();
+        $hidden->fname = 'Collectif';
+        $hidden->custom_properties = wp_json_encode([
+            'sign_as_organization' => '1',
+            'organization_name' => 'Collectif invisible',
+            'organization_public' => '0',
+        ]);
+
+        $detected_hidden = Petitioner_Integration::get_submission_organization($hidden);
+
+        $this->assertNotNull($detected_hidden);
+        $this->assertFalse($detected_hidden['is_public']);
+
+        // JSON invalide : dégradation silencieuse en « pas d'organisation ».
+        $broken = new stdClass();
+        $broken->custom_properties = '{not-json';
+
+        $this->assertNull(Petitioner_Integration::get_submission_organization($broken));
+    }
+
     public function test_builder_palette_receives_each_field_only_once(): void
     {
         $builder_fields = Petitioner_Integration::expose_signature_fields_in_builder([
