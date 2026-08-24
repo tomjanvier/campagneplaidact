@@ -206,4 +206,121 @@ final class Test_Plaidact_Actyl extends BaseTestCase
         $this->assertSame('zones-humides', $this->actyl->resolve_campaign_slug(4201));
         $this->assertSame('', $this->actyl->resolve_campaign_slug(999999));
     }
+
+    /**
+     * Capture le payload transmis à l'API lors d'un enregistrement de don.
+     *
+     * @return array{path:string, method:string, body:array}|null
+     */
+    private function capture_donation_request(callable $trigger): ?array
+    {
+        $captured = null;
+
+        add_filter('pre_http_request', function ($preempt, $parsed_args, $url) use (&$captured) {
+            $captured = [
+                'url' => $url,
+                'method' => $parsed_args['method'] ?? 'POST',
+                'body' => json_decode((string) ($parsed_args['body'] ?? '{}'), true),
+            ];
+
+            return [
+                'response' => ['code' => 201],
+                'body' => '{"ok":true,"donationId":"d1","contactId":"c1"}',
+            ];
+        }, 10, 3);
+
+        try {
+            $trigger();
+        } finally {
+            remove_all_filters('pre_http_request');
+        }
+
+        return $captured;
+    }
+
+    public function test_givoly_donation_is_mapped_to_the_actyl_contract(): void
+    {
+        $this->activate();
+
+        $captured = null;
+        add_filter('pre_http_request', function ($preempt, $parsed_args, $url) use (&$captured) {
+            $captured = [
+                'url' => $url,
+                'body' => json_decode((string) ($parsed_args['body'] ?? '{}'), true),
+            ];
+
+            return [
+                'response' => ['code' => 201],
+                'body' => '{"ok":true}',
+            ];
+        }, 10, 3);
+
+        try {
+            $this->actyl->handle_givoly_donation([
+                'donation_id' => 7,
+                'gateway' => 'stripe',
+                'transaction_id' => 'pi_123',
+                'email' => 'donateur@exemple.fr',
+                'first_name' => 'Jean',
+                'last_name' => 'Martin',
+                'amount_cents' => 5000,
+                'currency' => 'EUR',
+                'campaign' => 'zones-humides',
+                'occurred_at' => '2026-08-24T12:00:00Z',
+            ]);
+        } finally {
+            remove_all_filters('pre_http_request');
+        }
+
+        $this->assertNotNull($captured);
+        $this->assertStringEndsWith('/api/v1/donations', (string) parse_url($captured['url'], PHP_URL_PATH));
+
+        $this->assertSame([
+            'email' => 'donateur@exemple.fr',
+            'provider' => 'stripe',
+            'label' => 'Don zones-humides',
+            'occurredAt' => '2026-08-24T12:00:00Z',
+            'fullName' => 'Jean Martin',
+            'amountCents' => 5000,
+        ], $captured['body']);
+    }
+
+    public function test_inactive_connection_never_sends_givoly_donations(): void
+    {
+        // Connexion non activée : aucune requête ne doit partir.
+        add_filter('pre_http_request', static function () {
+            throw new RuntimeException('Aucune requête sortante attendue.');
+        });
+
+        try {
+            $sent = $this->actyl->handle_givoly_donation([
+                'email' => 'donateur@exemple.fr',
+                'amount_cents' => 5000,
+            ]);
+
+            $this->assertFalse($sent);
+        } finally {
+            remove_all_filters('pre_http_request');
+        }
+    }
+
+    public function test_incomplete_donation_payload_is_rejected_without_request(): void
+    {
+        $this->activate();
+
+        add_filter('pre_http_request', static function () {
+            throw new RuntimeException('Aucune requête sortante attendue.');
+        });
+
+        try {
+            // Email manquant.
+            $this->assertFalse($this->actyl->handle_givoly_donation(['amount_cents' => 5000]));
+            // Montant manquant.
+            $this->assertFalse(
+                $this->actyl->handle_givoly_donation(['email' => 'donateur@exemple.fr'])
+            );
+        } finally {
+            remove_all_filters('pre_http_request');
+        }
+    }
 }

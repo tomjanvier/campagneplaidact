@@ -71,7 +71,9 @@ wp plaidact actyl-backfill --reset=1        # réinitialise le curseur
 
 ### Dons Givoly
 
-Givoly ne permet pas de capture fiable côté serveur depuis WordPress : le plugin n'envoie donc jamais de don de sa propre initiative. Un hook documenté est mis à disposition des modules qui obtiennent la confirmation autrement :
+Lorsque l'extension **Givoly** est active sur le même site, chaque don confirmé est automatiquement transmis à Actyl : Givoly émet l'action `givoly_donation_completed` à l'enregistrement de tout don validé (Stripe, HelloAsso, dons saisis manuellement), que le module Actyl relaie vers `/api/v1/donations`. La passerelle d'origine (`stripe`, `helloasso`, …) est transmise dans le champ `provider` ; elle est surchargeable via le filtre `plaidact_actyl_donation_provider`.
+
+Pour les sources autres que Givoly, un hook manuel reste disponible :
 
 ```php
 do_action("plaidact_actyl_record_donation", [
@@ -84,7 +86,14 @@ do_action("plaidact_actyl_record_donation", [
 ]);
 ```
 
-Le don part uniquement si la synchro est active ; il enrichit le contact en catégorie DONOR côté Actyl.
+Dans tous les cas, aucun don ne part si la synchronisation n'est pas active ; le contact est enrichi en catégorie DONOR côté Actyl.
+
+### Test manuel de bout en bout — dons
+
+1. Configurer Stripe ou HelloAsso dans Givoly (ou utiliser un don manuel via Givoly → Dons → Ajouter).
+2. Réaliser un don test depuis `[givoly_form]`.
+3. Vérifier dans le journal Actyl (Réglages → PLAID·ACT) la ligne `/api/v1/donations` avec code 201.
+4. Dans Actyl : le don apparaît sur le contact, passé en catégorie DONOR.
 
 ### Test manuel de bout en bout
 

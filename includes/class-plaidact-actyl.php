@@ -112,6 +112,12 @@ final class PLAIDACT_Actyl
         // Hook d'appel externe pour les dons (voir record_donation()).
         add_action("plaidact_actyl_record_donation", [$this, "record_donation"]);
 
+        // Confirmation de don émise par l'extension Givoly (action
+        // givoly_donation_completed, déclenchée une seule fois par don réel,
+        // toutes passerelles confondues). L'action reste inerte si Givoly
+        // est absent : elle n'est simplement jamais déclenchée.
+        add_action("givoly_donation_completed", [$this, "handle_givoly_donation"]);
+
         // Tâches différées.
         add_action(self::CRON_RETRY, [$this, "run_retry_push"]);
         add_action(self::CRON_AUTO_PING, [$this, "run_auto_ping"]);
@@ -902,13 +908,15 @@ final class PLAIDACT_Actyl
     }
 
     /**
-     * Enregistre un don confirmé vers /api/v1/donations.
+     * Enregistre un don vers /api/v1/donations.
      *
-     * Givoly ne permet pas de capture fiable côté serveur depuis WordPress :
-     * cette méthode est mise à disposition des modules qui obtiennent la
-     * confirmation autrement (retour de passerelle, import, webhook interne).
-     * Elle n'est JAMAIS appelée automatiquement par ce plugin afin de ne pas
-     * simuler un suivi de dons inexistant. Deux usages :
+     * Deux chemins d'alimentation :
+     *
+     *  1. automatique — l'action `givoly_donation_completed` émise par
+     *     l'extension Givoly à chaque don confirmé (Stripe, HelloAsso, saisie
+     *     manuelle) est relayée par handle_givoly_donation() ;
+     *  2. manuel — tout module obtenant une confirmation par ailleurs peut
+     *     appeler cette méthode ou l'action :
      *
      *     do_action("plaidact_actyl_record_donation", [
      *         "email"        => "donateur@exemple.fr",
@@ -919,8 +927,6 @@ final class PLAIDACT_Actyl
      *         "occurred_at"  => "2026-08-24T12:00:00Z",  // défaut : maintenant
      *         "provider"     => "givoly",                // défaut
      *     ]);
-     *
-     *     PLAIDACT_Actyl::init()->record_donation($args);
      *
      * @param array<string,mixed> $args Arguments du don.
      * @return bool Succès (2xx), false si inactif, incomplet ou en échec.
@@ -961,6 +967,55 @@ final class PLAIDACT_Actyl
         $result = $this->request("/api/v1/donations", "POST", $payload);
 
         return $result["code"] >= 200 && $result["code"] < 300;
+    }
+
+    /**
+     * Action givoly_donation_completed : transmet à Actyl chaque don confirmé
+     * par l'extension Givoly (Stripe, HelloAsso, saisie manuelle).
+     *
+     * Givoly garantit un déclenchement unique par don grâce à son
+     * idempotence par référence de transaction : aucune déduplication
+     * supplémentaire n'est nécessaire ici.
+     *
+     * @param array<string,mixed> $donation Données émises par Givoly :
+     *   donation_id, gateway, transaction_id, email, first_name, last_name,
+     *   amount_cents, currency, campaign, occurred_at.
+     * @return bool Succès de la transmission (false si inactif ou incomplet).
+     */
+    public function handle_givoly_donation(array $donation): bool
+    {
+        $email = sanitize_email((string) ($donation["email"] ?? ""));
+        $amount_cents = isset($donation["amount_cents"]) ? absint($donation["amount_cents"]) : 0;
+
+        if ("" === $email || $amount_cents <= 0) {
+            return false;
+        }
+
+        $first_name = sanitize_text_field((string) ($donation["first_name"] ?? ""));
+        $last_name = sanitize_text_field((string) ($donation["last_name"] ?? ""));
+        $campaign_slug = sanitize_title((string) ($donation["campaign"] ?? ""));
+
+        // Passerelle réelle transmise à Actyl pour le suivi analytique ;
+        // surchargeable si le contrat distant impose une valeur précise.
+        $provider = sanitize_key((string) ($donation["gateway"] ?? "givoly"));
+        $provider = (string) apply_filters(
+            "plaidact_actyl_donation_provider",
+            $provider,
+            $donation
+        );
+
+        return $this->record_donation([
+            "email" => $email,
+            "full_name" => trim($first_name . " " . $last_name),
+            "amount_cents" => $amount_cents,
+            "provider" => "" !== $provider ? $provider : "givoly",
+            // Le contrat Actyl ne comporte pas de champ campagne : le slug
+            // Givoly sert de libellé lisible côté dons.
+            "label" => "" !== $campaign_slug
+                ? sprintf(/* translators: %s: slug de la campagne de dons */ __("Don %s", "plaidact-campaign-core"), $campaign_slug)
+                : __("Don", "plaidact-campaign-core"),
+            "occurred_at" => (string) ($donation["occurred_at"] ?? ""),
+        ]);
     }
 
     /* ---------------------------------------------------------------------

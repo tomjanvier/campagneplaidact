@@ -89,7 +89,7 @@ Client singleton de l'API REST d'Actyl (plateforme de plaidoyer externe) :
 - configuration isolée dans l'option `plaidact_actyl_settings` (URL HTTPS, token jamais affiché, activation) ; la synchronisation ne sort d'aucune donnée sans configuration complète **et** ping `/api/v1/ping` réussi ;
 - signatures : poussées à l'événement `petitioner_submission_finalized` (données vérifiées, hors requête visiteur) vers `/api/v1/petitions/{slug}/signatures`, le slug étant lié par pétition via la métadonnée `_plaidact_actyl_campaign_slug` ; relance unique WP-Cron (+10 min) sur panne réseau ou 5xx ;
 - newsletter : l'action `plaidact_newsletter_subscribed`, tirée par le handler du formulaire, alimente `/api/v1/supporters` (source `newsletter`) ;
-- dons : hook `plaidact_actyl_record_donation` documenté, jamais déclenché automatiquement (pas de capture serveur fiable chez Givoly) ;
+- dons : capture automatique via l'action `givoly_donation_completed` émise par l'extension Givoly à chaque don confirmé (toutes passerelles), relayée vers `/api/v1/donations` ; hook `plaidact_actyl_record_donation` documenté pour toute autre source ; fournisseur surchargeable par le filtre `plaidact_actyl_donation_provider` ;
 - rattrapage par lots de 20 avec curseur persistant (`plaidact_actyl_backfill_cursor`), bouton dans les réglages et commande `wp plaidact actyl-backfill` ;
 - journal des 100 derniers événements (`plaidact_actyl_log`) consultable dans Réglages → PLAID·ACT.
 
