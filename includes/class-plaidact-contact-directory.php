@@ -1,6 +1,6 @@
 <?php
 /**
- * Public contacts directory (no FluentCRM dependency).
+ * Répertoire public de contacts, sans dépendance à FluentCRM.
  *
  * @package PlaidAct_Breves_Feed
  */
@@ -250,12 +250,12 @@ final class PlaidAct_Contact_Directory {
 	}
 
 	/**
-	 * Adds new CSV contacts without removing or overwriting existing records.
-	 * A normalized email is preferred as the identity; name and first name are
-	 * used only when no email is available.
+	 * Ajoute les contacts CSV sans supprimer ni écraser les entrées existantes.
+	 * L'adresse normalisée sert d'identité en priorité ; le nom et le prénom
+	 * ne sont utilisés qu'en l'absence d'adresse.
 	 *
-	 * @param array<int,array<string,mixed>> $existing Existing saved contacts.
-	 * @param array<int,array<string,mixed>> $incoming Imported contacts.
+	 * @param array<int,array<string,mixed>> $existing Contacts déjà enregistrés.
+	 * @param array<int,array<string,mixed>> $incoming Contacts importés.
 	 * @return array<int,array<string,mixed>>
 	 */
 	private function merge_contacts_preserving_existing( array $existing, array $incoming ): array {
@@ -740,7 +740,7 @@ final class PlaidAct_Contact_Directory {
 			return array();
 		}
 
-		// Normalize legacy records so missing keys never raise warnings.
+		// Normalise les anciennes entrées afin d'éviter les clés manquantes.
 		foreach ( $lists as $index => $list ) {
 			if ( ! is_array( $list ) ) {
 				continue;

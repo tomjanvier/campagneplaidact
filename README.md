@@ -2,9 +2,9 @@
 
 Plugin WordPress unique pour gérer les contenus PLAID·ACT : pétitions, newsletter, répertoires, shortcodes et blocs Gutenberg sont regroupés dans `plaidact-campaign-core`.
 
-## Instructions pour les contributeurs et agents
+## Instructions de contribution
 
-**La lecture complète de [AGENTS.md](AGENTS.md) est obligatoire avant toute analyse ou modification du dépôt.** Ces instructions définissent la stack, l'architecture, les conventions de développement, les règles de sécurité, les validations attendues et les garanties de conservation des données. Elles s'appliquent à toute contribution humaine comme automatisée, y compris la validation et la création de pull requests.
+**La lecture complète de [AGENTS.md](AGENTS.md) est obligatoire avant toute analyse ou modification du dépôt.** Ces instructions définissent la stack, l'architecture, les conventions de développement, les règles de sécurité, les validations attendues et les garanties de conservation des données. Elles s'appliquent à toute contribution, y compris la validation et la création de pull requests.
 
 ## Objectif
 
@@ -61,12 +61,12 @@ Comportements garantis :
 
 ### Rattrapage des signatures existantes
 
-Dans la section Connexion Actyl, le bouton **« Synchroniser les signatures existantes »** repousse toutes les signatures antérieures par lots de 20, avec barre de progression, reprise automatique là où il s'est arrêté (curseur `plaidact_actyl_backfill_cursor`) et bouton « Recommencer depuis zéro ». Équivalent en ligne de commande :
+Dans la section Connexion Actyl, le bouton **« Synchroniser les signatures existantes »** repousse uniquement les signatures confirmées, par lots de 20, avec barre de progression et bouton « Recommencer depuis zéro ». Le curseur `plaidact_actyl_backfill_cursor` conserve un avancement distinct pour le rattrapage global et pour chaque pétition afin qu'un changement de périmètre n'ignore aucune ligne. Équivalent en ligne de commande :
 
 ```bash
 wp plaidact actyl-backfill                  # toutes les pétitions liées
 wp plaidact actyl-backfill --petition=12    # une seule pétition
-wp plaidact actyl-backfill --reset=1        # réinitialise le curseur
+wp plaidact actyl-backfill --reset=1        # réinitialise le périmètre courant
 ```
 
 ### Dons Givoly

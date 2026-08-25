@@ -10,6 +10,7 @@
  */
 
 use Plaidact\CampaignCore\Shortcodes;
+use Plaidact\CampaignCore\Actyl;
 use WorDBless\BaseTestCase;
 
 require_once dirname(__DIR__, 5) . '/includes/class-plaidact-campaign-polylang.php';
@@ -23,7 +24,7 @@ final class Test_Plaidact_Actyl extends BaseTestCase
      * Instance sous test (le singleton conserve ses hooks entre les tests :
      * l'état utile vit exclusivement dans les options, remises à zéro ici).
      */
-    private PLAIDACT_Actyl $actyl;
+    private Actyl $actyl;
 
     public function set_up()
     {
@@ -34,7 +35,7 @@ final class Test_Plaidact_Actyl extends BaseTestCase
         delete_option('plaidact_actyl_backfill_cursor');
         delete_option('plaidact_actyl_log');
 
-        $this->actyl = PLAIDACT_Actyl::init();
+        $this->actyl = Actyl::init();
     }
 
     public function tear_down()
@@ -64,6 +65,17 @@ final class Test_Plaidact_Actyl extends BaseTestCase
     {
         $this->assertFalse($this->actyl->is_configured());
         $this->assertFalse($this->actyl->is_active());
+    }
+
+    public function test_backfill_handler_is_registered(): void
+    {
+        $this->assertSame(
+            10,
+            has_action(
+                'admin_post_plaidact_actyl_backfill_batch',
+                [$this->actyl, 'handle_backfill_batch']
+            )
+        );
     }
 
     public function test_url_must_be_https_and_is_stored_without_trailing_slash(): void
@@ -170,6 +182,68 @@ final class Test_Plaidact_Actyl extends BaseTestCase
         $this->assertFalse($this->actyl->should_retry(401));
         $this->assertFalse($this->actyl->should_retry(404));
         $this->assertFalse($this->actyl->should_retry(429));
+    }
+
+    public function test_http_requests_are_bounded_and_reject_unsafe_urls(): void
+    {
+        update_option('plaidact_actyl_settings', [
+            'actyl_url' => 'https://actyl.exemple.fr',
+            'actyl_api_token' => 'actyl_secret',
+            'actyl_enabled' => '0',
+        ]);
+
+        $request_args = null;
+        add_filter('pre_http_request', function ($preempt, $parsed_args) use (&$request_args) {
+            $request_args = $parsed_args;
+
+            return [
+                'response' => ['code' => 200],
+                'body' => '{"ok":true}',
+            ];
+        }, 10, 2);
+
+        try {
+            $this->assertTrue($this->actyl->ping());
+        } finally {
+            remove_all_filters('pre_http_request');
+        }
+
+        $this->assertIsArray($request_args);
+        $this->assertSame(5, $request_args['timeout']);
+        $this->assertSame(0, $request_args['redirection']);
+        $this->assertTrue($request_args['reject_unsafe_urls']);
+    }
+
+    public function test_backfill_cursors_are_isolated_by_scope(): void
+    {
+        $set_cursor = new ReflectionMethod($this->actyl, 'set_backfill_cursor');
+        $set_cursor->setAccessible(true);
+        $get_cursor = new ReflectionMethod($this->actyl, 'get_backfill_cursor');
+        $get_cursor->setAccessible(true);
+
+        $set_cursor->invoke($this->actyl, 0, 120);
+        $set_cursor->invoke($this->actyl, 42, 75);
+
+        $this->assertSame(120, $get_cursor->invoke($this->actyl, 0));
+        $this->assertSame(75, $get_cursor->invoke($this->actyl, 42));
+        $this->assertSame(0, $get_cursor->invoke($this->actyl, 43));
+    }
+
+    public function test_backfill_counts_only_confirmed_submissions(): void
+    {
+        $build_filter = new ReflectionMethod($this->actyl, 'build_backfill_filter');
+        $build_filter->setAccessible(true);
+
+        $global_filter = $build_filter->invoke($this->actyl, []);
+        $petition_filter = $build_filter->invoke($this->actyl, [42, 43]);
+
+        $this->assertSame('approval_status = %s', $global_filter['sql']);
+        $this->assertSame(['Confirmed'], $global_filter['params']);
+        $this->assertSame(
+            'approval_status = %s AND form_id IN (%d,%d)',
+            $petition_filter['sql']
+        );
+        $this->assertSame(['Confirmed', 42, 43], $petition_filter['params']);
     }
 
     public function test_log_keeps_only_the_newest_hundred_events(): void

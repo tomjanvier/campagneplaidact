@@ -23,9 +23,9 @@ define(
 );
 
 /**
- * Returns a cache-busting version for plugin assets.
+ * Retourne une version de ressource qui invalide correctement le cache.
  *
- * @param string $relative_path Path relative to the plugin root.
+ * @param string $relative_path Chemin relatif depuis la racine de l'extension.
  * @return string
  */
 function plaidact_campaign_core_asset_version(string $relative_path): string
@@ -53,7 +53,7 @@ function plaidact_campaign_core_asset_version(string $relative_path): string
 }
 
 /**
- * Loads the bundled Petitioner module when it is present.
+ * Charge le module Petitioner embarqué lorsqu'il est présent.
  *
  * @return void
  */
@@ -74,7 +74,7 @@ function plaidact_campaign_core_load_bundled_petitioner(): void
 plaidact_campaign_core_load_bundled_petitioner();
 
 /**
- * Loads translations from the plugin languages directory.
+ * Charge les traductions depuis le répertoire de langues de l'extension.
  *
  * @return void
  */
@@ -89,7 +89,7 @@ function plaidact_campaign_core_load_textdomain(): void
 add_action("init", "plaidact_campaign_core_load_textdomain", 0);
 
 /**
- * Shows an actionable admin warning when the bundled petition engine is missing.
+ * Affiche une alerte exploitable lorsque le moteur de pétition est absent.
  *
  * @return void
  */
@@ -126,10 +126,10 @@ require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-contact-directory.php
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-actyl.php";
 
 /**
- * Makes the association field group bundled with the plugin available to ACF.
- * Existing field groups from the database keep priority and are not modified.
+ * Rend disponible dans ACF le groupe de champs associatif embarqué.
+ * Les groupes déjà enregistrés en base restent prioritaires et inchangés.
  *
- * @param array<int,string> $paths ACF JSON load paths.
+ * @param array<int,string> $paths Chemins de chargement JSON d'ACF.
  * @return array<int,string>
  */
 function plaidact_campaign_core_acf_json_paths(array $paths): array
@@ -140,11 +140,11 @@ function plaidact_campaign_core_acf_json_paths(array $paths): array
 add_filter("acf/settings/load_json", "plaidact_campaign_core_acf_json_paths");
 
 /**
- * Reads an association field through ACF when available, with a native
- * post-meta fallback so the directory remains usable without ACF.
+ * Lit un champ associatif via ACF, avec repli natif sur les métadonnées afin
+ * que le répertoire reste utilisable sans ACF.
  *
- * @param string   $key Field name.
- * @param int|null $post_id Post ID, or the current post.
+ * @param string   $key Nom du champ.
+ * @param int|null $post_id Identifiant du contenu, ou contenu courant.
  * @return mixed
  */
 function plaidact_campaign_core_get_field(string $key, ?int $post_id = null)
@@ -159,11 +159,11 @@ function plaidact_campaign_core_get_field(string $key, ?int $post_id = null)
 }
 
 /**
- * Updates an association field without making ACF a hard dependency.
+ * Met à jour un champ associatif sans rendre ACF obligatoire.
  *
- * @param string $key Field name.
- * @param mixed  $value Field value.
- * @param int    $post_id Post ID.
+ * @param string $key Nom du champ.
+ * @param mixed  $value Valeur du champ.
+ * @param int    $post_id Identifiant du contenu.
  * @return mixed
  */
 function plaidact_campaign_core_update_field(string $key, $value, int $post_id)
@@ -176,7 +176,7 @@ function plaidact_campaign_core_update_field(string $key, $value, int $post_id)
 }
 
 /**
- * Activates bundled modules.
+ * Active les modules embarqués.
  *
  * @return void
  */
@@ -194,7 +194,7 @@ function plaidact_campaign_core_activate(): void
 }
 
 /**
- * Deactivates bundled modules.
+ * Désactive les modules embarqués.
  *
  * @return void
  */
@@ -209,7 +209,7 @@ function plaidact_campaign_core_deactivate(): void
 }
 
 /**
- * Uninstalls bundled modules.
+ * Désinstalle les modules embarqués.
  *
  * @return void
  */
@@ -227,7 +227,7 @@ register_deactivation_hook(__FILE__, "plaidact_campaign_core_deactivate");
 register_uninstall_hook(__FILE__, "plaidact_campaign_core_uninstall");
 
 /**
- * Bootstraps plugin modules.
+ * Initialise les modules de l'extension.
  *
  * @return void
  */
@@ -243,6 +243,6 @@ function plaidact_campaign_core_init(): void
 
     // Synchronisation Actyl : singleton désactivé par défaut, sans effet
     // réseau tant que la connexion n'est pas configurée et validée.
-    PLAIDACT_Actyl::init();
+    \Plaidact\CampaignCore\Actyl::init();
 }
 add_action("plugins_loaded", "plaidact_campaign_core_init");
