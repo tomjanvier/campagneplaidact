@@ -572,6 +572,81 @@ Linktree|https://linktr.ee/acat"',
 		return $where . $wpdb->prepare( " AND {$wpdb->posts}.post_title LIKE %s", $title_like );
 	}
 
+	/**
+	 * Returns the set of initial letters that have at least one published
+	 * association, optionally restricted to a taxonomy term.
+	 *
+	 * Replaces the former per-letter WP_Query (26 queries per page render)
+	 * with one lightweight query, cached per request.
+	 *
+	 * @param string $term_slug Optional association category slug.
+	 * @return array<int,string> Sorted uppercase letters.
+	 */
+	public static function get_available_asso_letters( string $term_slug = '' ): array {
+		static $letters_cache = [];
+
+		$term_slug = sanitize_title( $term_slug );
+		$cache_key = '' === $term_slug ? 'all' : $term_slug;
+
+		if ( isset( $letters_cache[ $cache_key ] ) ) {
+			return $letters_cache[ $cache_key ];
+		}
+
+		$query_args = [
+			'post_type'              => [ self::ASSO_POST_TYPE ],
+			'post_status'            => 'publish',
+			'posts_per_page'         => -1,
+			'orderby'                => 'title',
+			'order'                  => 'ASC',
+			'fields'                 => 'ids',
+			'no_found_rows'          => true,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
+		];
+
+		if ( '' !== $term_slug ) {
+			$query_args['tax_query'] = [
+				[
+					'taxonomy' => self::ASSO_TAXONOMY,
+					'field'    => 'slug',
+					'terms'    => $term_slug,
+				],
+			];
+		}
+
+		$query    = new WP_Query( $query_args );
+		$letters  = [];
+		$post_ids = $query->posts;
+
+		if ( ! empty( $post_ids ) ) {
+			global $wpdb;
+			$placeholders = implode( ',', array_fill( 0, count( $post_ids ), '%d' ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Single lightweight query for titles only.
+			$titles = $wpdb->get_col(
+				$wpdb->prepare(
+					"SELECT post_title FROM {$wpdb->posts} WHERE ID IN ({$placeholders})",
+					array_map( 'absint', $post_ids )
+				)
+			);
+
+			foreach ( (array) $titles as $title ) {
+				$title = trim( remove_accents( (string) $title ) );
+				if ( '' === $title ) {
+					continue;
+				}
+				$letter = mb_strtoupper( mb_substr( $title, 0, 1 ) );
+				if ( '' === $letter || ! ctype_alpha( $letter ) ) {
+					continue;
+				}
+				$letters[ $letter ] = true;
+			}
+		}
+
+		$letters_cache[ $cache_key ] = array_keys( $letters );
+
+		return $letters_cache[ $cache_key ];
+	}
+
 	/** @return array<string,mixed> */
 	public static function get_asso_card_data( int $post_id ): array {
 		$site_url = trim( (string) \plaidact_campaign_core_get_field( 'url_web', $post_id ) );
@@ -1214,7 +1289,7 @@ Linktree|https://linktr.ee/acat"',
 		$first_line = (string) fgets( $handle );
 		rewind( $handle );
 		$delimiter = substr_count( $first_line, ';' ) > substr_count( $first_line, ',' ) ? ';' : ',';
-		$headers = fgetcsv( $handle, 0, $delimiter );
+		$headers = fgetcsv( $handle, 0, $delimiter, '"', '\\' );
 		if ( ! is_array( $headers ) ) {
 			fclose( $handle );
 			self::redirect_import_error( __( 'CSV invalide.', 'plaidact-campaign-core' ) );
@@ -1224,7 +1299,7 @@ Linktree|https://linktr.ee/acat"',
 		$count = 0;
 		$duplicate_count = 0;
 		$dedupe_map = [];
-		while ( ( $row = fgetcsv( $handle, 0, $delimiter ) ) !== false ) {
+		while ( ( $row = fgetcsv( $handle, 0, $delimiter, '"', '\\' ) ) !== false ) {
 			$data = [];
 			foreach ( $headers as $index => $header ) {
 				$data[ $header ] = isset( $row[ $index ] ) ? self::sanitize_import_value( $header, (string) $row[ $index ] ) : '';
@@ -1286,13 +1361,14 @@ Linktree|https://linktr.ee/acat"',
 
 		header( 'Content-Type: text/csv; charset=utf-8' );
 		header( 'Content-Disposition: attachment; filename="export-associations.csv"' );
+		header( 'X-Content-Type-Options: nosniff' );
 
 		$output = fopen( 'php://output', 'wb' );
 		if ( false === $output ) {
 			wp_die( esc_html__( 'Impossible de générer le fichier CSV.', 'plaidact-campaign-core' ) );
 		}
 
-		fputcsv( $output, self::get_asso_import_headers() );
+		fputcsv( $output, self::get_asso_import_headers(), ',', '"', '\\' );
 
 		while ( $query->have_posts() ) {
 			$query->the_post();
@@ -1334,7 +1410,10 @@ Linktree|https://linktr.ee/acat"',
 					(string) \plaidact_campaign_core_get_field( 'social_discord', $post_id ),
 					(string) \plaidact_campaign_core_get_field( 'social_bluesky', $post_id ),
 					implode( "\n", $social_links_lines ),
-				]
+				],
+				',',
+				'"',
+				'\\'
 			);
 		}
 
@@ -1359,7 +1438,7 @@ Linktree|https://linktr.ee/acat"',
 		$first_line = (string) fgets( $handle );
 		rewind( $handle );
 		$delimiter = substr_count( $first_line, ';' ) > substr_count( $first_line, ',' ) ? ';' : ',';
-		$headers = fgetcsv( $handle, 0, $delimiter );
+		$headers = fgetcsv( $handle, 0, $delimiter, '"', '\\' );
 		if ( ! is_array( $headers ) ) {
 			fclose( $handle );
 			self::redirect_agenda_import( 0, 0 );
@@ -1369,7 +1448,7 @@ Linktree|https://linktr.ee/acat"',
 		$count = 0;
 		$dupes = 0;
 		$seen  = [];
-		while ( ( $row = fgetcsv( $handle, 0, $delimiter ) ) !== false ) {
+		while ( ( $row = fgetcsv( $handle, 0, $delimiter, '"', '\\' ) ) !== false ) {
 			$data = [];
 			foreach ( $headers as $i => $header ) {
 				$data[ $header ] = isset( $row[ $i ] ) ? self::sanitize_import_value( $header, (string) $row[ $i ] ) : '';
@@ -1669,7 +1748,38 @@ Linktree|https://linktr.ee/acat"',
 		$upload = wp_upload_dir();
 		$base_dir = trailingslashit( $upload['basedir'] ) . 'plaidact-import-logos-' . uniqid( '', true );
 		wp_mkdir_p( $base_dir );
-		$zip->extractTo( $base_dir );
+
+		// Extract file-by-file to block zip-slip paths and archive bombs.
+		$max_files    = 500;
+		$max_bytes    = 50 * MB_IN_BYTES;
+		$total_bytes  = 0;
+		$extracted    = 0;
+
+		for ( $i = 0; $i < $zip->numFiles; $i++ ) {
+			if ( $extracted >= $max_files ) {
+				break;
+			}
+			$entry = (string) $zip->getNameIndex( $i );
+			if ( '' === $entry || str_contains( $entry, '..' ) || str_starts_with( $entry, '/' ) || 1 === preg_match( '#^[A-Za-z]:[\/\\\\]#', $entry ) ) {
+				continue;
+			}
+			if ( false !== strpos( basename( $entry ), "\0" ) || is_dir( 'zip://' . $zip_file['tmp_name'] . '#' . $entry ) ) {
+				continue;
+			}
+			$stats = $zip->statIndex( $i );
+			if ( ! is_array( $stats ) || ! isset( $stats['size'] ) ) {
+				continue;
+			}
+			$total_bytes += (int) $stats['size'];
+			if ( $total_bytes > $max_bytes ) {
+				break;
+			}
+			$target = $base_dir . '/' . basename( $entry );
+			if ( false === file_put_contents( $target, $zip->getFromIndex( $i ) ) ) {
+				continue;
+			}
+			$extracted++;
+		}
 		$zip->close();
 
 		$map = [];

@@ -300,7 +300,7 @@ final class PlaidAct_Contact_Directory {
 		$delimiter = $this->detect_csv_delimiter( $handle );
 		$line_number = 0;
 		$headers = null;
-		while ( ( $candidate = fgetcsv( $handle, 0, $delimiter ) ) !== false ) {
+		while ( ( $candidate = fgetcsv( $handle, 0, $delimiter, '"', '\\' ) ) !== false ) {
 			$line_number++;
 			if ( $line_number <= 3 ) {
 				continue;
@@ -322,7 +322,7 @@ final class PlaidAct_Contact_Directory {
 		}, $headers );
 		$max_rows = 5000;
 		$row_count = 0;
-		while ( ( $line = fgetcsv( $handle, 0, $delimiter ) ) !== false ) {
+		while ( ( $line = fgetcsv( $handle, 0, $delimiter, '"', '\\' ) ) !== false ) {
 			$row_count++;
 			if ( $row_count > $max_rows ) {
 				break;
@@ -618,7 +618,7 @@ final class PlaidAct_Contact_Directory {
 		if ( null === $list || ! wp_verify_nonce( $nonce, self::NONCE_DOWNLOAD_PREFIX . $list_id ) ) {
 			wp_die( esc_html__( 'Lien de téléchargement invalide.', 'plaidact-campaign-core' ) );
 		}
-		$contacts = $list['contacts'];
+		$contacts = isset( $list['contacts'] ) && is_array( $list['contacts'] ) ? $list['contacts'] : array();
 		$filtered = isset( $_GET['filtered'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['filtered'] ) );
 		if ( $filtered ) {
 			$search = isset( $_GET['search'] ) ? sanitize_text_field( wp_unslash( $_GET['search'] ) ) : '';
@@ -630,21 +630,26 @@ final class PlaidAct_Contact_Directory {
 		$filename = 'contacts-' . $list_id;
 		if ( 'xls' === $format ) {
 			header( 'Content-Type: application/vnd.ms-excel; charset=utf-8' );
-			header( 'Content-Disposition: attachment; filename=' . $filename . '.xls' );
+			header( 'Content-Disposition: attachment; filename="' . $filename . '.xls"' );
+			header( 'X-Content-Type-Options: nosniff' );
 			$this->render_excel_like_export( $list, $contacts );
 			exit;
 		}
 		header( 'Content-Type: text/csv; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename=' . $filename . '.csv' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '.csv"' );
+		header( 'X-Content-Type-Options: nosniff' );
 		$output = fopen( 'php://output', 'w' );
-		$branding = $this->get_export_branding();
-		fputcsv( $output, array( 'https://plaidact.org/base-contacts-politiques/' ) );
-		fputcsv( $output, array( '' ) );
-		if ( '' !== $branding['logo_url'] ) {
-			fputcsv( $output, array( '=IMAGE("' . str_replace( '"', '""', $branding['logo_url'] ) . '")' ) );
-			fputcsv( $output, array( '' ) );
+		if ( false === $output ) {
+			wp_die( esc_html__( 'Impossible de générer le fichier CSV.', 'plaidact-campaign-core' ) );
 		}
-		fputcsv( $output, array( 'Nom', 'Prénom', $list['column_label'], 'Institution', 'Groupe politique', 'Commission', 'Email', 'Notes' ) );
+		$branding = $this->get_export_branding();
+		fputcsv( $output, array( 'https://plaidact.org/base-contacts-politiques/' ), ',', '"', '\\' );
+		fputcsv( $output, array( '' ), ',', '"', '\\' );
+		if ( '' !== $branding['logo_url'] ) {
+			fputcsv( $output, array( '=IMAGE("' . str_replace( '"', '""', $branding['logo_url'] ) . '")' ), ',', '"', '\\' );
+			fputcsv( $output, array( '' ), ',', '"', '\\' );
+		}
+		fputcsv( $output, array( 'Nom', 'Prénom', (string) ( $list['column_label'] ?? '' ), 'Institution', 'Groupe politique', 'Commission', 'Email', 'Notes' ), ',', '"', '\\' );
 		foreach ( $contacts as $contact ) {
 			fputcsv(
 				$output,
@@ -657,7 +662,10 @@ final class PlaidAct_Contact_Directory {
 					$this->escape_csv_formula( (string) ( $contact['commission'] ?? '' ) ),
 					$this->escape_csv_formula( (string) ( $contact['email'] ?? '' ) ),
 					$this->escape_csv_formula( (string) ( $contact['notes'] ?? '' ) ),
-				)
+				),
+				',',
+				'"',
+				'\\'
 			);
 		}
 		fclose( $output );
@@ -728,7 +736,33 @@ final class PlaidAct_Contact_Directory {
 
 	private function get_lists(): array {
 		$lists = get_option( self::OPTION_CONTACT_LISTS, array() );
-		return is_array( $lists ) ? $lists : array();
+		if ( ! is_array( $lists ) ) {
+			return array();
+		}
+
+		// Normalize legacy records so missing keys never raise warnings.
+		foreach ( $lists as $index => $list ) {
+			if ( ! is_array( $list ) ) {
+				continue;
+			}
+			$lists[ $index ] = array_merge(
+				array(
+					'id'            => 0,
+					'name'          => '',
+					'column_label'  => '',
+					'description'   => '',
+					'image_url'     => '',
+					'updated_at'    => 0,
+					'contacts'      => array(),
+				),
+				$list
+			);
+			if ( ! is_array( $lists[ $index ]['contacts'] ) ) {
+				$lists[ $index ]['contacts'] = array();
+			}
+		}
+
+		return $lists;
 	}
 
 	private function get_list_by_id( int $list_id ): ?array {

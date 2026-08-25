@@ -28,6 +28,73 @@ Le dépôt est organisé autour d’un seul plugin WordPress : `plaidact-campaig
 - Il ne doit pas être activé comme plugin autonome.
 - Les couleurs et le CSS public se règlent directement dans **Petitioner → Settings**.
 
+### Couche d'intégration (`includes/class-plaidact-campaign-petitioner-integration.php`)
+
+Toute la logique métier liée au moteur passe par cette classe, jamais par une
+modification directe du vendor. Elle s'appuie uniquement sur les filtres et
+actions publics de Petitioner :
+
+- **Signature enrichie** : champs « organisation » et « titre/fonction »
+  ajoutés après l'email via `av_petitioner_form_fields`, ordre garanti via
+  `av_petitioner_field_order`, stockage JSON via
+  `av_petitioner_get_custom_property_types`. Les libellés trilingues
+  (fr/en/es) dérivent d'une définition déclarative unique ; la langue cible
+  est résolue une seule fois par requête.
+- **Réglages à trois niveaux** : filtre de code
+  (`plaidact_campaign_enhanced_signature_enabled`) > métabox par pétition
+  (`_plaidact_enhanced_signature` : suivre la globale / activer / désactiver)
+  > réglage global PLAID·ACT. Par défaut, les pétitions existantes suivent le
+  réglage global et ne changent jamais de comportement après mise à jour.
+- **Rétrocompatibilité** : le filtre de champs normalise les entrées legacy
+  (null, chaîne illisible) sans erreur fatale — le migrateur du moteur
+  convertit normalement les anciens formats en priorité 5 ; un champ
+  homonyme déjà configuré par l'administrateur n'est jamais écrasé ; les
+  signatures antérieures à l'intégration (propriétés personnalisées vides)
+  conservent l'affichage historique. Le décodage local des propriétés
+  (`get_submission_custom_properties()`) rend les organisations lisibles y
+  compris sur les lignes SQL brutes transmises par le hook finalized.
+- **Multilinguisme** : doublons et compteurs traitent les formulaires
+  traduits d'une même pétition comme une entité unique
+  (`av_petitioner_check_duplicate_email`,
+  `av_petitioner_submission_count_form_ids`).
+- **Effets de bord** : à la confirmation d'une signature
+  (`petitioner_submission_finalized`, déjà exécutée hors requête AJAX par le
+  moteur), l'intégration notifie l'équipe (contexte organisation inclus),
+  envoie l'email au décideur si Petitioner ne le fait pas, et synchronise
+  Brevo — sans écrire de statut d'erreur quand Brevo n'est pas configuré.
+- **API interne** consommée par les shortcodes et l'admin :
+  - `Petitioner_Integration::is_available()` : moteur embarqué présent ?
+  - `::get_signature_count($form_id)` : signatures confirmées toutes
+    traductions confondues, en une requête SQL agrégée ;
+  - `::query_submissions($form_ids, $args)` : liste paginée des signataires
+    (jauge, liste publique, page admin Signataires, export CSV) ;
+  - `::get_submission_organization($submission)` : informations
+    d'organisation décodées d'une signature, ou null.
+
+Les shortcodes (`includes/class-plaidact-campaign-shortcodes.php`) délègent
+toute cette logique à l'intégration : ils restent responsables du rendu seul.
+
+### Tests
+
+Les tests PHPUnit vivent dans `vendor/petitioner/tests/php/integrations/`
+(WorDBless). Le moteur par défaut de WorDBless (« dbless ») simule options et
+contenus mais pas les tables personnalisées : les tests qui insèrent de vraies
+signatures se marquent alors « skipped » avec un message explicite ; sur MySQL
+ou SQLite ils s'exécutent intégralement.
+
+## Module Actyl (`includes/class-plaidact-actyl.php`)
+
+Client singleton de l'API REST d'Actyl (plateforme de plaidoyer externe) :
+
+- configuration isolée dans l'option `plaidact_actyl_settings` (URL HTTPS, token jamais affiché, activation) ; la synchronisation ne sort d'aucune donnée sans configuration complète **et** ping `/api/v1/ping` réussi ;
+- signatures : poussées à l'événement `petitioner_submission_finalized` (données vérifiées, hors requête visiteur) vers `/api/v1/petitions/{slug}/signatures`, le slug étant lié par pétition via la métadonnée `_plaidact_actyl_campaign_slug` ; relance unique WP-Cron (+10 min) sur panne réseau ou 5xx ;
+- newsletter : l'action `plaidact_newsletter_subscribed`, tirée par le handler du formulaire, alimente `/api/v1/supporters` (source `newsletter`) ;
+- dons : capture automatique via l'action `givoly_donation_completed` émise par l'extension Givoly à chaque don confirmé (toutes passerelles), relayée vers `/api/v1/donations` ; hook `plaidact_actyl_record_donation` documenté pour toute autre source ; fournisseur surchargeable par le filtre `plaidact_actyl_donation_provider` ;
+- rattrapage par lots de 20 avec curseur persistant (`plaidact_actyl_backfill_cursor`), bouton dans les réglages et commande `wp plaidact actyl-backfill` ;
+- journal des 100 derniers événements (`plaidact_actyl_log`) consultable dans Réglages → PLAID·ACT.
+
+Aucun appel n'est effectué pendant les imports CSV ou traitements en masse existants.
+
 ## Notes
 
 - Si Polylang est actif, les chaînes textuelles configurées dans les réglages restent traduisibles.
