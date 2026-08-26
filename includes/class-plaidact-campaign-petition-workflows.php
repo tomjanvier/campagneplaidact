@@ -1,6 +1,6 @@
 <?php
 /**
- * Shared Petitioner side effects for petition signatures.
+ * Effets de bord partagés des signatures Petitioner.
  *
  * @package PLAIDACT\CampaignCore
  */
@@ -12,14 +12,14 @@ if (!defined("ABSPATH")) {
 }
 
 /**
- * Centralizes shared petition side effects.
+ * Centralise les effets de bord partagés des pétitions.
  */
 final class Petition_Workflows
 {
     /**
-     * Returns the best redirect URL for frontend form handlers.
+     * Retourne la meilleure URL de redirection pour les formulaires publics.
      *
-     * @param string|null $language Optional language slug.
+     * @param string|null $language Slug de langue facultatif.
      * @return string
      */
     public static function get_redirect_url(?string $language = null): string
@@ -34,17 +34,17 @@ final class Petition_Workflows
     }
 
     /**
-     * Sends the admin notification email for a petition signature when configured.
+     * Envoie la notification d'une signature à l'administrateur configuré.
      *
-     * @param array       $settings PLAID·ACT settings.
-     * @param string      $name Signer display name.
-     * @param string      $email Signer email.
-     * @param string      $postcode Signer postal code.
-     * @param string      $phone Signer phone number.
-     * @param string|null $language Optional language slug.
-     * @param int|null    $form_id Optional bundled Petitioner form ID.
-     * @param array<int,string> $context_lines Optional extra lines appended
-     *                                          to the message (e.g. organization details).
+     * @param array       $settings Réglages PLAID·ACT.
+     * @param string      $name Nom affiché du signataire.
+     * @param string      $email Adresse du signataire.
+     * @param string      $postcode Code postal du signataire.
+     * @param string      $phone Téléphone du signataire.
+     * @param string|null $language Slug de langue facultatif.
+     * @param int|null    $form_id Identifiant facultatif du formulaire Petitioner.
+     * @param array<int,string> $context_lines Lignes facultatives ajoutées au message,
+     *                                          par exemple les informations d'organisation.
      * @return void
      */
     public static function maybe_notify_admin(
@@ -96,13 +96,13 @@ final class Petition_Workflows
     }
 
     /**
-     * Sends the decision-maker email for a petition signature when configured.
+     * Envoie la signature au décideur lorsque son adresse est configurée.
      *
-     * @param array       $settings PLAID·ACT settings.
-     * @param string      $name Signer display name.
-     * @param string      $email Signer email.
-     * @param string      $postcode Signer postal code.
-     * @param string|null $language Optional language slug.
+     * @param array       $settings Réglages PLAID·ACT.
+     * @param string      $name Nom affiché du signataire.
+     * @param string      $email Adresse du signataire.
+     * @param string      $postcode Code postal du signataire.
+     * @param string|null $language Slug de langue facultatif.
      * @return void
      */
     public static function maybe_send_decision_maker_email(
@@ -146,9 +146,9 @@ final class Petition_Workflows
     }
 
     /**
-     * Returns a language-aware site URL for notifications.
+     * Retourne l'URL du site adaptée à la langue des notifications.
      *
-     * @param string|null $language Optional language slug.
+     * @param string|null $language Slug de langue facultatif.
      * @return string
      */
     private static function get_site_url_for_language(?string $language = null): string
@@ -157,10 +157,10 @@ final class Petition_Workflows
     }
 
     /**
-     * Builds optional reply-to headers for a signer.
+     * Construit les en-têtes de réponse facultatifs du signataire.
      *
-     * @param string $name Signer display name.
-     * @param string $email Signer email.
+     * @param string $name Nom affiché du signataire.
+     * @param string $email Adresse du signataire.
      * @return array<int, string>
      */
     private static function build_reply_to_headers(

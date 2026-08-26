@@ -1,4 +1,4 @@
-# Instructions pour les agents travaillant sur ce dépôt
+# Instructions de contribution
 
 > **À lire intégralement avant toute analyse, modification, validation ou création de pull request.**
 > Ces instructions font foi. Si un fichier `AGENTS.md` existe dans un sous-répertoire concerné par la tâche, il s'applique en complément et doit également être lu.
@@ -126,13 +126,11 @@ La documentation de méthode (PHPDoc) suit le même principe : elle décrit le c
 
 ## Neutralité des contenus
 
-Il est interdit d'ajouter dans le code, les commentaires, les commits, la documentation, les fichiers générés ou les pull requests :
+Il est interdit d'ajouter dans le code, les commentaires, les commits, la documentation, les fichiers produits ou les pull requests :
 
-- le nom d'un assistant conversationnel ;
-- le nom d'une entreprise fournissant des modèles ;
-- le nom d'un outil de génération de code ;
-- le nom ou la version d'un modèle utilisé ;
-- toute mention présentant le contenu comme produit automatiquement plutôt que rédigé par un contributeur.
+- une attribution étrangère au projet ou à ses contributeurs identifiés ;
+- le nom d'un procédé ou d'un outil interne sans rapport fonctionnel avec le projet ;
+- une mention relative aux conditions internes de production du contenu.
 
 Les messages de commit et les descriptions de pull request restent professionnels et décrivent uniquement les changements techniques et fonctionnels.
 

@@ -18,6 +18,8 @@
  * @package PLAIDACT\CampaignCore
  */
 
+namespace Plaidact\CampaignCore;
+
 if (!defined("ABSPATH")) {
     exit();
 }
@@ -25,7 +27,7 @@ if (!defined("ABSPATH")) {
 /**
  * Client singleton de l'API Actyl.
  */
-final class PLAIDACT_Actyl
+final class Actyl
 {
     /** Option de configuration (URL, token, activation). */
     private const OPTION_SETTINGS = "plaidact_actyl_settings";
@@ -84,6 +86,8 @@ final class PLAIDACT_Actyl
             self::$instance = new self();
         }
 
+        self::$instance->register_hooks();
+
         return self::$instance;
     }
 
@@ -95,11 +99,22 @@ final class PLAIDACT_Actyl
      */
     private function __construct()
     {
+    }
+
+    /**
+     * Enregistre les points d'entrée WordPress. Les appels répétés sont sûrs :
+     * WordPress ne duplique pas une même fonction de rappel à priorité égale.
+     *
+     * @return void
+     */
+    private function register_hooks(): void
+    {
         // Réglages : section « Connexion Actyl » dans Réglages → PLAID·ACT.
         add_action("admin_init", [$this, "register_settings"]);
         add_action("plaidact_campaign_settings_page_end", [$this, "render_connection_section"]);
         add_action("admin_post_plaidact_actyl_test_connection", [$this, "handle_test_connection"]);
         add_action("admin_post_plaidact_actyl_clear_log", [$this, "handle_clear_log"]);
+        add_action("admin_post_plaidact_actyl_backfill_batch", [$this, "handle_backfill_batch"]);
 
         // Liaison pétition → campagne Actyl.
         add_action("add_meta_boxes", [$this, "register_campaign_metabox"]);
@@ -323,9 +338,10 @@ final class PLAIDACT_Actyl
         $base = untrailingslashit((string) $settings["actyl_url"]);
         $token = (string) $settings["actyl_api_token"];
 
-        $response = wp_remote_request($base . $path, [
+        $response = wp_safe_remote_request($base . $path, [
             "method" => $method,
             "timeout" => self::REQUEST_TIMEOUT,
+            "redirection" => 0,
             "headers" => [
                 "Authorization" => "Bearer " . $token,
                 "Content-Type" => "application/json",
@@ -821,7 +837,20 @@ final class PLAIDACT_Actyl
 
         set_transient($lock_key, 1, self::RETRY_DELAY + 120);
 
-        wp_schedule_single_event(time() + self::RETRY_DELAY, self::CRON_RETRY, [$task]);
+        $scheduled = wp_schedule_single_event(
+            time() + self::RETRY_DELAY,
+            self::CRON_RETRY,
+            [$task],
+            true
+        );
+
+        if (is_wp_error($scheduled) || false === $scheduled) {
+            delete_transient($lock_key);
+            $message = is_wp_error($scheduled)
+                ? $scheduled->get_error_message()
+                : __("La nouvelle tentative n’a pas pu être planifiée.", "plaidact-campaign-core");
+            $this->log_event($path, 0, $message);
+        }
     }
 
     /**
@@ -1039,6 +1068,30 @@ final class PLAIDACT_Actyl
     }
 
     /**
+     * Construit le filtre SQL commun aux lectures de rattrapage.
+     *
+     * La confirmation est obligatoire quel que soit le périmètre : une ligne
+     * en attente de double opt-in ou d'approbation ne doit jamais quitter le
+     * site pendant un rattrapage.
+     *
+     * @param array<int> $form_ids Formulaires ciblés, ou liste vide pour tous.
+     * @return array{sql:string, params:array<int,int|string>}
+     */
+    private function build_backfill_filter(array $form_ids): array
+    {
+        $sql = "approval_status = %s";
+        $params = ["Confirmed"];
+        $form_ids = array_values(array_filter(array_map("absint", $form_ids)));
+
+        if ([] !== $form_ids) {
+            $sql .= " AND form_id IN (" . implode(",", array_fill(0, count($form_ids), "%d")) . ")";
+            $params = array_merge($params, $form_ids);
+        }
+
+        return ["sql" => $sql, "params" => $params];
+    }
+
+    /**
      * Compte total et restant pour l'affichage de progression.
      *
      * Le « total » désigne toutes les lignes du périmètre (traitées ou non) :
@@ -1047,7 +1100,7 @@ final class PLAIDACT_Actyl
      * @param array<int> $form_ids Formulaires ciblés (vide = tout).
      * @return array{total:int, remaining:int}
      */
-    private function backfill_counts(array $form_ids = []): array
+    private function backfill_counts(array $form_ids = [], int $petition_filter = 0): array
     {
         global $wpdb;
 
@@ -1056,24 +1109,22 @@ final class PLAIDACT_Actyl
         }
 
         $table = \AV_Petitioner_Submissions_Model::table_name();
-        $cursor = (int) get_option(self::OPTION_BACKFILL_CURSOR, 0);
+        $cursor = $this->get_backfill_cursor($petition_filter);
 
-        $filter_sql = "";
-        $params = [];
-
-        if ([] !== $form_ids) {
-            $filter_sql = " AND form_id IN (" . implode(",", array_fill(0, count($form_ids), "%d")) . ")";
-            $params = array_map("absint", $form_ids);
-        }
+        $filter = $this->build_backfill_filter($form_ids);
 
         $total = (int) $wpdb->get_var(
-            $wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE id >= 0{$filter_sql}", $params)
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table} WHERE {$filter["sql"]}",
+                $filter["params"]
+            )
         );
 
         $remaining = (int) $wpdb->get_var(
             $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$table} WHERE id > %d{$filter_sql}",
-                array_merge([$cursor], $params)
+                "SELECT COUNT(*) FROM {$table}
+                 WHERE {$filter["sql"]} AND id > %d",
+                array_merge($filter["params"], [$cursor])
             )
         );
 
@@ -1081,6 +1132,78 @@ final class PLAIDACT_Actyl
             "total" => $total,
             "remaining" => $remaining,
         ];
+    }
+
+    /**
+     * Clé stable du curseur pour un périmètre de rattrapage.
+     *
+     * @param int $petition_filter Pétition ciblée, ou zéro pour toutes.
+     * @return string
+     */
+    private function backfill_cursor_key(int $petition_filter): string
+    {
+        return $petition_filter > 0 ? "petition:" . absint($petition_filter) : "all";
+    }
+
+    /**
+     * Lit le curseur du périmètre demandé. L'ancienne valeur scalaire est
+     * conservée comme curseur du rattrapage global pour la rétrocompatibilité.
+     *
+     * @param int $petition_filter Pétition ciblée, ou zéro pour toutes.
+     * @return int
+     */
+    private function get_backfill_cursor(int $petition_filter): int
+    {
+        $stored = get_option(self::OPTION_BACKFILL_CURSOR, []);
+
+        if (!is_array($stored)) {
+            return 0 === $petition_filter ? absint($stored) : 0;
+        }
+
+        return absint($stored[$this->backfill_cursor_key($petition_filter)] ?? 0);
+    }
+
+    /**
+     * Enregistre le curseur sans écraser l'avancement des autres périmètres.
+     *
+     * @param int $petition_filter Pétition ciblée, ou zéro pour toutes.
+     * @param int $cursor Dernière ligne traitée.
+     * @return void
+     */
+    private function set_backfill_cursor(int $petition_filter, int $cursor): void
+    {
+        $stored = get_option(self::OPTION_BACKFILL_CURSOR, []);
+        $cursors = is_array($stored) ? $stored : ["all" => absint($stored)];
+        $cursors[$this->backfill_cursor_key($petition_filter)] = absint($cursor);
+
+        update_option(self::OPTION_BACKFILL_CURSOR, $cursors, false);
+    }
+
+    /**
+     * Réinitialise uniquement le périmètre demandé.
+     *
+     * @param int $petition_filter Pétition ciblée, ou zéro pour toutes.
+     * @return void
+     */
+    private function reset_backfill_cursor(int $petition_filter): void
+    {
+        $stored = get_option(self::OPTION_BACKFILL_CURSOR, []);
+
+        if (!is_array($stored)) {
+            if (0 === $petition_filter) {
+                delete_option(self::OPTION_BACKFILL_CURSOR);
+            }
+            return;
+        }
+
+        unset($stored[$this->backfill_cursor_key($petition_filter)]);
+
+        if ([] === $stored) {
+            delete_option(self::OPTION_BACKFILL_CURSOR);
+            return;
+        }
+
+        update_option(self::OPTION_BACKFILL_CURSOR, $stored, false);
     }
 
     /**
@@ -1110,22 +1233,17 @@ final class PLAIDACT_Actyl
 
         $form_ids = $this->backfill_form_ids($petition_filter);
         $table = \AV_Petitioner_Submissions_Model::table_name();
-        $cursor = (int) get_option(self::OPTION_BACKFILL_CURSOR, 0);
+        $cursor = $this->get_backfill_cursor($petition_filter);
 
-        $filter_sql = "";
-        $params = [$cursor];
-
-        if ([] !== $form_ids) {
-            $filter_sql = " AND form_id IN (" . implode(",", array_fill(0, count($form_ids), "%d")) . ")";
-            $params = array_merge($params, array_map("absint", $form_ids));
-        }
+        $filter = $this->build_backfill_filter($form_ids);
+        $params = array_merge($filter["params"], [$cursor]);
 
         // Ordre stable par identifiant : le curseur garantit une reprise exacte.
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT id, form_id, fname, lname, email, city
                  FROM {$table}
-                 WHERE id > %d{$filter_sql}
+                 WHERE {$filter["sql"]} AND id > %d
                  ORDER BY id ASC
                  LIMIT %d",
                 array_merge($params, [self::BACKFILL_BATCH_SIZE])
@@ -1186,7 +1304,10 @@ final class PLAIDACT_Actyl
         }
 
         $last_row = end($rows);
-        update_option(self::OPTION_BACKFILL_CURSOR, (int) ($last_row->id ?? $cursor), false);
+        $this->set_backfill_cursor(
+            $petition_filter,
+            (int) ($last_row->id ?? $cursor)
+        );
 
         $result["done"] = count($rows) < self::BACKFILL_BATCH_SIZE;
 
@@ -1218,7 +1339,7 @@ final class PLAIDACT_Actyl
         // « Recommencer depuis zéro » rembobine le curseur ; sinon reprise là
         // où la précédente exécution s'est arrêtée.
         if (isset($_POST["reset"])) {
-            delete_option(self::OPTION_BACKFILL_CURSOR);
+            $this->reset_backfill_cursor($petition_filter);
         }
 
         $stats = $this->process_backfill_batch($petition_filter);
@@ -1259,11 +1380,14 @@ final class PLAIDACT_Actyl
         $petition_filter = isset($assoc_args["petition"]) ? absint($assoc_args["petition"]) : 0;
 
         if (!empty($assoc_args["reset"])) {
-            delete_option(self::OPTION_BACKFILL_CURSOR);
+            $this->reset_backfill_cursor($petition_filter);
             \WP_CLI::log("Curseur de rattrapage réinitialisé.");
         }
 
-        $counts = $this->backfill_counts($this->backfill_form_ids($petition_filter));
+        $counts = $this->backfill_counts(
+            $this->backfill_form_ids($petition_filter),
+            $petition_filter
+        );
         \WP_CLI::log(sprintf(
             "Rattrapage : %d signatures restantes sur %d au total.",
             $counts["remaining"],
@@ -1279,7 +1403,10 @@ final class PLAIDACT_Actyl
             $total_pushed += $batch["pushed"];
             $total_skipped += $batch["skipped"];
 
-            $progress = $this->backfill_counts($this->backfill_form_ids($petition_filter));
+            $progress = $this->backfill_counts(
+                $this->backfill_form_ids($petition_filter),
+                $petition_filter
+            );
             \WP_CLI::log(sprintf(
                 "Lot traité : +%d envoyées, %d ignorées — %d restantes.",
                 $batch["pushed"],
@@ -1526,7 +1653,10 @@ final class PLAIDACT_Actyl
     private function render_backfill_box(): void
     {
         $petition_filter = isset($_GET["ab_petition"]) ? absint(wp_unslash($_GET["ab_petition"])) : 0;
-        $counts = $this->backfill_counts($this->backfill_form_ids($petition_filter));
+        $counts = $this->backfill_counts(
+            $this->backfill_form_ids($petition_filter),
+            $petition_filter
+        );
         $processed = max(0, $counts["total"] - $counts["remaining"]);
         $percent = $counts["total"] > 0 ? (int) round(($processed / $counts["total"]) * 100) : 100;
         $running = isset($_GET["actyl_backfill"])

@@ -1,6 +1,6 @@
 <?php
 /**
- * Gutenberg blocks for PLAID·ACT shortcodes.
+ * Blocs Gutenberg associés aux shortcodes PLAID·ACT.
  *
  * @package PLAIDACT\CampaignCore
  */
@@ -12,12 +12,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Registers dynamic Gutenberg blocks backed by existing shortcodes.
+ * Enregistre les blocs Gutenberg dynamiques appuyés sur les shortcodes.
  */
 final class Blocks {
 
 	/**
-	 * Hooks WordPress actions.
+	 * Enregistre les actions WordPress.
 	 *
 	 * @return void
 	 */
@@ -26,7 +26,7 @@ final class Blocks {
 	}
 
 	/**
-	 * Registers editor assets and dynamic blocks.
+	 * Enregistre les ressources de l'éditeur et les blocs dynamiques.
 	 *
 	 * @return void
 	 */

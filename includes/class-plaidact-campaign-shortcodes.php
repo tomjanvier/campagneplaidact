@@ -1,6 +1,6 @@
 <?php
 /**
- * PLAID·ACT shortcodes for Petitioner petitions and frontend modules.
+ * Shortcodes PLAID·ACT pour les pétitions Petitioner et les modules publics.
  *
  * @package PLAIDACT\CampaignCore
  */
@@ -12,7 +12,7 @@ if (!defined("ABSPATH")) {
 }
 
 /**
- * Registers PLAID·ACT shortcodes.
+ * Enregistre les shortcodes PLAID·ACT.
  */
 final class Shortcodes
 {
@@ -27,7 +27,7 @@ final class Shortcodes
     private static array $settings_cache = [];
 
     /**
-     * Hooks WordPress actions.
+     * Enregistre les actions WordPress.
      *
      * @return void
      */
@@ -79,7 +79,7 @@ final class Shortcodes
 
 
     /**
-     * Loads shared frontend styles for shortcode and block output.
+     * Charge les styles publics partagés des shortcodes et des blocs.
      *
      * @return void
      */
@@ -125,8 +125,8 @@ final class Shortcodes
     }
 
     /**
-     * Detects whether the current request renders a petition form, gauge or
-     * signers list so petition-only scripts stay off unrelated pages.
+     * Détecte si la requête affiche un formulaire, une jauge ou une liste de
+     * signataires afin de ne charger les scripts que sur les pages utiles.
      *
      * @return bool
      */
@@ -153,7 +153,7 @@ final class Shortcodes
         }
 
         if (!$uses_petition) {
-            // Petitioner shortcodes can also live in Text widgets.
+            // Les shortcodes Petitioner peuvent aussi être placés dans des widgets Texte.
             $widgets = get_option("widget_text", []);
             if (is_array($widgets)) {
                 foreach ($widgets as $widget) {
@@ -173,9 +173,9 @@ final class Shortcodes
         }
 
         /**
-         * Filters whether petition assets should load on the current request.
+         * Filtre le chargement des ressources de pétition sur la requête courante.
          *
-         * @param bool $uses_petition Whether a petition element was detected.
+         * @param bool $uses_petition Indique si un élément de pétition a été détecté.
          */
         $uses_petition_cache = (bool) apply_filters(
             "plaidact_campaign_loads_petition_assets",
@@ -482,10 +482,10 @@ final class Shortcodes
     }
 
     /**
-     * Resolves the Petitioner form ID to render for the current campaign.
+     * Résout l'identifiant du formulaire Petitioner de la campagne courante.
      *
      * @param array       $settings PLAID·ACT settings.
-     * @param string|null $language Optional language slug.
+     * @param string|null $language Slug de langue facultatif.
      * @return int
      */
     public static function resolve_petitioner_form_id(
@@ -552,9 +552,9 @@ final class Shortcodes
 
 
     /**
-     * Returns every Petitioner form ID linked to the same multilingual petition group.
+     * Retourne les formulaires Petitioner d'un même groupe multilingue.
      *
-     * @param int $form_id Resolved Petitioner form ID.
+     * @param int $form_id Identifiant du formulaire Petitioner résolu.
      * @return array<int>
      */
     public static function get_linked_petitioner_form_ids(int $form_id): array
@@ -592,7 +592,7 @@ final class Shortcodes
     }
 
     /**
-     * Builds the public URL used by the standalone petition counter CTA.
+     * Construit l'URL publique du bouton de la jauge autonome.
      */
     private static function get_petition_sign_url(int $form_id, array $settings, ?string $language): string
     {
@@ -950,10 +950,10 @@ final class Shortcodes
          "Quand Polylang est actif, les champs textuels ci-dessus sont enregistrés comme chaînes traduisibles dans Polylang > Traductions des chaînes.",
          "plaidact-campaign-core"
      ); ?></p>
- 					<?php submit_button(); ?>
- 				</form>
- 		</div>
- 		<?php
+					<?php submit_button(); ?>
+				</form>
+		</div>
+		<?php
         // Point d'ancrage pour les sections de réglages additionnelles
         // (ex. connexion Actyl) : rendu après le formulaire principal, avec
         // leur propre formulaire et leur propre option.
@@ -1194,7 +1194,7 @@ final class Shortcodes
 
 
     /**
-     * Renders a standalone Petitioner signature gauge for a petition.
+     * Affiche une jauge autonome de signatures Petitioner.
      *
      * @param array<string,mixed> $atts Shortcode or block attributes.
      * @return string
@@ -1267,9 +1267,9 @@ final class Shortcodes
     }
 
     /**
-     * Gets the active Petitioner goal, with PLAID·ACT settings as fallback.
+     * Retourne l'objectif Petitioner actif, avec repli sur les réglages PLAID·ACT.
      *
-     * @param int          $form_id Petition form ID.
+     * @param int          $form_id Identifiant du formulaire de pétition.
      * @param array<mixed> $settings PLAID·ACT settings.
      * @return int
      */
@@ -1283,18 +1283,18 @@ final class Shortcodes
     }
 
     /**
-     * Gets the confirmed signature count for a Petitioner petition.
+     * Retourne le nombre de signatures confirmées d'une pétition Petitioner.
      *
-     * @param int $form_id Petition form ID.
+     * @param int $form_id Identifiant du formulaire de pétition.
      * @return int
      */
     /**
-     * Gets the confirmed signature count for a Petitioner petition.
+     * Retourne le nombre de signatures confirmées d'une pétition Petitioner.
      *
      * La logique SQL vit dans Petitioner_Integration : les shortcodes ne
      * font que du rendu.
      *
-     * @param int $form_id Petition form ID.
+     * @param int $form_id Identifiant du formulaire de pétition.
      * @return int
      */
     private static function get_petition_signature_count(int $form_id): int
@@ -1304,14 +1304,13 @@ final class Shortcodes
 
 
     /**
-     * Retrieves submissions across all translated Petitioner forms in one
-     * paginated list.
+     * Regroupe les signatures des formulaires traduits dans une liste paginée.
      *
      * Simple passerelle vers Petitioner_Integration::query_submissions() :
      * voir cette méthode pour la sémantique exacte des arguments.
      *
-     * @param array<int> $form_ids Linked Petitioner form IDs.
-     * @param array<string,mixed> $args Query arguments.
+     * @param array<int> $form_ids Identifiants des formulaires Petitioner liés.
+     * @param array<string,mixed> $args Arguments de la requête.
      * @return array{submissions:array,total:int}
      */
     private static function get_linked_petition_submissions(array $form_ids, array $args): array
@@ -1632,7 +1631,7 @@ final class Shortcodes
     }
 
     /**
-     * Renders partner cards.
+     * Affiche les cartes des partenaires.
      *
      * @param array<string,mixed> $atts Shortcode or block attributes.
      * @return string
@@ -1689,9 +1688,9 @@ final class Shortcodes
 
 
     /**
-     * Sanitizes a space-separated CSS class list.
+     * Nettoie une liste de classes CSS séparées par des espaces.
      *
-     * @param string $classes Raw class list.
+     * @param string $classes Liste brute de classes.
      * @return string
      */
     private static function sanitize_css_classes(string $classes): string
@@ -1829,7 +1828,7 @@ final class Shortcodes
 
 
     /**
-     * Echoes the newsletter form for theme templates.
+     * Affiche le formulaire newsletter depuis un gabarit de thème.
      *
      * Themes can render the extension-managed Brevo form with:
      * do_action('plaidact_newsletter_form', ['class' => 'my-theme-newsletter']);
@@ -2133,12 +2132,12 @@ final class Shortcodes
             exit();
         }
 
-        // Silently accept honeypot hits to look like success for bots.
+        // Répond comme en cas de succès afin de ne pas renseigner les robots.
         if ("" !== sanitize_text_field(wp_unslash($_POST["plaidact_website"] ?? ""))) {
             self::redirect_with_status("campaign_sent", "1", $language);
         }
 
-        // Basic per-IP rate limit against mail flooding.
+        // Limite simple par adresse IP contre les envois massifs d'emails.
         $rate_limit_key = "plaidact_scm_rl_" . md5((string) ($_SERVER["REMOTE_ADDR"] ?? ""));
         if (get_transient($rate_limit_key)) {
             self::redirect_with_status("campaign_sent", "0", $language);

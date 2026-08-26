@@ -1,6 +1,6 @@
 <?php
 /**
- * CPT registration for PLAID·ACT content.
+ * Enregistrement des types de contenus PLAID·ACT.
  *
  * @package PLAIDACT\CampaignCore
  */
@@ -12,32 +12,32 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Registers PLAID·ACT post types and partner metadata.
+ * Enregistre les types de contenus et les métadonnées des partenaires.
  */
 final class CPT {
 
 	/**
-	 * Content schema version used for one-time migrations and rewrite rules.
+	 * Version du schéma utilisée pour les migrations et règles de réécriture.
 	 */
 	private const CONTENT_SCHEMA_VERSION = '2.1.0';
 
 	/**
-	 * Option storing the completed content schema version.
+	 * Option stockant la version de schéma entièrement appliquée.
 	 */
 	private const CONTENT_SCHEMA_OPTION = 'plaidact_core_content_schema_version';
 
 	/**
-	 * Previous brief post type registered by the legacy PLAID·ACT theme.
+	 * Ancien type de brève enregistré par le thème PLAID·ACT historique.
 	 */
 	private const LEGACY_BREVE_POST_TYPE = 'breves';
 
 	/**
-	 * Canonical brief post type owned by this plugin.
+	 * Type canonique des brèves géré par cette extension.
 	 */
 	private const BREVE_POST_TYPE = 'plaid_breve';
 
 	/**
-	 * Hooks WordPress actions.
+	 * Enregistre les actions WordPress.
 	 *
 	 * @return void
 	 */
@@ -58,11 +58,11 @@ final class CPT {
 	}
 
 	/**
-	 * Adds human-readable brief fields to REST exports.
+	 * Ajoute aux exports REST des champs de brève directement lisibles.
 	 *
-	 * WordPress exposes the editor content as a nested object and topics as term
-	 * IDs by default. Export tools consuming the REST API therefore need flat,
-	 * immediately usable values for these two fields.
+	 * WordPress expose par défaut le contenu sous forme d'objet imbriqué et les
+	 * thématiques comme identifiants de termes. Les exports ont besoin de
+	 * valeurs simples et immédiatement exploitables.
 	 *
 	 * @return void
 	 */
@@ -108,7 +108,7 @@ final class CPT {
 	}
 
 	/**
-	 * Registers PLAID·ACT post types.
+	 * Enregistre les types de contenus PLAID·ACT.
 	 *
 	 * @return void
 	 */
@@ -297,11 +297,11 @@ final class CPT {
 	}
 
 	/**
-	 * Removes the obsolete duplicate menu once legacy posts have been migrated.
+	 * Retire le menu en double après la migration des contenus historiques.
 	 *
-	 * The old theme may still register `breves` on init. Running late leaves the
-	 * canonical post type as the only editor while preserving its `/breves/`
-	 * URLs and archive.
+	 * L'ancien thème peut encore enregistrer `breves` pendant `init`. Une
+	 * exécution tardive conserve uniquement le type canonique dans l'éditeur,
+	 * sans modifier les URL ni l'archive `/breves/`.
 	 *
 	 * @return void
 	 */
@@ -316,9 +316,9 @@ final class CPT {
 	}
 
 	/**
-	 * Keeps older theme queries working after the post type migration.
+	 * Maintient les requêtes de l'ancien thème après la migration du type.
 	 *
-	 * @param \WP_Query $query Query being prepared.
+	 * @param \WP_Query $query Requête en cours de préparation.
 	 * @return void
 	 */
 	public static function map_legacy_breve_query( \WP_Query $query ): void {
@@ -346,7 +346,7 @@ final class CPT {
 	}
 
 	/**
-	 * Refreshes permalink rules once after this content schema is installed.
+	 * Actualise une fois les permaliens après l'installation du schéma.
 	 *
 	 * @return void
 	 */
@@ -366,7 +366,7 @@ final class CPT {
 	}
 
 	/**
-	 * Registers PLAID·ACT taxonomies.
+	 * Enregistre les taxonomies PLAID·ACT.
 	 *
 	 * @return void
 	 */
@@ -397,7 +397,7 @@ final class CPT {
 	}
 
 	/**
-	 * Registers partner meta for REST and UI parity.
+	 * Enregistre les métadonnées partenaires pour REST et l'administration.
 	 *
 	 * @return void
 	 */
@@ -418,7 +418,7 @@ final class CPT {
 	}
 
 	/**
-	 * Registers social embed metadata.
+	 * Enregistre les métadonnées des intégrations sociales.
 	 *
 	 * @return void
 	 */
@@ -467,7 +467,7 @@ final class CPT {
 	}
 
 	/**
-	 * Adds URL metabox for partners.
+	 * Ajoute la métabox d'URL des partenaires.
 	 *
 	 * @return void
 	 */
@@ -483,7 +483,7 @@ final class CPT {
 	}
 
 	/**
-	 * Registers social wall metabox.
+	 * Enregistre la métabox du mur social.
 	 *
 	 * @return void
 	 */
@@ -499,9 +499,9 @@ final class CPT {
 	}
 
 	/**
-	 * Renders partner URL field.
+	 * Affiche le champ URL du partenaire.
 	 *
-	 * @param \WP_Post $post Current post object.
+	 * @param \WP_Post $post Contenu en cours d'édition.
 	 * @return void
 	 */
 	public static function render_partner_metabox( \WP_Post $post ): void {
@@ -523,9 +523,9 @@ final class CPT {
 	}
 
 	/**
-	 * Renders social embed fields.
+	 * Affiche les champs d'intégration sociale.
 	 *
-	 * @param \WP_Post $post Current post object.
+	 * @param \WP_Post $post Contenu en cours d'édition.
 	 * @return void
 	 */
 	public static function render_social_embed_metabox( \WP_Post $post ): void {
@@ -553,9 +553,9 @@ final class CPT {
 	}
 
 	/**
-	 * Saves partner URL field.
+	 * Enregistre le champ URL du partenaire.
 	 *
-	 * @param int $post_id Current post ID.
+	 * @param int $post_id Identifiant du contenu courant.
 	 * @return void
 	 */
 	public static function save_partner_url( int $post_id ): void {
@@ -583,9 +583,9 @@ final class CPT {
 	}
 
 	/**
-	 * Saves social embed metabox fields.
+	 * Enregistre les champs de la métabox sociale.
 	 *
-	 * @param int $post_id Current post ID.
+	 * @param int $post_id Identifiant du contenu courant.
 	 * @return void
 	 */
 	public static function save_social_embed_meta( int $post_id ): void {

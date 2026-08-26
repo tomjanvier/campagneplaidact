@@ -573,14 +573,14 @@ Linktree|https://linktr.ee/acat"',
 	}
 
 	/**
-	 * Returns the set of initial letters that have at least one published
-	 * association, optionally restricted to a taxonomy term.
+	 * Retourne les initiales ayant au moins une association publiée,
+	 * avec une restriction facultative sur une catégorie.
 	 *
-	 * Replaces the former per-letter WP_Query (26 queries per page render)
-	 * with one lightweight query, cached per request.
+	 * Remplace les 26 requêtes précédentes par une lecture groupée, mise en
+	 * cache pendant la requête courante.
 	 *
-	 * @param string $term_slug Optional association category slug.
-	 * @return array<int,string> Sorted uppercase letters.
+	 * @param string $term_slug Slug facultatif de la catégorie d'association.
+	 * @return array<int,string> Lettres majuscules triées.
 	 */
 	public static function get_available_asso_letters( string $term_slug = '' ): array {
 		static $letters_cache = [];
@@ -621,7 +621,7 @@ Linktree|https://linktr.ee/acat"',
 		if ( ! empty( $post_ids ) ) {
 			global $wpdb;
 			$placeholders = implode( ',', array_fill( 0, count( $post_ids ), '%d' ) );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Single lightweight query for titles only.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Lecture groupée des titres uniquement.
 			$titles = $wpdb->get_col(
 				$wpdb->prepare(
 					"SELECT post_title FROM {$wpdb->posts} WHERE ID IN ({$placeholders})",
@@ -1672,7 +1672,7 @@ Linktree|https://linktr.ee/acat"',
 			}
 		}
 		if ( ! empty( $term_ids ) ) {
-			// Add imported causes without removing existing taxonomy relations.
+			// Ajoute les causes importées sans retirer les taxonomies existantes.
 			wp_set_object_terms( $post_id, $term_ids, self::ASSO_TAXONOMY, true );
 		}
 	}
@@ -1749,7 +1749,7 @@ Linktree|https://linktr.ee/acat"',
 		$base_dir = trailingslashit( $upload['basedir'] ) . 'plaidact-import-logos-' . uniqid( '', true );
 		wp_mkdir_p( $base_dir );
 
-		// Extract file-by-file to block zip-slip paths and archive bombs.
+		// Extraction fichier par fichier contre le zip-slip et les archives démesurées.
 		$max_files    = 500;
 		$max_bytes    = 50 * MB_IN_BYTES;
 		$total_bytes  = 0;

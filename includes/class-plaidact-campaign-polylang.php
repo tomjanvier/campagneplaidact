@@ -1,6 +1,6 @@
 <?php
 /**
- * Polylang integration helpers.
+ * Outils d'intégration avec Polylang.
  *
  * @package PLAIDACT\CampaignCore
  */
@@ -12,12 +12,12 @@ if (!defined("ABSPATH")) {
 }
 
 /**
- * Handles Polylang compatibility for PLAID·ACT tools.
+ * Assure la compatibilité des outils PLAID·ACT avec Polylang.
  */
 final class Polylang
 {
     /**
-     * Boots Polylang hooks.
+     * Enregistre les hooks Polylang.
      *
      * @return void
      */
@@ -33,7 +33,7 @@ final class Polylang
     }
 
     /**
-     * Registers core settings as translatable strings in Polylang.
+     * Enregistre les réglages du cœur comme chaînes traduisibles dans Polylang.
      *
      * @return void
      */
@@ -64,8 +64,8 @@ final class Polylang
     /**
      * Makes PLAID·ACT editorial content translatable in Polylang.
      *
-     * @param array $post_types Registered Polylang post types.
-     * @param bool  $is_settings Whether Polylang is building the settings screen.
+     * @param array $post_types Types de contenus enregistrés dans Polylang.
+     * @param bool  $is_settings Indique si Polylang construit l'écran des réglages.
      * @return array
      */
     public static function register_translatable_post_types(
@@ -80,10 +80,10 @@ final class Polylang
     }
 
     /**
-     * Backward-compatible alias for integrations using the former callback.
+     * Alias rétrocompatible pour les intégrations utilisant l'ancien rappel.
      *
-     * @param array $post_types Registered Polylang post types.
-     * @param bool  $is_settings Whether Polylang is building the settings screen.
+     * @param array $post_types Types de contenus enregistrés dans Polylang.
+     * @param bool  $is_settings Indique si Polylang construit l'écran des réglages.
      * @return array
      */
     public static function register_petitioner_post_type(
@@ -97,7 +97,7 @@ final class Polylang
     }
 
     /**
-     * Gets the current Polylang language slug when available.
+     * Retourne le slug de la langue Polylang courante lorsqu'il existe.
      *
      * @return string|null
      */
@@ -113,9 +113,9 @@ final class Polylang
     }
 
     /**
-     * Gets the Polylang language slug for a specific post when available.
+     * Retourne le slug Polylang d'un contenu lorsqu'il existe.
      *
-     * @param int $post_id Post ID.
+     * @param int $post_id Identifiant du contenu.
      * @return string|null
      */
     public static function post_language(
@@ -136,10 +136,10 @@ final class Polylang
     }
 
     /**
-     * Translates a registered string for the current or provided language.
+     * Traduit une chaîne enregistrée dans la langue courante ou demandée.
      *
-     * @param string      $value Raw string value.
-     * @param string|null $language Optional language slug.
+     * @param string      $value Valeur brute de la chaîne.
+     * @param string|null $language Slug de langue facultatif.
      * @return string
      */
     public static function translate_string(
@@ -170,10 +170,10 @@ final class Polylang
     }
 
     /**
-     * Resolves a translated post ID in the requested language.
+     * Résout l'identifiant traduit d'un contenu dans la langue demandée.
      *
-     * @param int         $post_id Source post ID.
-     * @param string|null $language Optional language slug.
+     * @param int         $post_id Identifiant du contenu source.
+     * @param string|null $language Slug de langue facultatif.
      * @return int
      */
     public static function resolve_post_translation(
@@ -205,9 +205,9 @@ final class Polylang
     }
 
     /**
-     * Returns a language-aware home URL when Polylang exposes one.
+     * Retourne l'URL d'accueil adaptée à la langue lorsque Polylang la fournit.
      *
-     * @param string|null $language Optional language slug.
+     * @param string|null $language Slug de langue facultatif.
      * @return string
      */
     public static function home_url(?string $language = null): string
