@@ -50,6 +50,9 @@ final class Shortcodes
             __CLASS__,
             "render_send_campaign_form",
         ]);
+        add_shortcode("plaidact_breves", [__CLASS__, "render_breves"]);
+        add_shortcode("plaid_breves", [__CLASS__, "render_breves"]);
+        add_shortcode("breves", [__CLASS__, "render_breves"]);
         add_action("admin_menu", [__CLASS__, "register_admin_pages"]);
         add_action("admin_init", [__CLASS__, "register_settings"]);
         add_action("wp_enqueue_scripts", [__CLASS__, "enqueue_assets"]);
@@ -2184,6 +2187,88 @@ final class Shortcodes
         ]);
 
         self::redirect_with_status("campaign_sent", "1", $language);
+    }
+
+    /**
+     * Affiche les dernières brèves publiées.
+     *
+     * Les alias sont conservés pour permettre aux pages historiques de
+     * continuer à fonctionner après la centralisation du CPT dans le plugin.
+     *
+     * @param array<string,mixed> $atts Attributs du shortcode.
+     * @return string
+     */
+    public static function render_breves(array $atts = []): string
+    {
+        if (!self::is_module_enabled("enable_breves")) {
+            return "";
+        }
+
+        $language = self::get_current_language();
+        $settings = self::get_settings(true, $language);
+        $atts = shortcode_atts(
+            [
+                "title" => __("Les brèves", "plaidact-campaign-core"),
+                "description" => "",
+                "limit" => 6,
+                "topic" => "",
+            ],
+            $atts,
+            "plaidact_breves"
+        );
+
+        $limit = max(1, min(24, absint($atts["limit"])));
+        $query_args = [
+            "post_type" => "plaid_breve",
+            "post_status" => "publish",
+            "posts_per_page" => $limit,
+            "orderby" => "date",
+            "order" => "DESC",
+            "no_found_rows" => true,
+        ];
+        $topic = sanitize_title((string) $atts["topic"]);
+
+        if ("" !== $topic) {
+            $query_args["tax_query"] = [
+                [
+                    "taxonomy" => "plaid_breve_topic",
+                    "field" => "slug",
+                    "terms" => $topic,
+                ],
+            ];
+        }
+
+        $breves = get_posts($query_args);
+        $title = trim((string) $atts["title"]);
+        $description = trim((string) $atts["description"]);
+
+        ob_start();
+        ?>
+        <section class="plaidact-breves plaidact-card <?php echo esc_attr(self::get_campaign_design_class($settings)); ?>" aria-label="<?php echo esc_attr($title ?: __("Les brèves", "plaidact-campaign-core")); ?>">
+            <?php if ("" !== $title): ?>
+                <h3 class="plaidact-card__title"><?php echo esc_html($title); ?></h3>
+            <?php endif; ?>
+            <?php if ("" !== $description): ?>
+                <p><?php echo esc_html($description); ?></p>
+            <?php endif; ?>
+            <?php if (!empty($breves)): ?>
+                <div class="plaidact-breves__grid">
+                    <?php foreach ($breves as $breve): ?>
+                        <article class="plaidact-breve">
+                            <h4 class="plaidact-breve__title">
+                                <a href="<?php echo esc_url(get_permalink($breve)); ?>"><?php echo esc_html(get_the_title($breve)); ?></a>
+                            </h4>
+                            <?php echo wp_kses_post(wpautop(get_the_excerpt($breve))); ?>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <p><?php esc_html_e("Aucune brève publiée pour le moment.", "plaidact-campaign-core"); ?></p>
+            <?php endif; ?>
+        </section>
+        <?php
+
+        return (string) ob_get_clean();
     }
 
     public static function render_social_wall(array $atts = []): string
