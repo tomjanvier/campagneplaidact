@@ -315,6 +315,10 @@ final class Shortcodes
             "enable_breves" => "1",
             "enable_out" => "1",
             "enable_agenda" => "1",
+            // Connexion Act désactivée par défaut : l'activation expose une
+            // nouvelle surface d'authentification, l'opérateur doit d'abord
+            // enregistrer le client côté Act.
+            "enable_sso" => "0",
             "social_wall_title" => __("Social Wall", "plaidact-campaign-core"),
             "social_wall_description" => __(
                 "Suivez ici les publications liées à PLAID·ACT.",
@@ -709,6 +713,7 @@ final class Shortcodes
             "enable_breves" => isset($input["enable_breves"]) ? (!empty($input["enable_breves"]) ? "1" : "0") : (string) $existing["enable_breves"],
             "enable_out" => isset($input["enable_out"]) ? (!empty($input["enable_out"]) ? "1" : "0") : (string) $existing["enable_out"],
             "enable_agenda" => isset($input["enable_agenda"]) ? (!empty($input["enable_agenda"]) ? "1" : "0") : (string) $existing["enable_agenda"],
+            "enable_sso" => isset($input["enable_sso"]) ? (!empty($input["enable_sso"]) ? "1" : "0") : (string) $existing["enable_sso"],
             "social_wall_title" => sanitize_text_field(
                 (string) ($input["social_wall_title"] ?? "")
             ),
@@ -1000,6 +1005,7 @@ final class Shortcodes
             "enable_breves" => __("Brèves", "plaidact-campaign-core"),
             "enable_out" => __("Out / sorties", "plaidact-campaign-core"),
             "enable_agenda" => __("Agenda", "plaidact-campaign-core"),
+            "enable_sso" => __("Connexion Act (SSO)", "plaidact-campaign-core"),
             "enable_socialwall" => __("Social wall", "plaidact-campaign-core"),
             "enable_articles" => __("Articles", "plaidact-campaign-core"),
             "enable_partners" => __("Partenaires", "plaidact-campaign-core"),

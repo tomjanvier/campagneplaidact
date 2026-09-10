@@ -705,3 +705,178 @@
 .petitioner__input[hidden] {
 	display: none !important;
 }
+
+/* Timeline agenda : rendu vertical/horizontal, accessible et responsive. */
+.pa-timeline {
+	margin: 0 auto;
+	max-width: 1100px;
+	padding: 0 1rem;
+}
+
+.pa-timeline__title {
+	font-size: clamp(1.4rem, 3vw, 2rem);
+	line-height: 1.15;
+	margin: 0 0 0.5rem;
+}
+
+.pa-timeline__actions {
+	margin: 0 0 1.25rem;
+}
+
+.pa-timeline__download {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	border: 1px solid currentColor;
+	border-radius: 999px;
+	padding: 0.5rem 0.9rem;
+	text-decoration: none;
+}
+
+.pa-timeline__download:hover,
+.pa-timeline__download:focus-visible {
+	text-decoration: underline;
+	outline: 2px solid currentColor;
+	outline-offset: 2px;
+}
+
+.pa-timeline__year {
+	font-size: clamp(1.2rem, 2.4vw, 1.6rem);
+	margin: 1.75rem 0 0.75rem;
+}
+
+.pa-timeline__months {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: repeat(var(--pa-timeline-columns, 3), minmax(0, 1fr));
+}
+
+.pa-timeline--vertical .pa-timeline__months {
+	border-left: 2px solid currentColor;
+	padding-left: 1rem;
+}
+
+.pa-timeline--horizontal .pa-timeline__months {
+	border-top: 2px solid currentColor;
+	padding-top: 1rem;
+}
+
+.pa-timeline__month {
+	background: #fff;
+	border: 1px solid #e5e7eb;
+	border-radius: 10px;
+	padding: 0.9rem;
+	min-width: 0;
+}
+
+.pa-timeline__month-name {
+	font-size: 1rem;
+	margin: 0 0 0.6rem;
+}
+
+.pa-timeline__events {
+	display: grid;
+	gap: 0.75rem;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.pa-timeline__event {
+	border-top: 2px solid currentColor;
+	padding-top: 0.6rem;
+}
+
+.pa-timeline__event--suite {
+	border-top-style: dashed;
+}
+
+.pa-timeline__logo {
+	width: 2.5rem;
+	height: 2.5rem;
+	object-fit: contain;
+	border-radius: 0.375rem;
+	border: 1px solid rgb(15 23 42 / 12%);
+	background: #fff;
+}
+
+.pa-timeline__date {
+	font-size: 0.85rem;
+	font-weight: 700;
+	margin: 0 0 0.25rem;
+}
+
+.pa-timeline__badge {
+	display: inline-block;
+	border: 1px solid currentColor;
+	border-radius: 999px;
+	font-size: 0.75rem;
+	font-weight: 700;
+	margin-left: 0.4rem;
+	padding: 0.05rem 0.5rem;
+}
+
+.pa-timeline__event-title {
+	font-size: 0.98rem;
+	margin: 0;
+}
+
+.pa-timeline__event-title a {
+	text-decoration-thickness: from-font;
+	text-underline-offset: 0.15em;
+}
+
+.pa-timeline__event-title a:hover,
+.pa-timeline__event-title a:focus-visible,
+.pa-timeline__download:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 2px;
+}
+
+.pa-timeline__meta {
+	color: #4b5563;
+	font-size: 0.88rem;
+	margin: 0.25rem 0 0;
+}
+
+.pa-timeline__empty {
+	color: #6b7280;
+	font-size: 0.9rem;
+	margin: 0;
+}
+
+.pa-timeline__more {
+	color: #4b5563;
+	font-size: 0.85rem;
+	margin: 0.6rem 0 0;
+}
+
+.pa-timeline-error,
+.pa-timeline-empty {
+	border: 1px solid #e5e7eb;
+	border-radius: 10px;
+	padding: 0.9rem 1rem;
+}
+
+@media (max-width: 900px) {
+	.pa-timeline__months {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 600px) {
+	.pa-timeline__months {
+		grid-template-columns: 1fr;
+	}
+
+	.pa-timeline--vertical .pa-timeline__months {
+		border-left-width: 3px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pa-timeline__event-title a,
+	.pa-timeline__download {
+		transition: none;
+	}
+}
