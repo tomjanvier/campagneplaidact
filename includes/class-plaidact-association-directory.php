@@ -32,15 +32,41 @@ final class Association_Directory {
 
 	private const SOCIAL_ICON_FALLBACK = 'share';
 
+	/**
+	 * Types lus par les timelines.
+	 *
+	 * Le type canonique « agenda » porte les timelines, la taxonomie, les
+	 * imports et les URLs « /agenda/ ». Le type historique
+	 * « plaid_agenda_event » est conservé en lecture afin de ne perdre aucun
+	 * contenu, ID, slug ou métadonnée existante.
+	 *
+	 * @return array<int,string>
+	 */
+	public static function get_timeline_post_types(): array {
+		return [ 'agenda', 'plaid_agenda_event' ];
+	}
+
 	public static function init(): void {
 		add_action( 'init', [ __CLASS__, 'register_asso_cpt_and_taxonomies' ], 2 );
+		// Type « agenda » canonique pour les timelines : enregistré après le type
+		// historique « plaid_agenda_event » (priorité 10 côté CPT) afin que ses
+		// réécritures « /agenda/ » restent prioritaires sans supprimer l'ancien type.
+		add_action( 'init', [ __CLASS__, 'register_agenda_post_type' ], 12 );
+		add_action( 'init', [ __CLASS__, 'register_taxonomy' ], 12 );
+		add_action( 'init', [ __CLASS__, 'register_hover_definitions' ] );
+		add_action( 'init', [ __CLASS__, 'register_blocks' ] );
 		add_action( 'wp_enqueue_scripts', [ __CLASS__, 'enqueue_assets' ] );
+		add_action( 'template_redirect', [ __CLASS__, 'maybe_serve_timeline_ical' ] );
 		add_shortcode( 'plaidact_asso_directory', [ __CLASS__, 'asso_directory_shortcode' ] );
+		add_shortcode( 'plaidact_timeline', [ __CLASS__, 'timeline_shortcode' ] );
+		add_shortcode( 'plaidact_hover_term', [ __CLASS__, 'hover_term_shortcode' ] );
 		add_filter( 'template_include', [ __CLASS__, 'maybe_use_plugin_templates' ] );
 		add_filter( 'theme_page_templates', [ __CLASS__, 'register_page_templates' ] );
 		add_filter( 'template_include', [ __CLASS__, 'handle_page_template' ], 99 );
 		add_action( 'admin_menu', [ __CLASS__, 'register_asso_import_page' ] );
+		add_action( 'admin_menu', [ __CLASS__, 'register_agenda_import_page' ] );
 		add_action( 'admin_post_plaidact_import_asso', [ __CLASS__, 'handle_asso_import' ] );
+		add_action( 'admin_post_plaidact_import_agenda', [ __CLASS__, 'handle_agenda_import' ] );
 		add_action( 'admin_post_plaidact_export_asso_csv', [ __CLASS__, 'handle_asso_export_csv' ] );
 		add_action( 'admin_post_plaidact_migrate_asso_taxonomies', [ __CLASS__, 'handle_asso_taxonomy_migration' ] );
 		add_action( 'pre_get_posts', [ __CLASS__, 'include_associations_in_site_search' ] );
@@ -72,9 +98,12 @@ final class Association_Directory {
 	}
 
 	public static function register_taxonomy(): void {
+		// Taxonomie partagée : le type canonique « agenda » porte les timelines,
+		// le type historique « plaid_agenda_event » reste rattaché en lecture
+		// afin que les événements existants puissent être classés sans migration.
 		register_taxonomy(
 			'agenda_timeline',
-			[ 'agenda' ],
+			self::get_timeline_post_types(),
 			[
 				'labels' => [
 					'name'          => _x( 'Timelines Agenda', 'taxonomy general name', 'plaidact-campaign-core' ),
@@ -243,6 +272,9 @@ final class Association_Directory {
 	}
 
 	public static function render_timeline_block( array $attributes ): string {
+		if ( class_exists( Shortcodes::class ) && ! Shortcodes::is_module_enabled( 'enable_agenda' ) ) {
+			return '';
+		}
 		$term = isset( $attributes['term'] ) ? sanitize_title( (string) $attributes['term'] ) : '';
 		$layout = isset( $attributes['layout'] ) && in_array( (string) $attributes['layout'], [ 'vertical', 'horizontal' ], true ) ? (string) $attributes['layout'] : 'vertical';
 		$fill = isset( $attributes['fillEmptyMonths'] ) && $attributes['fillEmptyMonths'] ? '1' : '0';
@@ -261,6 +293,9 @@ final class Association_Directory {
 	}
 
 	public static function render_asso_block( array $attributes ): string {
+		if ( class_exists( Shortcodes::class ) && ! Shortcodes::is_module_enabled( 'enable_directory' ) ) {
+			return '';
+		}
 		return self::asso_directory_shortcode(
 			[
 				'cause'          => isset( $attributes['cause'] ) ? sanitize_title( (string) $attributes['cause'] ) : '',
@@ -384,6 +419,7 @@ Linktree|https://linktr.ee/acat"',
 		$status = isset( $_GET['status'] ) ? sanitize_key( (string) $_GET['status'] ) : '';
 		$count  = isset( $_GET['count'] ) ? absint( $_GET['count'] ) : 0;
 		$dupes  = isset( $_GET['dupes'] ) ? absint( $_GET['dupes'] ) : 0;
+		$error  = isset( $_GET['error'] ) ? sanitize_text_field( (string) $_GET['error'] ) : '';
 		$template_headers = implode( ',', [ 'title', 'slug', 'timeline', 'date_debut', 'date_fin', 'type_evenement', 'lieu', 'nom_organisation', 'lien_evenement' ] );
 		$template_row     = 'Réunion G7,reunion-g7,geopolitique,2026-06-02,2026-06-02,ponctuels,Ottawa,PLAID·ACT,https://example.org/evenement';
 		?>
@@ -391,6 +427,8 @@ Linktree|https://linktr.ee/acat"',
 			<h1><?php esc_html_e( 'Import des événements Agenda', 'plaidact-campaign-core' ); ?></h1>
 			<?php if ( 'ok' === $status ) : ?>
 				<div class="notice notice-success"><p><?php echo esc_html( sprintf( __( '%d événements importés/mis à jour (%d doublons ignorés).', 'plaidact-campaign-core' ), $count, $dupes ) ); ?></p></div>
+			<?php elseif ( 'error' === $status ) : ?>
+				<div class="notice notice-error"><p><?php echo esc_html( '' !== $error ? $error : __( 'Import impossible : vérifiez le fichier CSV.', 'plaidact-campaign-core' ) ); ?></p></div>
 			<?php endif; ?>
 			<p><a class="button" href="data:text/csv;charset=utf-8,<?php echo rawurlencode( $template_headers . "\n" . $template_row ); ?>" download="modele-import-agenda.csv"><?php esc_html_e( 'Télécharger un modèle CSV', 'plaidact-campaign-core' ); ?></a></p>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
@@ -447,6 +485,10 @@ Linktree|https://linktr.ee/acat"',
 	}
 
 	public static function asso_directory_shortcode( array $atts ): string {
+		// Module « Répertoire » désactivé : aucun rendu public.
+		if ( class_exists( Shortcodes::class ) && ! Shortcodes::is_module_enabled( 'enable_directory' ) ) {
+			return '';
+		}
 		$atts = shortcode_atts(
 			[
 				'posts_per_page' => 9,
@@ -471,6 +513,10 @@ Linktree|https://linktr.ee/acat"',
 	}
 
 	public static function timeline_shortcode( array $atts ): string {
+		// Module « Agenda » désactivé : aucun rendu public, valeur par défaut « activé ».
+		if ( class_exists( Shortcodes::class ) && ! Shortcodes::is_module_enabled( 'enable_agenda' ) ) {
+			return '';
+		}
 		$atts = shortcode_atts(
 				[
 					'term'  => '',
@@ -750,7 +796,9 @@ Linktree|https://linktr.ee/acat"',
 
 		$query = new WP_Query(
 			[
-				'post_type'      => 'agenda',
+				// Lecture bi-type : le canonique « agenda » plus l'historique
+				// « plaid_agenda_event », sans déplacer ni renommer aucune donnée.
+				'post_type'      => self::get_timeline_post_types(),
 				'post_status'    => 'publish',
 				'posts_per_page' => -1,
 				'meta_key'       => 'date_debut',
@@ -1428,22 +1476,41 @@ Linktree|https://linktr.ee/acat"',
 		}
 		check_admin_referer( 'plaidact_import_agenda' );
 		if ( empty( $_FILES['agenda_csv']['tmp_name'] ) ) {
-			self::redirect_agenda_import( 0, 0 );
+			self::redirect_agenda_import_error( __( 'CSV manquant.', 'plaidact-campaign-core' ) );
 		}
 
-		$handle = fopen( (string) $_FILES['agenda_csv']['tmp_name'], 'rb' );
+		// Contrôle du fichier téléversé : upload réel et extension CSV uniquement.
+		$tmp_name  = (string) $_FILES['agenda_csv']['tmp_name'];
+		$file_name = isset( $_FILES['agenda_csv']['name'] ) ? (string) $_FILES['agenda_csv']['name'] : '';
+		if ( ! is_uploaded_file( $tmp_name ) ) {
+			self::redirect_agenda_import_error( __( 'CSV manquant.', 'plaidact-campaign-core' ) );
+		}
+		$file_type = wp_check_filetype_and_ext( $tmp_name, $file_name );
+		if ( empty( $file_type['ext'] ) || 'csv' !== strtolower( (string) $file_type['ext'] ) ) {
+			self::redirect_agenda_import_error( __( 'Le fichier doit être un CSV.', 'plaidact-campaign-core' ) );
+		}
+
+		$handle = fopen( $tmp_name, 'rb' );
 		if ( false === $handle ) {
-			self::redirect_agenda_import( 0, 0 );
+			self::redirect_agenda_import_error( __( 'Impossible de lire le CSV.', 'plaidact-campaign-core' ) );
 		}
 		$first_line = (string) fgets( $handle );
+		if ( '' === trim( $first_line ) ) {
+			fclose( $handle );
+			self::redirect_agenda_import_error( __( 'CSV invalide.', 'plaidact-campaign-core' ) );
+		}
 		rewind( $handle );
 		$delimiter = substr_count( $first_line, ';' ) > substr_count( $first_line, ',' ) ? ';' : ',';
 		$headers = fgetcsv( $handle, 0, $delimiter, '"', '\\' );
 		if ( ! is_array( $headers ) ) {
 			fclose( $handle );
-			self::redirect_agenda_import( 0, 0 );
+			self::redirect_agenda_import_error( __( 'CSV invalide.', 'plaidact-campaign-core' ) );
 		}
 		$headers = array_map( static fn( $h ) => sanitize_key( (string) $h ), $headers );
+		if ( ! in_array( 'title', $headers, true ) ) {
+			fclose( $handle );
+			self::redirect_agenda_import_error( __( 'Colonne « title » manquante.', 'plaidact-campaign-core' ) );
+		}
 
 		$count = 0;
 		$dupes = 0;
@@ -1469,12 +1536,8 @@ Linktree|https://linktr.ee/acat"',
 			if ( $post_id <= 0 ) {
 				continue;
 			}
-			update_post_meta( $post_id, 'date_debut', (string) ( $data['date_debut'] ?? '' ) );
-			update_post_meta( $post_id, 'date_fin', (string) ( $data['date_fin'] ?? '' ) );
-			update_post_meta( $post_id, 'type_evenement', (string) ( $data['type_evenement'] ?? '' ) );
-			update_post_meta( $post_id, 'lieu', (string) ( $data['lieu'] ?? '' ) );
-			update_post_meta( $post_id, 'nom_organisation', (string) ( $data['nom_organisation'] ?? '' ) );
-			\plaidact_campaign_core_update_field( 'lien_evenement', (string) ( $data['lien_evenement'] ?? '' ), $post_id );
+			// Import additif : les valeurs existantes ne sont jamais vidées.
+			self::sync_agenda_meta( $post_id, $data );
 			self::sync_agenda_timeline_term( $post_id, (string) ( $data['timeline'] ?? '' ) );
 			$count++;
 		}
@@ -1882,24 +1945,66 @@ Linktree|https://linktr.ee/acat"',
 		exit;
 	}
 
+	private static function redirect_agenda_import_error( string $message ): void {
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'post_type' => 'agenda',
+					'page'      => 'plaidact-agenda-import',
+					'status'    => 'error',
+					'error'     => $message,
+				],
+				admin_url( 'edit.php' )
+			)
+		);
+		exit;
+	}
+
 	/** @param array<string,string> $data */
 	private static function upsert_agenda_post( array $data ): int {
 		$slug = sanitize_title( (string) ( $data['slug'] ?? '' ) );
 		$post = '' !== $slug ? get_page_by_path( $slug, OBJECT, 'agenda' ) : null;
+		if ( $post instanceof WP_Post ) {
+			// Import additif : une fiche existante n'est jamais réinitialisée
+			// (contenu, statut, dates, auteur, extrait, slug et médias conservés).
+			return $post->ID;
+		}
 		$postarr = [
 			'post_type'    => 'agenda',
 			'post_status'  => 'publish',
 			'post_title'   => sanitize_text_field( (string) ( $data['title'] ?? '' ) ),
 			'post_content' => '',
 		];
-		if ( $post instanceof WP_Post ) {
-			$postarr['ID'] = $post->ID;
-			return (int) wp_update_post( $postarr );
-		}
 		if ( '' !== $slug ) {
 			$postarr['post_name'] = $slug;
 		}
 		return (int) wp_insert_post( $postarr );
+	}
+
+	/**
+	 * Complète les métadonnées d'un événement sans jamais vider l'existant.
+	 *
+	 * @param array<string,string> $data Ligne CSV déjà normalisée.
+	 */
+	private static function sync_agenda_meta( int $post_id, array $data ): void {
+		foreach ( [ 'date_debut', 'date_fin', 'type_evenement', 'lieu', 'nom_organisation' ] as $key ) {
+			$new_value = trim( (string) ( $data[ $key ] ?? '' ) );
+			if ( '' === $new_value ) {
+				continue;
+			}
+			$current = trim( (string) get_post_meta( $post_id, $key, true ) );
+			if ( '' === $current ) {
+				update_post_meta( $post_id, $key, $new_value );
+			}
+		}
+
+		$new_link = trim( (string) ( $data['lien_evenement'] ?? '' ) );
+		if ( '' !== $new_link ) {
+			$current_link = trim( (string) \plaidact_campaign_core_get_field( 'lien_evenement', $post_id ) );
+			if ( '' === $current_link ) {
+				\plaidact_campaign_core_update_field( 'lien_evenement', $new_link, $post_id );
+			}
+		}
 	}
 
 	private static function sync_agenda_timeline_term( int $post_id, string $timeline_name ): void {
@@ -1912,7 +2017,8 @@ Linktree|https://linktr.ee/acat"',
 			$term = wp_insert_term( $timeline_name, 'agenda_timeline' );
 		}
 		if ( is_array( $term ) && isset( $term['term_id'] ) ) {
-			wp_set_object_terms( $post_id, [ (int) $term['term_id'] ], 'agenda_timeline', false );
+			// Ajoute la timeline sans retirer les termes déjà associés.
+			wp_set_object_terms( $post_id, [ (int) $term['term_id'] ], 'agenda_timeline', true );
 		}
 	}
 

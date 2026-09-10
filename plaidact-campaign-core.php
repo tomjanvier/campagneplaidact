@@ -123,6 +123,7 @@ require_once PLAIDACT_CORE_PATH .
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-campaign-blocks.php";
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-association-directory.php";
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-contact-directory.php";
+require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-act-sso.php";
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-actyl.php";
 
 /**
@@ -240,6 +241,7 @@ function plaidact_campaign_core_init(): void
     \Plaidact\CampaignCore\Blocks::boot();
     \Plaidact\CampaignCore\Association_Directory::init();
     \PlaidAct_Contact_Directory::init();
+    \Plaidact\CampaignCore\Act_SSO::init();
 
     // Synchronisation Actyl : singleton désactivé par défaut, sans effet
     // réseau tant que la connexion n'est pas configurée et validée.

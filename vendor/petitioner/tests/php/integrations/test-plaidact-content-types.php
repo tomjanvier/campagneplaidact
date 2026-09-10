@@ -2,10 +2,12 @@
 
 use Plaidact\CampaignCore\CPT;
 use Plaidact\CampaignCore\Polylang;
+use Plaidact\CampaignCore\Shortcodes;
 use WorDBless\BaseTestCase;
 
 require_once dirname(__DIR__, 5) . '/includes/class-plaidact-campaign-cpt.php';
 require_once dirname(__DIR__, 5) . '/includes/class-plaidact-campaign-polylang.php';
+require_once dirname(__DIR__, 5) . '/includes/class-plaidact-campaign-shortcodes.php';
 
 final class Test_Plaidact_Content_Types extends BaseTestCase
 {
@@ -15,21 +17,28 @@ final class Test_Plaidact_Content_Types extends BaseTestCase
 
         delete_option('plaidact_core_content_schema_version');
         delete_option('plaidact_core_rewrite_schema_version');
+        delete_option('plaidact_campaign_settings');
 
         CPT::register_post_types();
         CPT::register_taxonomies();
+        Shortcodes::boot();
     }
 
     public function tear_down()
     {
         delete_option('plaidact_core_content_schema_version');
         delete_option('plaidact_core_rewrite_schema_version');
+        delete_option('plaidact_campaign_settings');
 
         foreach (['breves', 'plaid_newsletter', 'plaid_breve', 'plaid_agenda_event', 'plaid_partner', 'plaid_social_embed'] as $post_type) {
             if (post_type_exists($post_type)) {
                 unregister_post_type($post_type);
             }
         }
+
+        remove_shortcode('plaidact_breves');
+        remove_shortcode('plaid_breves');
+        remove_shortcode('breves');
 
         parent::tear_down();
     }
@@ -90,5 +99,16 @@ final class Test_Plaidact_Content_Types extends BaseTestCase
         $this->assertArrayHasKey('petitioner-petition', $post_types);
         $this->assertArrayHasKey('plaid_breve', $post_types);
         $this->assertArrayHasKey('plaid_newsletter', $post_types);
+    }
+
+    public function test_breve_shortcodes_are_registered_and_respect_module_toggle(): void
+    {
+        $this->assertTrue(shortcode_exists('plaidact_breves'));
+        $this->assertTrue(shortcode_exists('plaid_breves'));
+        $this->assertTrue(shortcode_exists('breves'));
+
+        update_option('plaidact_campaign_settings', ['enable_breves' => '0']);
+
+        $this->assertSame('', Shortcodes::render_breves());
     }
 }

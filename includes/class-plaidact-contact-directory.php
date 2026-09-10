@@ -472,6 +472,10 @@ final class PlaidAct_Contact_Directory {
 
 
 	public function render_shortcode(): string {
+		// Module « Répertoire » désactivé : aucun rendu public, activé par défaut.
+		if ( class_exists( 'Plaidact\CampaignCore\Shortcodes' ) && ! \Plaidact\CampaignCore\Shortcodes::is_module_enabled( 'enable_directory' ) ) {
+			return '';
+		}
 		wp_enqueue_style( 'plaidact-fluentcrm-directory' );
 		wp_enqueue_script( 'plaidact-contact-directory' );
 		$lists = $this->get_lists();
