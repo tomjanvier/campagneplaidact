@@ -109,6 +109,7 @@ final class Act_SSO
         add_action("admin_post_nopriv_plaidact_act_sso_callback", [__CLASS__, "handle_sso_callback"]);
         add_action("admin_post_plaidact_act_sso_callback", [__CLASS__, "handle_sso_callback"]);
         add_action("admin_post_plaidact_act_sso_discover", [__CLASS__, "handle_discover"]);
+        add_action("admin_post_plaidact_act_sso_logout", [__CLASS__, "handle_sso_logout"]);
 
         // Bouton sur l'écran de connexion natif + shortcode public.
         add_action("login_form", [__CLASS__, "render_login_form_button"]);
@@ -118,6 +119,7 @@ final class Act_SSO
         // Autorise la redirection vers l'hôte Act configuré (wp_safe_redirect
         // refuse par défaut tout hôte externe, y compris en production).
         add_filter("allowed_redirect_hosts", [__CLASS__, "allow_act_host"]);
+        add_filter("logout_url", [__CLASS__, "filter_logout_url"], 10, 2);
     }
 
     /* ---------------------------------------------------------------------
@@ -313,7 +315,7 @@ final class Act_SSO
             return $empty;
         }
 
-        $response = wp_remote_get($issuer . "/.well-known/openid-configuration", ["timeout" => 15]);
+        $response = wp_remote_get($issuer . "/.well-known/openid-configuration", ["timeout" => 5]);
 
         if (is_wp_error($response)) {
             return $empty;
@@ -357,6 +359,30 @@ final class Act_SSO
             "plaidact_act_sso_callback",
             admin_url("admin-post.php")
         );
+    }
+
+    /** Normalise une destination vers un chemin local relatif uniquement. */
+    public static function safe_relative_path(string $candidate): string
+    {
+        $candidate = trim($candidate);
+        if ("" === $candidate) {
+            return "/";
+        }
+        if (str_starts_with($candidate, "/") && !str_starts_with($candidate, "//")) {
+            return $candidate;
+        }
+
+        $parts = wp_parse_url($candidate);
+        $home = wp_parse_url(home_url("/"));
+        if (
+            !is_array($parts) || !is_array($home) || empty($parts["host"]) ||
+            strtolower((string) $parts["host"]) !== strtolower((string) ($home["host"] ?? ""))
+        ) {
+            return "/";
+        }
+
+        $path = "/" . ltrim((string) ($parts["path"] ?? ""), "/");
+        return !empty($parts["query"]) ? $path . "?" . $parts["query"] : $path;
     }
 
     /* ---------------------------------------------------------------------
@@ -603,8 +629,8 @@ final class Act_SSO
         $state = wp_generate_password(32, false);
         $verifier = wp_generate_password(64, false);
         $redirect_to = isset($_REQUEST["redirect_to"])
-            ? wp_validate_redirect(wp_unslash($_REQUEST["redirect_to"]), home_url("/"))
-            : home_url("/");
+            ? self::safe_relative_path((string) wp_unslash($_REQUEST["redirect_to"]))
+            : "/";
 
         set_transient(
             self::STATE_PREFIX . $state,
@@ -671,7 +697,7 @@ final class Act_SSO
         }
 
         $token_response = wp_remote_post($discovery["token_endpoint"], [
-            "timeout" => 15,
+            "timeout" => 5,
             "body" => $token_body,
         ]);
 
@@ -687,7 +713,7 @@ final class Act_SSO
         }
 
         $userinfo_response = wp_remote_get($discovery["userinfo_endpoint"], [
-            "timeout" => 15,
+            "timeout" => 5,
             "headers" => ["Authorization" => "Bearer " . $access_token],
         ]);
 
@@ -731,7 +757,7 @@ final class Act_SSO
          */
         do_action("plaidact_act_sso_logged_in", $user->ID, $identity);
 
-        wp_safe_redirect(wp_validate_redirect((string) ($stored["redirect_to"] ?? home_url("/")), home_url("/")));
+        wp_safe_redirect(home_url(self::safe_relative_path((string) ($stored["redirect_to"] ?? "/"))));
         exit;
     }
 
@@ -865,7 +891,45 @@ final class Act_SSO
             return;
         }
 
-        $user->set_role($mapped);
+        // Additif : ne retire jamais un rôle ni une capacité existante.
+        $user->add_role($mapped);
+    }
+
+    /** Remplace le lien de déconnexion par le flux local puis central Act. */
+    public static function filter_logout_url(string $logout_url, string $redirect): string
+    {
+        if (!self::is_sso_enabled()) {
+            return $logout_url;
+        }
+        $url = add_query_arg(
+            [
+                "action" => "plaidact_act_sso_logout",
+                "redirect_to" => self::safe_relative_path($redirect),
+            ],
+            admin_url("admin-post.php")
+        );
+
+        return wp_nonce_url($url, "plaidact_act_sso_logout");
+    }
+
+    /** Détruit d'abord la session WordPress, puis termine la session Act. */
+    public static function handle_sso_logout(): void
+    {
+        check_admin_referer("plaidact_act_sso_logout");
+        $redirect = isset($_GET["redirect_to"])
+            ? self::safe_relative_path((string) wp_unslash($_GET["redirect_to"]))
+            : "/";
+        $discovery = self::get_discovery();
+
+        wp_logout();
+
+        if (!empty($discovery["end_session_endpoint"])) {
+            wp_safe_redirect($discovery["end_session_endpoint"]);
+            exit;
+        }
+
+        wp_safe_redirect(home_url($redirect));
+        exit;
     }
 
     /* ---------------------------------------------------------------------
@@ -887,7 +951,7 @@ final class Act_SSO
         return add_query_arg(
             [
                 "action" => "plaidact_act_sso_start",
-                "redirect_to" => wp_validate_redirect($redirect_to, home_url("/")),
+                "redirect_to" => self::safe_relative_path($redirect_to),
             ],
             admin_url("admin-post.php")
         );
@@ -975,7 +1039,7 @@ final class Act_SSO
 
         return sprintf(
             '<p class="plaidact-act-sso-login"><a class="button button-secondary" href="%s">%s</a></p>',
-            esc_url(self::get_start_url(wp_validate_redirect($redirect, home_url("/")))),
+            esc_url(self::get_start_url(self::safe_relative_path($redirect))),
             esc_html($label)
         );
     }

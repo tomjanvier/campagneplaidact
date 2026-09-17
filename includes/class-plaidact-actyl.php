@@ -41,6 +41,12 @@ final class Actyl
     /** Curseur du rattrapage : dernière ligne de signature traitée (id). */
     private const OPTION_BACKFILL_CURSOR = "plaidact_actyl_backfill_cursor";
 
+    /** Marques persistantes donation Givoly → identifiant du don Actyl. */
+    private const OPTION_DONATION_MARKS = "plaidact_actyl_donation_marks";
+
+    /** Cache court de la liste des pétitions publiée par Actyl. */
+    private const PETITIONS_TRANSIENT = "plaidact_actyl_petitions";
+
     /** Métadonnée de liaison pétition → slug de campagne Actyl. */
     private const META_CAMPAIGN_SLUG = "_plaidact_actyl_campaign_slug";
 
@@ -74,6 +80,9 @@ final class Actyl
      * @var self|null
      */
     private static ?self $instance = null;
+
+    /** Identifiant Actyl renvoyé par le dernier POST de don réussi. */
+    private ?string $last_donation_id = null;
 
     /**
      * Point d'entrée : instancie le module une seule fois.
@@ -397,8 +406,17 @@ final class Actyl
         $message = "";
 
         if (is_array($decoded)) {
+            if (array_key_exists("created", $decoded) || array_key_exists("newsletterStatus", $decoded)) {
+                $message = sprintf(
+                    "created=%s, newsletterStatus=%s",
+                    !empty($decoded["created"]) ? "true" : "false",
+                    null === ($decoded["newsletterStatus"] ?? null)
+                        ? "null"
+                        : sanitize_text_field((string) $decoded["newsletterStatus"])
+                );
+            }
             foreach (["message", "error", "ok"] as $key) {
-                if (isset($decoded[$key])) {
+                if ("" === $message && isset($decoded[$key])) {
                     $message = is_bool($decoded[$key])
                         ? ($decoded[$key] ? "ok" : "ko")
                         : (string) $decoded[$key];
@@ -452,6 +470,55 @@ final class Actyl
         $log = get_option(self::OPTION_LOG, []);
 
         return is_array($log) ? $log : [];
+    }
+
+    /**
+     * Liste les pétitions publiées, avec un cache court pour l'administration.
+     * Une panne conserve le champ libre : elle ne bloque jamais l'édition.
+     *
+     * @return array<int,array{slug:string,title:string,count:int}>
+     */
+    private function get_remote_petitions(): array
+    {
+        if (!$this->is_active()) {
+            return [];
+        }
+
+        $cached = get_transient(self::PETITIONS_TRANSIENT);
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $result = $this->request("/api/v1/petitions", "GET");
+        if (200 !== $result["code"]) {
+            return [];
+        }
+
+        $decoded = json_decode($result["body"], true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $petitions = [];
+        foreach ($decoded as $petition) {
+            if (!is_array($petition)) {
+                continue;
+            }
+            $slug = sanitize_title((string) ($petition["slug"] ?? ""));
+            $title = sanitize_text_field((string) ($petition["title"] ?? ""));
+            if ("" === $slug || "" === $title) {
+                continue;
+            }
+            $petitions[] = [
+                "slug" => $slug,
+                "title" => $title,
+                "count" => absint($petition["count"] ?? 0),
+            ];
+        }
+
+        set_transient(self::PETITIONS_TRANSIENT, $petitions, 5 * MINUTE_IN_SECONDS);
+
+        return $petitions;
     }
 
     /* ---------------------------------------------------------------------
@@ -601,8 +668,8 @@ final class Actyl
     /**
      * Affiche le champ « Slug de campagne Actyl ».
      *
-     * Le contrat Actyl n'expose pas de liste des campagnes : champ libre,
-     * alimenté par le slug visible dans l'URL de la campagne côté Actyl.
+     * La liste distante est proposée quand la connexion est active. Le champ
+     * reste libre pour préserver l'édition si Actyl est indisponible.
      *
      * @param \WP_Post $post Pétition en cours d'édition.
      * @return void
@@ -612,6 +679,7 @@ final class Actyl
         wp_nonce_field("plaidact_actyl_campaign_save", "plaidact_actyl_campaign_nonce");
 
         $slug = (string) get_post_meta($post->ID, self::META_CAMPAIGN_SLUG, true);
+        $petitions = $this->get_remote_petitions();
         ?>
         <p>
             <label for="plaidact_actyl_campaign_slug">
@@ -623,8 +691,23 @@ final class Actyl
                 id="plaidact_actyl_campaign_slug"
                 name="plaidact_actyl_campaign_slug"
                 value="<?php echo esc_attr($slug); ?>"
+                list="plaidact_actyl_petitions"
                 placeholder="ex. zones-humides"
             />
+            <?php if ([] !== $petitions) : ?>
+                <datalist id="plaidact_actyl_petitions">
+                    <?php foreach ($petitions as $petition) : ?>
+                        <option value="<?php echo esc_attr($petition["slug"]); ?>">
+                            <?php echo esc_html(sprintf(
+                                /* translators: 1: titre, 2: nombre de signatures */
+                                __("%1$s — %2$d signature(s)", "plaidact-campaign-core"),
+                                $petition["title"],
+                                $petition["count"]
+                            )); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </datalist>
+            <?php endif; ?>
         </p>
         <p class="description">
             <?php esc_html_e(
@@ -804,7 +887,7 @@ final class Actyl
         $path = "/api/v1/petitions/" . rawurlencode($campaign_slug) . "/signatures";
         $result = $this->request($path, "POST", $payload);
 
-        if ($result["code"] >= 200 && $result["code"] < 300) {
+        if (201 === $result["code"]) {
             return true;
         }
 
@@ -962,6 +1045,7 @@ final class Actyl
      */
     public function record_donation(array $args): bool
     {
+        $this->last_donation_id = null;
         if (!$this->is_active()) {
             return false;
         }
@@ -995,7 +1079,20 @@ final class Actyl
 
         $result = $this->request("/api/v1/donations", "POST", $payload);
 
-        return $result["code"] >= 200 && $result["code"] < 300;
+        if (201 !== $result["code"]) {
+            return false;
+        }
+
+        $decoded = json_decode($result["body"], true);
+        $donation_id = is_array($decoded)
+            ? sanitize_text_field((string) ($decoded["donationId"] ?? ""))
+            : "";
+        if ("" === $donation_id) {
+            return false;
+        }
+        $this->last_donation_id = $donation_id;
+
+        return true;
     }
 
     /**
@@ -1013,12 +1110,25 @@ final class Actyl
      */
     public function handle_givoly_donation(array $donation): bool
     {
+        $donation_id = absint($donation["donation_id"] ?? 0);
         $email = sanitize_email((string) ($donation["email"] ?? ""));
         $amount_cents = isset($donation["amount_cents"]) ? absint($donation["amount_cents"]) : 0;
 
-        if ("" === $email || $amount_cents <= 0) {
+        if ($donation_id <= 0 || "" === $email || $amount_cents <= 0) {
             return false;
         }
+
+        $marks = get_option(self::OPTION_DONATION_MARKS, []);
+        $marks = is_array($marks) ? $marks : [];
+        if (!empty($marks[$donation_id])) {
+            return true;
+        }
+
+        $lock = "plaidact_actyl_donation_" . $donation_id;
+        if (get_transient($lock)) {
+            return false;
+        }
+        set_transient($lock, 1, 5 * MINUTE_IN_SECONDS);
 
         $first_name = sanitize_text_field((string) ($donation["first_name"] ?? ""));
         $last_name = sanitize_text_field((string) ($donation["last_name"] ?? ""));
@@ -1033,7 +1143,7 @@ final class Actyl
             $donation
         );
 
-        return $this->record_donation([
+        $ok = $this->record_donation([
             "email" => $email,
             "full_name" => trim($first_name . " " . $last_name),
             "amount_cents" => $amount_cents,
@@ -1045,6 +1155,16 @@ final class Actyl
                 : __("Don", "plaidact-campaign-core"),
             "occurred_at" => (string) ($donation["occurred_at"] ?? ""),
         ]);
+
+        if ($ok) {
+            // La marque est liée à l'identifiant persistant du paiement Givoly.
+            // Sa présence interdit tout nouveau POST pour ce même paiement.
+            $marks[$donation_id] = $this->last_donation_id;
+            update_option(self::OPTION_DONATION_MARKS, $marks, false);
+        }
+        delete_transient($lock);
+
+        return $ok;
     }
 
     /* ---------------------------------------------------------------------
