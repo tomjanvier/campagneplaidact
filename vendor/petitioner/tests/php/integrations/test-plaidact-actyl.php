@@ -34,6 +34,7 @@ final class Test_Plaidact_Actyl extends BaseTestCase
         delete_option('plaidact_actyl_ping_ok_at');
         delete_option('plaidact_actyl_backfill_cursor');
         delete_option('plaidact_actyl_log');
+        delete_option('plaidact_actyl_donation_marks');
 
         $this->actyl = Actyl::init();
     }
@@ -44,6 +45,7 @@ final class Test_Plaidact_Actyl extends BaseTestCase
         delete_option('plaidact_actyl_ping_ok_at');
         delete_option('plaidact_actyl_backfill_cursor');
         delete_option('plaidact_actyl_log');
+        delete_option('plaidact_actyl_donation_marks');
 
         parent::tear_down();
     }
@@ -198,7 +200,7 @@ final class Test_Plaidact_Actyl extends BaseTestCase
 
             return [
                 'response' => ['code' => 200],
-                'body' => '{"ok":true}',
+                'body' => '{"ok":true,"donationId":"actyl-don-7"}',
             ];
         }, 10, 2);
 
@@ -325,7 +327,7 @@ final class Test_Plaidact_Actyl extends BaseTestCase
 
             return [
                 'response' => ['code' => 201],
-                'body' => '{"ok":true}',
+                'body' => '{"ok":true,"donationId":"actyl-don-7"}',
             ];
         }, 10, 3);
 
@@ -357,6 +359,19 @@ final class Test_Plaidact_Actyl extends BaseTestCase
             'fullName' => 'Jean Martin',
             'amountCents' => 5000,
         ], $captured['body']);
+        $this->assertSame(
+            'actyl-don-7',
+            get_option('plaidact_actyl_donation_marks', [])[7] ?? null
+        );
+
+        // Une nouvelle livraison du même événement ne déclenche aucun POST.
+        $captured = null;
+        $this->assertTrue($this->actyl->handle_givoly_donation([
+            'donation_id' => 7,
+            'email' => 'donateur@exemple.fr',
+            'amount_cents' => 5000,
+        ]));
+        $this->assertNull($captured);
     }
 
     public function test_inactive_connection_never_sends_givoly_donations(): void

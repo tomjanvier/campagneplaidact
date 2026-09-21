@@ -161,6 +161,13 @@ final class Test_Plaidact_Act_SSO extends BaseTestCase
         );
     }
 
+    public function test_next_is_limited_to_a_local_relative_path(): void
+    {
+        $this->assertSame('/wp-admin/edit.php?page=1', Act_SSO::safe_relative_path('/wp-admin/edit.php?page=1'));
+        $this->assertSame('/', Act_SSO::safe_relative_path('//evil.example/path'));
+        $this->assertSame('/', Act_SSO::safe_relative_path('https://evil.example/path'));
+    }
+
     public function test_insecure_localhost_issuer_rejected_by_default(): void
     {
         $clean = Act_SSO::sanitize_sso_settings([

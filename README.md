@@ -50,7 +50,7 @@ Le plugin peut pousser en temps réel vers une instance [Actyl](*plateforme de p
    - renseigner l'URL de l'instance (HTTPS uniquement) et le token ;
    - cocher « Activer la synchronisation » puis enregistrer ;
    - cliquer sur **« Tester la connexion »** : le résultat s'affiche inline (succès vert / code HTTP ou message réseau précis). La synchronisation ne démarre qu'après ce test réussi ; toute modification d'URL ou de token en exige un nouveau.
-3. Pour chaque pétition à synchroniser, ouvrir la pétition dans Petitioner et renseigner le **slug de campagne Actyl** dans la metabox « Connexion Actyl ». Vide = aucune donnée envoyée pour cette pétition.
+3. Pour chaque pétition à synchroniser, ouvrir la pétition dans Petitioner et choisir le **slug de campagne Actyl** proposé par `/api/v1/petitions` dans la metabox « Connexion Actyl ». Si Actyl est indisponible, le champ reste libre. Vide = aucune donnée envoyée pour cette pétition.
 
 Comportements garantis :
 
@@ -71,7 +71,7 @@ wp plaidact actyl-backfill --reset=1        # réinitialise le périmètre coura
 
 ### Dons Givoly
 
-Lorsque l'extension **Givoly** est active sur le même site, chaque don confirmé est automatiquement transmis à Actyl : Givoly émet l'action `givoly_donation_completed` à l'enregistrement de tout don validé (Stripe, HelloAsso, dons saisis manuellement), que le module Actyl relaie vers `/api/v1/donations`. La passerelle d'origine (`stripe`, `helloasso`, …) est transmise dans le champ `provider` ; elle est surchargeable via le filtre `plaidact_actyl_donation_provider`.
+Lorsque l'extension **Givoly** est active sur le même site, chaque don confirmé est automatiquement transmis à Actyl : Givoly émet l'action `givoly_donation_completed` à l'enregistrement de tout don validé (Stripe, HelloAsso, dons saisis manuellement), que le module Actyl relaie vers `/api/v1/donations`. L'identifiant `donationId` renvoyé par Actyl est persisté sous la clé du paiement Givoly ; toute nouvelle livraison du même événement est ignorée. La passerelle d'origine (`stripe`, `helloasso`, …) est transmise dans le champ `provider` ; elle est surchargeable via le filtre `plaidact_actyl_donation_provider`.
 
 Pour les sources autres que Givoly, un hook manuel reste disponible :
 
@@ -94,6 +94,7 @@ Dans tous les cas, aucun don ne part si la synchronisation n'est pas active ; le
 2. Réaliser un don test depuis `[givoly_form]`.
 3. Vérifier dans le journal Actyl (Réglages → PLAID·ACT) la ligne `/api/v1/donations` avec code 201.
 4. Dans Actyl : le don apparaît sur le contact, passé en catégorie DONOR.
+5. Rejouer le même événement Givoly : aucune seconde requête `/donations` ne doit apparaître dans le journal.
 
 ### Test manuel de bout en bout
 
@@ -105,6 +106,21 @@ Dans tous les cas, aucun don ne part si la synchronisation n'est pas active ; le
 6. Re-soumettre le même email : le compteur ne double pas (mise à jour idempotente).
 7. Arrêter l'instance Actyl, signer à nouveau : le site continue de fonctionner normalement, le journal enregistre l'échec réseau, puis après redémarrage d'Actyl la relance automatique (+10 min) fait apparaître la signature.
 8. Soumettre le formulaire `[plaid_newsletter_form]` : le contact apparaît dans Actyl avec source `newsletter`, catégorie SUPPORTER et tag `newsletter-site`.
+
+### Connexion SSO avec Act
+
+Dans **Réglages → PLAID·ACT → Se connecter avec Act**, renseigner l'issuer
+(`https://act.plaidact.org`), le `client_id` dédié à WordPress et, si le client
+n'est pas public, son secret. Enregistrer exactement l'URL de rappel affichée
+dans l'administration Act. Le plugin découvre les endpoints, utilise PKCE S256,
+consomme `state` une seule fois et lie les comptes par `sub`, puis par email.
+Les rôles Act sont ajoutés sans retirer les rôles WordPress existants.
+
+Scénario manuel : tester la découverte, ouvrir `wp-login.php`, se connecter avec
+Act, vérifier la création ou la liaison sans changement de mot de passe, puis se
+déconnecter et constater la fin des sessions WordPress et Act. Rejouer le même
+callback doit échouer ; une destination externe dans `redirect_to` doit revenir
+à l'accueil du site.
 
 ## Journal des optimisations (2.3.0)
 
