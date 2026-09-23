@@ -124,5 +124,54 @@ final class Blocks {
 				),
 			)
 		);
+
+		register_block_type(
+			'plaidact/breves',
+			array(
+				'api_version'     => 2,
+				'editor_script'   => 'plaidact-campaign-blocks',
+				'render_callback' => static function ( array $attributes ): string {
+					// Respect du toggle module comme pour le shortcode.
+					if ( ! Shortcodes::is_module_enabled( 'enable_breves' ) ) {
+						return '';
+					}
+					return Shortcodes::render_breves(
+						array(
+							'title'       => isset( $attributes['title'] ) ? (string) $attributes['title'] : '',
+							'description' => isset( $attributes['description'] ) ? (string) $attributes['description'] : '',
+							'limit'       => isset( $attributes['limit'] ) ? (int) $attributes['limit'] : 8,
+							'topic'       => isset( $attributes['topic'] ) ? (string) $attributes['topic'] : '',
+							'layout'      => isset( $attributes['layout'] ) ? (string) $attributes['layout'] : 'scroll',
+						)
+					);
+				},
+				'attributes'      => array(
+					'title'       => array(
+						'type'    => 'string',
+						'default' => 'ACTUALITÉS',
+					),
+					'description' => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'limit'       => array(
+						'type'    => 'number',
+						'default' => 8,
+					),
+					'topic'       => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'layout'      => array(
+						'type'    => 'string',
+						'default' => 'scroll',
+					),
+				),
+				'supports'        => array(
+					'className' => true,
+					'anchor'    => true,
+				),
+			)
+		);
 	}
 }

@@ -101,30 +101,41 @@ final class Shortcodes
             wp_add_inline_style("plaidact-campaign-shortcodes", $newsletter_custom_css);
         }
 
-        if (!self::current_request_uses_petition()) {
-            return;
+        if (self::current_request_uses_petition()) {
+            wp_enqueue_script(
+                "plaidact-campaign-givoly",
+                PLAIDACT_CORE_URL . "assets/campaign-givoly.js",
+                [],
+                plaidact_campaign_core_asset_version("assets/campaign-givoly.js"),
+                [
+                    "in_footer" => true,
+                    "strategy" => "defer",
+                ]
+            );
+            wp_enqueue_script(
+                "plaidact-organization-signature",
+                PLAIDACT_CORE_URL . "assets/campaign-organization-signature.js",
+                [],
+                plaidact_campaign_core_asset_version("assets/campaign-organization-signature.js"),
+                [
+                    "in_footer" => true,
+                    "strategy" => "defer",
+                ]
+            );
         }
 
-        wp_enqueue_script(
-            "plaidact-campaign-givoly",
-            PLAIDACT_CORE_URL . "assets/campaign-givoly.js",
-            [],
-            plaidact_campaign_core_asset_version("assets/campaign-givoly.js"),
-            [
-                "in_footer" => true,
-                "strategy" => "defer",
-            ]
-        );
-        wp_enqueue_script(
-            "plaidact-organization-signature",
-            PLAIDACT_CORE_URL . "assets/campaign-organization-signature.js",
-            [],
-            plaidact_campaign_core_asset_version("assets/campaign-organization-signature.js"),
-            [
-                "in_footer" => true,
-                "strategy" => "defer",
-            ]
-        );
+        if (self::current_request_uses_breves()) {
+            wp_enqueue_script(
+                "plaidact-breves",
+                PLAIDACT_CORE_URL . "assets/js/plaidact-breves.js",
+                [],
+                plaidact_campaign_core_asset_version("assets/js/plaidact-breves.js"),
+                [
+                    "in_footer" => true,
+                    "strategy" => "defer",
+                ]
+            );
+        }
     }
 
     /**
@@ -186,6 +197,70 @@ final class Shortcodes
         );
 
         return $uses_petition_cache;
+    }
+
+    /**
+     * Détecte si la requête affiche des brèves afin de ne charger le script
+     * de défilement que sur les pages utiles.
+     *
+     * Le script est léger mais on évite de l'envoyer sur chaque page pour
+     * préserver le budget performance des pages sans brèves.
+     *
+     * @return bool
+     */
+    public static function current_request_uses_breves(): bool
+    {
+        static $uses_breves_cache = null;
+
+        if (null !== $uses_breves_cache) {
+            return $uses_breves_cache;
+        }
+
+        $uses_breves = is_post_type_archive("plaid_breve") || is_singular("plaid_breve") || is_tax("plaid_breve_topic");
+
+        if (!$uses_breves) {
+            $post = get_post();
+
+            if ($post instanceof \WP_Post) {
+                $content = (string) $post->post_content;
+                $uses_breves = has_shortcode($content, "plaidact_breves")
+                    || has_shortcode($content, "plaid_breves")
+                    || has_shortcode($content, "breves")
+                    || has_block("plaidact/breves", $post);
+            }
+        }
+
+        if (!$uses_breves) {
+            $widgets = get_option("widget_text", []);
+            if (is_array($widgets)) {
+                foreach ($widgets as $widget) {
+                    if (!is_array($widget)) {
+                        continue;
+                    }
+                    $widget_content = (string) ($widget["text"] ?? "");
+                    if (
+                        has_shortcode($widget_content, "plaidact_breves") ||
+                        has_shortcode($widget_content, "plaid_breves") ||
+                        has_shortcode($widget_content, "breves")
+                    ) {
+                        $uses_breves = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        /**
+         * Filtre le chargement des ressources de brèves sur la requête courante.
+         *
+         * @param bool $uses_breves Indique si des brèves ont été détectées.
+         */
+        $uses_breves_cache = (bool) apply_filters(
+            "plaidact_campaign_loads_breves_assets",
+            $uses_breves
+        );
+
+        return $uses_breves_cache;
     }
 
     public static function register_admin_pages(): void
@@ -2196,10 +2271,14 @@ final class Shortcodes
     }
 
     /**
-     * Affiche les dernières brèves publiées.
+     * Affiche les dernières brèves publiées en carrousel défilable.
      *
      * Les alias sont conservés pour permettre aux pages historiques de
      * continuer à fonctionner après la centralisation du CPT dans le plugin.
+     * Le rendu reproduit la maquette « ACTUALITÉS » : bande horizontale
+     * avec défilement natif, snap, séparateur vertical et métadonnée
+     * date | thématique. Le CSS assure le défilement sans JS ; un script
+     * léger ajoute le drag et les flèches clavier pour le confort.
      *
      * @param array<string,mixed> $atts Attributs du shortcode.
      * @return string
@@ -2214,62 +2293,148 @@ final class Shortcodes
         $settings = self::get_settings(true, $language);
         $atts = shortcode_atts(
             [
-                "title" => __("Les brèves", "plaidact-campaign-core"),
+                "title"       => __("ACTUALITÉS", "plaidact-campaign-core"),
                 "description" => "",
-                "limit" => 6,
-                "topic" => "",
+                "limit"       => 8,
+                "topic"       => "",
+                "layout"      => "scroll",
+                "class"       => "",
+                "className"   => "",
             ],
             $atts,
             "plaidact_breves"
         );
 
-        $limit = max(1, min(24, absint($atts["limit"])));
+        $limit  = max(1, min(24, absint($atts["limit"])));
+        $layout = in_array((string) $atts["layout"], ["scroll", "grid"], true) ? (string) $atts["layout"] : "scroll";
+        $topic  = sanitize_title((string) $atts["topic"]);
+        $title  = trim((string) $atts["title"]);
+        $description = trim((string) $atts["description"]);
+        $extra_class = self::sanitize_css_classes((string) ($atts["class"] ?? "") . " " . (string) ($atts["className"] ?? ""));
+
+        // Requête optimisée : pas de comptage total, cache méta inutile.
+        // On précharge les termes en une seule requête via update_post_term_cache.
         $query_args = [
-            "post_type" => "plaid_breve",
-            "post_status" => "publish",
-            "posts_per_page" => $limit,
-            "orderby" => "date",
-            "order" => "DESC",
-            "no_found_rows" => true,
+            "post_type"              => "plaid_breve",
+            "post_status"            => "publish",
+            "posts_per_page"         => $limit,
+            "orderby"                => "date",
+            "order"                  => "DESC",
+            "no_found_rows"          => true,
+            "update_post_meta_cache" => false,
+            "update_post_term_cache" => true,
+            "ignore_sticky_posts"    => true,
         ];
-        $topic = sanitize_title((string) $atts["topic"]);
 
         if ("" !== $topic) {
             $query_args["tax_query"] = [
                 [
                     "taxonomy" => "plaid_breve_topic",
-                    "field" => "slug",
-                    "terms" => $topic,
+                    "field"    => "slug",
+                    "terms"    => $topic,
                 ],
             ];
         }
 
         $breves = get_posts($query_args);
-        $title = trim((string) $atts["title"]);
-        $description = trim((string) $atts["description"]);
+
+        // Construction du mapping thématique depuis le cache préchargé (1 requête, pas N+1).
+        $breve_topic_map = [];
+        if (!empty($breves)) {
+            foreach ($breves as $breve) {
+                $post_terms = get_the_terms((int) $breve->ID, "plaid_breve_topic");
+                if (!is_wp_error($post_terms) && is_array($post_terms) && !empty($post_terms)) {
+                    $first = reset($post_terms);
+                    $breve_topic_map[(int) $breve->ID] = $first instanceof \WP_Term ? (string) $first->name : "";
+                } else {
+                    $breve_topic_map[(int) $breve->ID] = "";
+                }
+            }
+        }
+
+        $section_id = "plaidact-breves-" . md5(serialize([$title, $topic, $limit, $layout]));
+        $aria_label = $title !== "" ? $title : __("Les brèves", "plaidact-campaign-core");
+        $has_breves = !empty($breves);
 
         ob_start();
         ?>
-        <section class="plaidact-breves plaidact-card <?php echo esc_attr(self::get_campaign_design_class($settings)); ?>" aria-label="<?php echo esc_attr($title ?: __("Les brèves", "plaidact-campaign-core")); ?>">
-            <?php if ("" !== $title): ?>
-                <h3 class="plaidact-card__title"><?php echo esc_html($title); ?></h3>
-            <?php endif; ?>
-            <?php if ("" !== $description): ?>
-                <p><?php echo esc_html($description); ?></p>
-            <?php endif; ?>
-            <?php if (!empty($breves)): ?>
-                <div class="plaidact-breves__grid">
-                    <?php foreach ($breves as $breve): ?>
-                        <article class="plaidact-breve">
-                            <h4 class="plaidact-breve__title">
-                                <a href="<?php echo esc_url(get_permalink($breve)); ?>"><?php echo esc_html(get_the_title($breve)); ?></a>
-                            </h4>
-                            <?php echo wp_kses_post(wpautop(get_the_excerpt($breve))); ?>
-                        </article>
-                    <?php endforeach; ?>
+        <section
+            id="<?php echo esc_attr($section_id); ?>"
+            class="plaidact-breves plaidact-breves--<?php echo esc_attr($layout); ?> <?php echo esc_attr(trim(self::get_campaign_design_class($settings) . " " . $extra_class)); ?>"
+            aria-label="<?php echo esc_attr($aria_label); ?>"
+            data-plaidact-breves
+        >
+            <div class="plaidact-breves__head">
+                <?php if ("" !== $title): ?>
+                    <h2 class="plaidact-breves__title"><?php echo esc_html($title); ?></h2>
+                <?php endif; ?>
+                <?php if ("" !== $description): ?>
+                    <p class="plaidact-breves__desc"><?php echo esc_html($description); ?></p>
+                <?php endif; ?>
+            </div>
+
+            <?php if ($has_breves): ?>
+                <div
+                    class="plaidact-breves__viewport"
+                    tabindex="0"
+                    role="region"
+                    aria-label="<?php echo esc_attr(sprintf(__("Brèves : %s", "plaidact-campaign-core"), $aria_label)); ?>"
+                    aria-roledescription="carousel"
+                >
+                    <div class="plaidact-breves__track">
+                        <?php foreach ($breves as $index => $breve):
+                            $breve_id = (int) $breve->ID;
+                            $permalink = get_permalink($breve);
+                            $breve_title = get_the_title($breve);
+                            if ("" === trim((string) $breve_title)) {
+                                $breve_title = sprintf(__("Brève #%d", "plaidact-campaign-core"), $breve_id);
+                            }
+                            // Date localisée côté WordPress (respecte la locale du site).
+                            $date_iso = get_the_date("c", $breve);
+                            $date_display = get_the_date("j F Y", $breve);
+                            $topic_display = $breve_topic_map[$breve_id] ?? "";
+                            $excerpt_raw = get_the_excerpt($breve);
+                            if ("" === trim((string) $excerpt_raw)) {
+                                $content_raw = (string) get_post_field("post_content", $breve_id, "raw");
+                                $excerpt_raw = wp_trim_words(wp_strip_all_tags($content_raw), 28, "…");
+                            }
+                            // L'extrait conserve les liens et la mise en forme légère.
+                            $excerpt_html = wp_kses_post(wpautop($excerpt_raw));
+                            $heading_id = esc_attr($section_id . "-breve-" . $breve_id);
+                            ?>
+                            <article
+                                class="plaidact-breve"
+                                aria-labelledby="<?php echo $heading_id; ?>"
+                                aria-posinset="<?php echo esc_attr((string) ($index + 1)); ?>"
+                                aria-setsize="<?php echo esc_attr((string) count($breves)); ?>"
+                                role="group"
+                                aria-roledescription="slide"
+                            >
+                                <div class="plaidact-breve__meta">
+                                    <time datetime="<?php echo esc_attr((string) $date_iso); ?>"><?php echo esc_html((string) $date_display); ?></time>
+                                    <?php if ("" !== $topic_display): ?>
+                                        <span class="plaidact-breve__sep" aria-hidden="true">|</span>
+                                        <span class="plaidact-breve__topic"><?php echo esc_html($topic_display); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <h3 id="<?php echo $heading_id; ?>" class="plaidact-breve__heading">
+                                    <a href="<?php echo esc_url((string) $permalink); ?>"><?php echo esc_html((string) $breve_title); ?></a>
+                                </h3>
+                                <div class="plaidact-breve__excerpt"><?php echo $excerpt_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="plaidact-breves__nav" aria-hidden="true">
+                    <button class="plaidact-breves__arrow plaidact-breves__arrow--prev" type="button" tabindex="-1" aria-label="<?php esc_attr_e("Brève précédente", "plaidact-campaign-core"); ?>">
+                        <span aria-hidden="true">‹</span>
+                    </button>
+                    <button class="plaidact-breves__arrow plaidact-breves__arrow--next" type="button" tabindex="-1" aria-label="<?php esc_attr_e("Brève suivante", "plaidact-campaign-core"); ?>">
+                        <span aria-hidden="true">›</span>
+                    </button>
                 </div>
             <?php else: ?>
-                <p><?php esc_html_e("Aucune brève publiée pour le moment.", "plaidact-campaign-core"); ?></p>
+                <p class="plaidact-breves__empty"><?php esc_html_e("Aucune brève publiée pour le moment.", "plaidact-campaign-core"); ?></p>
             <?php endif; ?>
         </section>
         <?php
