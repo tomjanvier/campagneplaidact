@@ -142,6 +142,265 @@
 	margin: 0;
 }
 
+/* Brèves : carrousel horizontal optimisé (maquette ACTUALITÉS). */
+.plaidact-breves {
+	--plaidact-breves-gap: clamp(1rem, 2vw, 1.5rem);
+	--plaidact-breves-card-min: 280px;
+	--plaidact-breves-card-max: 340px;
+	--plaidact-breves-accent: #cc1a2b;
+	--plaidact-breves-meta: #2f8fd1;
+	--plaidact-breves-separator: #cbd5e1;
+	--plaidact-breves-text: #111827;
+	--plaidact-breves-muted: #475569;
+	background: #fff;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	container-type: inline-size;
+	padding: clamp(1.25rem, 3vw, 2rem) 0;
+}
+
+.plaidact-breves__head {
+	margin: 0 auto clamp(1rem, 2vw, 1.4rem);
+	max-width: 1100px;
+	padding: 0 1rem;
+}
+
+.plaidact-breves__title {
+	color: var(--plaidact-breves-text);
+	font-size: clamp(1.5rem, 4vw, 2rem);
+	font-weight: 900;
+	letter-spacing: -0.02em;
+	line-height: 1;
+	margin: 0;
+	text-transform: uppercase;
+}
+
+.plaidact-breves__title::after {
+	background: var(--plaidact-breves-accent);
+	content: "";
+	display: block;
+	height: 3px;
+	margin-top: 0.55rem;
+	width: 7rem;
+}
+
+.plaidact-breves__desc {
+	color: var(--plaidact-breves-muted);
+	font-size: 0.98rem;
+	line-height: 1.5;
+	margin: 0.75rem 0 0;
+	max-width: 60ch;
+}
+
+.plaidact-breves__viewport {
+	-webkit-overflow-scrolling: touch;
+	background: #fafafa;
+	border-block: 1px solid #e5e7eb;
+	margin: 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+	overscroll-behavior-x: contain;
+	padding: 1.25rem 1rem 0.85rem;
+	scroll-behavior: smooth;
+	scroll-padding-inline: 1rem;
+	scroll-snap-type: x mandatory;
+	scrollbar-color: #9ca3af #e5e7eb;
+	scrollbar-width: thin;
+}
+
+.plaidact-breves__viewport:focus-visible {
+	outline: 2px solid var(--plaidact-breves-accent);
+	outline-offset: -2px;
+}
+
+.plaidact-breves__viewport::-webkit-scrollbar {
+	height: 6px;
+}
+
+.plaidact-breves__viewport::-webkit-scrollbar-track {
+	background: #e5e7eb;
+}
+
+.plaidact-breves__viewport::-webkit-scrollbar-thumb {
+	background: #9ca3af;
+	border-radius: 999px;
+}
+
+.plaidact-breves__track {
+	display: flex;
+	flex-wrap: nowrap;
+	gap: var(--plaidact-breves-gap);
+	align-items: stretch;
+}
+
+.plaidact-breve {
+	background: #fff;
+	border-left: 4px solid var(--plaidact-breves-separator);
+	display: flex;
+	flex: 0 0 clamp(var(--plaidact-breves-card-min), 32vw, var(--plaidact-breves-card-max));
+	flex-direction: column;
+	gap: 0.6rem;
+	min-width: 0;
+	padding: 0 0 0 1rem;
+	scroll-snap-align: start;
+	scroll-snap-stop: normal;
+}
+
+.plaidact-breve__meta {
+	color: var(--plaidact-breves-meta);
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.35rem;
+	font-size: 0.82rem;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.plaidact-breve__meta time {
+	white-space: nowrap;
+}
+
+.plaidact-breve__sep {
+	color: #94a3b8;
+	font-weight: 400;
+}
+
+.plaidact-breve__topic {
+	color: var(--plaidact-breves-meta);
+	font-weight: 600;
+}
+
+.plaidact-breve__heading {
+	color: var(--plaidact-breves-text);
+	font-size: clamp(0.92rem, 2vw, 1rem);
+	font-weight: 800;
+	line-height: 1.28;
+	margin: 0;
+	text-transform: uppercase;
+}
+
+.plaidact-breve__heading a {
+	color: inherit;
+	text-decoration: none;
+	text-decoration-thickness: from-font;
+	text-underline-offset: 0.15em;
+}
+
+.plaidact-breve__heading a:hover,
+.plaidact-breve__heading a:focus-visible {
+	color: var(--plaidact-breves-accent);
+	text-decoration: underline;
+	outline: none;
+}
+
+.plaidact-breve__heading a:focus-visible {
+	outline: 2px solid var(--plaidact-breves-accent);
+	outline-offset: 2px;
+}
+
+.plaidact-breve__excerpt {
+	color: var(--plaidact-breves-muted);
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 6;
+	overflow: hidden;
+	font-size: 0.92rem;
+	line-height: 1.5;
+}
+
+.plaidact-breve__excerpt p {
+	margin: 0 0 0.6rem;
+}
+
+.plaidact-breve__excerpt p:last-child {
+	margin-bottom: 0;
+}
+
+.plaidact-breve__excerpt a {
+	color: var(--plaidact-breves-meta);
+	font-weight: 600;
+	text-decoration: underline;
+	text-decoration-thickness: from-font;
+	text-underline-offset: 0.15em;
+}
+
+.plaidact-breve__excerpt a:hover,
+.plaidact-breve__excerpt a:focus-visible {
+	color: var(--plaidact-breves-accent);
+}
+
+.plaidact-breves__nav {
+	display: flex;
+	gap: 0.5rem;
+	justify-content: flex-end;
+	margin: 0.6rem 1rem 0;
+}
+
+.plaidact-breves__arrow {
+	align-items: center;
+	background: #fff;
+	border: 1px solid #e5e7eb;
+	border-radius: 999px;
+	box-shadow: 0 1px 6px rgb(15 23 42 / 10%);
+	color: var(--plaidact-breves-text);
+	cursor: pointer;
+	display: inline-flex;
+	font-size: 1.35rem;
+	height: 2rem;
+	justify-content: center;
+	line-height: 1;
+	transition: border-color 160ms ease, transform 160ms ease, opacity 160ms ease;
+	width: 2rem;
+}
+
+.plaidact-breves__arrow:hover,
+.plaidact-breves__arrow:focus-visible {
+	border-color: var(--plaidact-breves-accent);
+	color: var(--plaidact-breves-accent);
+	outline: none;
+	transform: translateY(-1px);
+}
+
+.plaidact-breves__arrow:focus-visible {
+	outline: 2px solid var(--plaidact-breves-accent);
+	outline-offset: 2px;
+}
+
+.plaidact-breves__empty {
+	color: var(--plaidact-breves-muted);
+	margin: 1rem;
+}
+
+/* Rétrocompatibilité : ancien rendu grille (layout=grid ou contenu historique). */
+.plaidact-breves--grid .plaidact-breves__viewport {
+	background: transparent;
+	border: 0;
+	overflow: visible;
+	padding: 0 1rem;
+}
+
+.plaidact-breves--grid .plaidact-breves__track {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.plaidact-breves--grid .plaidact-breve {
+	flex: none;
+	border-top: 2px solid currentColor;
+	border-left: 0;
+	padding-top: 0.75rem;
+	padding-left: 0;
+	scroll-snap-align: none;
+}
+
+.plaidact-breves--grid .plaidact-breves__nav {
+	display: none;
+}
+
+/* Alias historique : conserve le rendu grille existant si encore utilisé. */
 .plaidact-breves__grid {
 	display: grid;
 	gap: 1rem;
@@ -149,14 +408,41 @@
 	margin-top: 1.25rem;
 }
 
-.plaidact-breve {
+.plaidact-breves__grid .plaidact-breve {
 	border-top: 2px solid currentColor;
+	border-left: 0;
 	padding-top: 0.75rem;
+	padding-left: 0;
 }
 
 .plaidact-breve__title {
 	font-size: 1rem;
 	margin: 0 0 0.5rem;
+}
+
+@media (max-width: 720px) {
+	.plaidact-breves__viewport {
+		padding-inline: 0.75rem;
+		scroll-padding-inline: 0.75rem;
+	}
+
+	.plaidact-breve {
+		flex-basis: min(84vw, 300px);
+	}
+
+	.plaidact-breves__nav {
+		display: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.plaidact-breves__viewport {
+		scroll-behavior: auto;
+	}
+
+	.plaidact-breves__arrow {
+		transition: none;
+	}
 }
 
 @media (max-width: 780px) {

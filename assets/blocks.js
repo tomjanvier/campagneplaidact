@@ -6,6 +6,7 @@
 	const TextControl = components.TextControl;
 	const ToggleControl = components.ToggleControl;
 	const RangeControl = components.RangeControl;
+	const SelectControl = components.SelectControl;
 	const __experimentalNumberControl = components.__experimentalNumberControl;
 	const NumberControl = __experimentalNumberControl || TextControl;
 
@@ -185,6 +186,85 @@
 					title: props.attributes.title || __('Bloc partenaires', 'plaidact-campaign-core'),
 					description: __('La grille réelle sera rendue sur le site public à partir des organisations porteuses.', 'plaidact-campaign-core'),
 					shortcode: '[plaid_partners]',
+				})
+			);
+		},
+		save: function () {
+			return null;
+		},
+	});
+
+	blocks.registerBlockType('plaidact/breves', {
+		title: __('PLAID·ACT — Brèves', 'plaidact-campaign-core'),
+		icon: 'megaphone',
+		category: 'widgets',
+		description: __('Affiche les brèves en carrousel horizontal défilable.', 'plaidact-campaign-core'),
+		attributes: {
+			title: { type: 'string', default: 'ACTUALITÉS' },
+			description: { type: 'string', default: '' },
+			limit: { type: 'number', default: 8 },
+			topic: { type: 'string', default: '' },
+			layout: { type: 'string', default: 'scroll' },
+		},
+		edit: function (props) {
+			var attrs = props.attributes;
+			return el(
+				element.Fragment,
+				null,
+				el(
+					InspectorControls,
+					null,
+					el(
+						PanelBody,
+						{ title: __('Réglages brèves', 'plaidact-campaign-core') },
+						el(TextControl, {
+							label: __('Titre', 'plaidact-campaign-core'),
+							value: attrs.title,
+							onChange: function (value) { props.setAttributes({ title: value }); },
+							help: __('Laissez vide pour masquer le titre. Par défaut : ACTUALITÉS.', 'plaidact-campaign-core'),
+						}),
+						el(TextControl, {
+							label: __('Description', 'plaidact-campaign-core'),
+							value: attrs.description,
+							onChange: function (value) { props.setAttributes({ description: value }); },
+						}),
+						el(RangeControl, {
+							label: __('Nombre de brèves', 'plaidact-campaign-core'),
+							value: attrs.limit,
+							min: 1,
+							max: 24,
+							onChange: function (value) { props.setAttributes({ limit: value }); },
+						}),
+						el(TextControl, {
+							label: __('Filtrer par thématique (slug)', 'plaidact-campaign-core'),
+							value: attrs.topic,
+							onChange: function (value) { props.setAttributes({ topic: value }); },
+							help: __('Slug de la taxonomie plaid_breve_topic, vide = toutes.', 'plaidact-campaign-core'),
+						}),
+						el(SelectControl, {
+							label: __('Disposition', 'plaidact-campaign-core'),
+							value: attrs.layout,
+							options: [
+								{ label: __('Défilement horizontal (recommandé)', 'plaidact-campaign-core'), value: 'scroll' },
+								{ label: __('Grille', 'plaidact-campaign-core'), value: 'grid' },
+							],
+							onChange: function (value) { props.setAttributes({ layout: value }); },
+						})
+					)
+				),
+				el(PlaceholderCard, {
+					title: attrs.title || __('Bloc brèves', 'plaidact-campaign-core'),
+					description: __('Le carrousel réel sera rendu sur le site public avec les brèves publiées.', 'plaidact-campaign-core'),
+					shortcode:
+						'[plaidact_breves title="' +
+						(attrs.title || '') +
+						'" limit="' +
+						(attrs.limit || 8) +
+						'"' +
+						(attrs.topic ? ' topic="' + attrs.topic + '"' : '') +
+						' layout="' +
+						(attrs.layout || 'scroll') +
+						'"]',
 				})
 			);
 		},
