@@ -132,11 +132,12 @@
 		var autoplayTimer = null;
 		var isHovered = false;
 		var isFocused = false;
+		var isVisible = true;
 		var marqueeRaf = null;
 		var lastMarqueeTime = 0;
 
 		function canAutoplay() {
-			return autoplayEnabled && needsScroll && !prefersReduced && !isHovered && !isFocused && !isDown && !document.hidden;
+			return autoplayEnabled && needsScroll && isVisible && !prefersReduced && !isHovered && !isFocused && !isDown && !document.hidden;
 		}
 
 		function scrollToNext() {
@@ -207,7 +208,7 @@
 			viewport.style.scrollBehavior = 'auto';
 		}
 		function canMarquee() {
-			return continuousEnabled && autoplayEnabled && needsScroll && !prefersReduced && !isHovered && !isFocused && !isDown && !document.hidden;
+			return continuousEnabled && autoplayEnabled && needsScroll && isVisible && !prefersReduced && !isHovered && !isFocused && !isDown && !document.hidden;
 		}
 		function stopMarquee() {
 			if (marqueeRaf) { window.cancelAnimationFrame(marqueeRaf); marqueeRaf = null; lastMarqueeTime = 0; }
@@ -225,7 +226,7 @@
 				lastMarqueeTime = timestamp;
 				if (canMarquee()) {
 					viewport.scrollLeft += (speedPxPerSec * delta / 1000);
-					var half = viewport.scrollWidth / 2;
+					var half = track ? track.scrollWidth / 2 : viewport.scrollWidth / 2;
 					if (half > 0 && viewport.scrollLeft >= half) {
 						viewport.scrollLeft -= half;
 					}
@@ -237,6 +238,23 @@
 		if (continuousEnabled && autoplayEnabled && !prefersReduced) {
 			window.setTimeout(function () { needsScroll = updateNav(); if (needsScroll) startMarquee(); }, 300);
 			window.addEventListener('resize', function () { needsScroll = updateNav(); if (!needsScroll) stopMarquee(); else if (continuousEnabled) startMarquee(); }, { passive: true });
+		}
+
+		// Évite de maintenir une animation active quand le carrousel est hors écran.
+		if ('IntersectionObserver' in window) {
+			try {
+				new IntersectionObserver(function (entries) {
+					isVisible = !!(entries[0] && entries[0].isIntersecting);
+					if (!isVisible) {
+						stopAutoplay();
+						stopMarquee();
+					} else if (continuousEnabled) {
+						startMarquee();
+					} else {
+						startAutoplay();
+					}
+				}).observe(root);
+			} catch (_e) {}
 		}
 	}
 

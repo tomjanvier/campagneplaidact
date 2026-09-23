@@ -366,6 +366,11 @@
 	margin-top: auto;
 	padding-top: 0.4rem;
 }
+.plaidact-breve__tags--above {
+	margin-top: 0;
+	margin-bottom: 0.15rem;
+	padding-top: 0;
+}
 .plaidact-breve__tag {
 	background: #F0F2F3;
 	border: 1px solid #e2e8f0;
