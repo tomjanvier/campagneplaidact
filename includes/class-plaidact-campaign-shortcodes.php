@@ -2332,6 +2332,8 @@ final class Shortcodes
                 "layout"      => "scroll",
                 "autoplay"    => "1",
                 "interval"    => 4000,
+                "continuous"  => "1",
+                "speed"       => 40,
                 "class"       => "",
                 "className"   => "",
             ],
@@ -2346,9 +2348,15 @@ final class Shortcodes
         $description = trim((string) $atts["description"]);
         $autoplay = !in_array(strtolower(trim((string) $atts["autoplay"])), ["0", "false", "no", "off"], true);
         $interval = max(1500, min(10000, absint($atts["interval"] ?? 4000)));
+        $continuous = !in_array(strtolower(trim((string) $atts["continuous"])), ["0", "false", "no", "off"], true);
+        $speed = max(10, min(200, absint($atts["speed"] ?? 40)));
         // Le défilement auto n'a de sens qu'en layout scroll avec plusieurs items.
         if ("grid" === $layout) {
             $autoplay = false;
+            $continuous = false;
+        }
+        if (!$autoplay) {
+            $continuous = false;
         }
         $extra_class = self::sanitize_css_classes((string) ($atts["class"] ?? "") . " " . (string) ($atts["className"] ?? ""));
 
@@ -2402,7 +2410,7 @@ final class Shortcodes
             }
         }
 
-        $section_id = "plaidact-breves-" . md5(serialize([$title, $topic, $limit, $layout, $autoplay, $interval]));
+        $section_id = "plaidact-breves-" . md5(serialize([$title, $topic, $limit, $layout, $autoplay, $interval, $continuous, $speed]));
         $aria_label = $title !== "" ? $title : __("Les brèves", "plaidact-campaign-core");
         $has_breves = !empty($breves);
 
@@ -2410,11 +2418,13 @@ final class Shortcodes
         ?>
         <section
             id="<?php echo esc_attr($section_id); ?>"
-            class="plaidact-breves plaidact-breves--<?php echo esc_attr($layout); ?> <?php echo esc_attr(trim(self::get_campaign_design_class($settings) . " " . $extra_class)); ?>"
+            class="plaidact-breves plaidact-breves--<?php echo esc_attr($layout); ?><?php echo $continuous ? " plaidact-breves--continuous" : ""; ?> <?php echo esc_attr(trim(self::get_campaign_design_class($settings) . " " . $extra_class)); ?>"
             aria-label="<?php echo esc_attr($aria_label); ?>"
             data-plaidact-breves
             data-autoplay="<?php echo $autoplay ? "1" : "0"; ?>"
             data-interval="<?php echo esc_attr((string) $interval); ?>"
+            data-continuous="<?php echo $continuous ? "1" : "0"; ?>"
+            data-speed="<?php echo esc_attr((string) $speed); ?>"
         >
             <?php if ("" !== $title || "" !== $description): ?>
             <div class="plaidact-breves__head">

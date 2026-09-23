@@ -466,6 +466,18 @@
 	display: none;
 }
 
+/* Mode continu (marquee) — défilement fluide infini à la Focus 2030 */
+.plaidact-breves--continuous .plaidact-breves__viewport {
+	scroll-snap-type: none;
+	scroll-behavior: auto;
+}
+.plaidact-breves--continuous .plaidact-breves__track {
+	will-change: scroll-position;
+}
+.plaidact-breves--continuous .plaidact-breves__viewport::-webkit-scrollbar {
+	height: 4px;
+}
+
 /* Alias historique : conserve le rendu grille existant si encore utilisé. */
 .plaidact-breves__grid {
 	display: grid;

@@ -207,6 +207,8 @@
 			layout: { type: 'string', default: 'scroll' },
 			autoplay: { type: 'boolean', default: true },
 			interval: { type: 'number', default: 4000 },
+			continuous: { type: 'boolean', default: true },
+			speed: { type: 'number', default: 40 },
 		},
 		edit: function (props) {
 			var attrs = props.attributes;
@@ -261,6 +263,14 @@
 							help: __('Fait défiler automatiquement le carrousel (pause au survol).', 'plaidact-campaign-core'),
 						}),
 						attrs.autoplay
+							? el(ToggleControl, {
+									label: __('Défilement continu (type Focus 2030)', 'plaidact-campaign-core'),
+									checked: !!attrs.continuous,
+									onChange: function (value) { props.setAttributes({ continuous: !!value }); },
+									help: __('Défilement fluide et infini sans à-coups, comme sur focus2030.org.', 'plaidact-campaign-core'),
+							  })
+							: null,
+						attrs.autoplay && !attrs.continuous
 							? el(RangeControl, {
 									label: __('Intervalle (ms)', 'plaidact-campaign-core'),
 									value: attrs.interval || 4000,
@@ -268,6 +278,16 @@
 									max: 10000,
 									step: 500,
 									onChange: function (value) { props.setAttributes({ interval: value }); },
+							  })
+							: null,
+						attrs.autoplay && attrs.continuous
+							? el(RangeControl, {
+									label: __('Vitesse (px/s)', 'plaidact-campaign-core'),
+									value: attrs.speed || 40,
+									min: 10,
+									max: 200,
+									step: 5,
+									onChange: function (value) { props.setAttributes({ speed: value }); },
 							  })
 							: null
 					)
@@ -289,8 +309,10 @@
 							(attrs.layout || 'scroll') +
 							'" autoplay="' +
 							(attrs.autoplay ? '1' : '0') +
-							'" interval="' +
-							(attrs.interval || 4000) +
+							'" continuous="' +
+							(attrs.continuous ? '1' : '0') +
+							'" speed="' +
+							(attrs.speed || 40) +
 							'"]',
 					})
 				)
