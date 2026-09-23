@@ -148,7 +148,7 @@ final class Blocks {
 				'attributes'      => array(
 					'title'       => array(
 						'type'    => 'string',
-						'default' => 'ACTUALITÉS',
+						'default' => '',
 					),
 					'description' => array(
 						'type'    => 'string',

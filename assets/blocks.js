@@ -200,7 +200,7 @@
 		category: 'widgets',
 		description: __('Affiche les brèves en carrousel horizontal défilable.', 'plaidact-campaign-core'),
 		attributes: {
-			title: { type: 'string', default: 'ACTUALITÉS' },
+			title: { type: 'string', default: '' },
 			description: { type: 'string', default: '' },
 			limit: { type: 'number', default: 8 },
 			topic: { type: 'string', default: '' },
@@ -208,6 +208,8 @@
 		},
 		edit: function (props) {
 			var attrs = props.attributes;
+			var blockProps = blockEditor.useBlockProps ? blockEditor.useBlockProps() : {};
+			var LayoutControl = SelectControl || TextControl;
 			return el(
 				element.Fragment,
 				null,
@@ -218,10 +220,10 @@
 						PanelBody,
 						{ title: __('Réglages brèves', 'plaidact-campaign-core') },
 						el(TextControl, {
-							label: __('Titre', 'plaidact-campaign-core'),
+							label: __('Titre (vide = sans en-tête)', 'plaidact-campaign-core'),
 							value: attrs.title,
 							onChange: function (value) { props.setAttributes({ title: value }); },
-							help: __('Laissez vide pour masquer le titre. Par défaut : ACTUALITÉS.', 'plaidact-campaign-core'),
+							help: __('Laissez vide pour n afficher que le carrousel, sans titre.', 'plaidact-campaign-core'),
 						}),
 						el(TextControl, {
 							label: __('Description', 'plaidact-campaign-core'),
@@ -241,7 +243,7 @@
 							onChange: function (value) { props.setAttributes({ topic: value }); },
 							help: __('Slug de la taxonomie plaid_breve_topic, vide = toutes.', 'plaidact-campaign-core'),
 						}),
-						el(SelectControl, {
+						el(LayoutControl, {
 							label: __('Disposition', 'plaidact-campaign-core'),
 							value: attrs.layout,
 							options: [
@@ -252,20 +254,24 @@
 						})
 					)
 				),
-				el(PlaceholderCard, {
-					title: attrs.title || __('Bloc brèves', 'plaidact-campaign-core'),
-					description: __('Le carrousel réel sera rendu sur le site public avec les brèves publiées.', 'plaidact-campaign-core'),
-					shortcode:
-						'[plaidact_breves title="' +
-						(attrs.title || '') +
-						'" limit="' +
-						(attrs.limit || 8) +
-						'"' +
-						(attrs.topic ? ' topic="' + attrs.topic + '"' : '') +
-						' layout="' +
-						(attrs.layout || 'scroll') +
-						'"]',
-				})
+				el(
+					'div',
+					blockProps,
+					el(PlaceholderCard, {
+						title: attrs.title || __('Bloc brèves — carrousel', 'plaidact-campaign-core'),
+						description: __('Le carrousel réel sera rendu sur le site public avec les brèves publiées. Cliquez pour régler le bloc dans la barre latérale.', 'plaidact-campaign-core'),
+						shortcode:
+							'[plaidact_breves' +
+							(attrs.title ? ' title="' + attrs.title.replace(/"/g, '&quot;') + '"' : '') +
+							' limit="' +
+							(attrs.limit || 8) +
+							'"' +
+							(attrs.topic ? ' topic="' + attrs.topic + '"' : '') +
+							' layout="' +
+							(attrs.layout || 'scroll') +
+							'"]',
+					})
+				)
 			);
 		},
 		save: function () {

@@ -142,71 +142,81 @@
 	margin: 0;
 }
 
-/* Brèves : carrousel horizontal optimisé (maquette ACTUALITÉS). */
+/* Brèves : carrousel horizontal — inspiré de plaidact.org (Rubik, palette #2f1435 / #F0F2F3) */
 .plaidact-breves {
-	--plaidact-breves-gap: clamp(1rem, 2vw, 1.5rem);
-	--plaidact-breves-card-min: 280px;
-	--plaidact-breves-card-max: 340px;
-	--plaidact-breves-accent: #cc1a2b;
-	--plaidact-breves-meta: #2f8fd1;
-	--plaidact-breves-separator: #cbd5e1;
-	--plaidact-breves-text: #111827;
+	--plaidact-breves-gap: clamp(1rem, 2vw, 1.35rem);
+	--plaidact-breves-card-min: 300px;
+	--plaidact-breves-card-max: 360px;
+	/* Palette PLAID·ACT.org — Blocksy */
+	--plaidact-breves-accent: #2f1435;
+	--plaidact-breves-accent-2: #8b359e;
+	--plaidact-breves-border: #F0F2F3;
+	--plaidact-breves-surface: #F8FAFB;
+	--plaidact-breves-text: #0f1a17;
 	--plaidact-breves-muted: #475569;
-	background: #fff;
+	--plaidact-breves-meta: #2f1435;
+	--plaidact-breves-separator: #F0F2F3;
+	--plaidact-breves-radius: 12px;
+	background: transparent;
 	border: 0;
 	border-radius: 0;
 	box-shadow: none;
 	container-type: inline-size;
-	padding: clamp(1.25rem, 3vw, 2rem) 0;
+	font-family: Rubik, ui-sans-system, -apple-system, "Segoe UI", sans-serif;
+	padding: 0;
 }
 
+/* En-tête optionnel : n'apparaît que si title/description fournis */
 .plaidact-breves__head {
-	margin: 0 auto clamp(1rem, 2vw, 1.4rem);
-	max-width: 1100px;
+	margin: 0 auto 1rem;
+	max-width: 1290px;
 	padding: 0 1rem;
 }
+.plaidact-breves__head:empty { display: none; }
 
 .plaidact-breves__title {
 	color: var(--plaidact-breves-text);
-	font-size: clamp(1.5rem, 4vw, 2rem);
-	font-weight: 900;
+	font-family: Rubik, sans-serif;
+	font-size: clamp(1.35rem, 3.5vw, 1.75rem);
+	font-weight: 700;
 	letter-spacing: -0.02em;
-	line-height: 1;
+	line-height: 1.15;
 	margin: 0;
-	text-transform: uppercase;
 }
-
-.plaidact-breves__title::after {
+.plaidact-breves__title:not(:empty)::after {
 	background: var(--plaidact-breves-accent);
 	content: "";
 	display: block;
-	height: 3px;
-	margin-top: 0.55rem;
-	width: 7rem;
+	height: 2px;
+	margin-top: 0.5rem;
+	opacity: .9;
+	width: 3.5rem;
 }
 
 .plaidact-breves__desc {
 	color: var(--plaidact-breves-muted);
-	font-size: 0.98rem;
-	line-height: 1.5;
-	margin: 0.75rem 0 0;
-	max-width: 60ch;
+	font-size: 0.95rem;
+	line-height: 1.6;
+	margin: 0.6rem 0 0;
+	max-width: 62ch;
 }
 
+/* Viewport : bande scrollable bien placée, alignée avec l'en-tête (1290px) */
 .plaidact-breves__viewport {
 	-webkit-overflow-scrolling: touch;
-	background: #fafafa;
-	border-block: 1px solid #e5e7eb;
+	background: var(--plaidact-breves-surface);
+	border-block: 1px solid var(--plaidact-breves-border);
 	margin: 0;
 	overflow-x: auto;
 	overflow-y: hidden;
 	overscroll-behavior-x: contain;
-	padding: 1.25rem 1rem 0.85rem;
+	padding: 1.1rem max(1rem, calc((100% - 1290px) / 2 + 1rem)) 0.9rem;
 	scroll-behavior: smooth;
-	scroll-padding-inline: 1rem;
+	scroll-padding-inline: max(1rem, calc((100% - 1290px) / 2 + 1rem));
 	scroll-snap-type: x mandatory;
-	scrollbar-color: #9ca3af #e5e7eb;
+	scrollbar-color: #cbd5e1 var(--plaidact-breves-border);
 	scrollbar-width: thin;
+	scrollbar-gutter: stable;
 }
 
 .plaidact-breves__viewport:focus-visible {
@@ -219,32 +229,45 @@
 }
 
 .plaidact-breves__viewport::-webkit-scrollbar-track {
-	background: #e5e7eb;
+	background: var(--plaidact-breves-border);
 }
 
 .plaidact-breves__viewport::-webkit-scrollbar-thumb {
-	background: #9ca3af;
+	background: #cbd5e1;
 	border-radius: 999px;
 }
+.plaidact-breves__viewport::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 .plaidact-breves__track {
 	display: flex;
 	flex-wrap: nowrap;
 	gap: var(--plaidact-breves-gap);
 	align-items: stretch;
+	/* Permet au premier et dernier item d'être bien placés avec le padding du viewport */
+	padding-right: 0.5rem;
 }
 
 .plaidact-breve {
 	background: #fff;
-	border-left: 4px solid var(--plaidact-breves-separator);
+	border: 1px solid var(--plaidact-breves-border);
+	border-left: 3px solid var(--plaidact-breves-border);
+	border-radius: var(--plaidact-breves-radius);
+	box-shadow: 0 1px 3px rgba(15,23,42,.05);
 	display: flex;
-	flex: 0 0 clamp(var(--plaidact-breves-card-min), 32vw, var(--plaidact-breves-card-max));
+	flex: 0 0 clamp(var(--plaidact-breves-card-min), 31vw, var(--plaidact-breves-card-max));
 	flex-direction: column;
-	gap: 0.6rem;
+	gap: 0.55rem;
 	min-width: 0;
-	padding: 0 0 0 1rem;
+	padding: 1rem 1rem 1.1rem 1.1rem;
 	scroll-snap-align: start;
 	scroll-snap-stop: normal;
+	transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.plaidact-breve:hover {
+	border-color: #e2e8f0;
+	border-left-color: var(--plaidact-breves-accent);
+	box-shadow: 0 4px 16px rgba(47,20,53,.07);
+	transform: translateY(-1px);
 }
 
 .plaidact-breve__meta {
@@ -253,9 +276,12 @@
 	flex-wrap: wrap;
 	align-items: center;
 	gap: 0.35rem;
-	font-size: 0.82rem;
+	font-family: Rubik, sans-serif;
+	font-size: 0.78rem;
 	font-weight: 600;
+	letter-spacing: 0.02em;
 	line-height: 1.3;
+	text-transform: uppercase;
 }
 
 .plaidact-breve__meta time {
@@ -268,17 +294,17 @@
 }
 
 .plaidact-breve__topic {
-	color: var(--plaidact-breves-meta);
-	font-weight: 600;
+	color: var(--plaidact-breves-accent-2);
+	font-weight: 700;
 }
 
 .plaidact-breve__heading {
 	color: var(--plaidact-breves-text);
-	font-size: clamp(0.92rem, 2vw, 1rem);
-	font-weight: 800;
-	line-height: 1.28;
+	font-family: Rubik, sans-serif;
+	font-size: clamp(0.96rem, 1.9vw, 1.02rem);
+	font-weight: 700;
+	line-height: 1.32;
 	margin: 0;
-	text-transform: uppercase;
 }
 
 .plaidact-breve__heading a {
@@ -304,14 +330,15 @@
 	color: var(--plaidact-breves-muted);
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 6;
+	-webkit-line-clamp: 5;
 	overflow: hidden;
-	font-size: 0.92rem;
-	line-height: 1.5;
+	font-family: Rubik, sans-serif;
+	font-size: 0.88rem;
+	line-height: 1.65;
 }
 
 .plaidact-breve__excerpt p {
-	margin: 0 0 0.6rem;
+	margin: 0 0 0.55rem;
 }
 
 .plaidact-breve__excerpt p:last-child {
@@ -319,7 +346,7 @@
 }
 
 .plaidact-breve__excerpt a {
-	color: var(--plaidact-breves-meta);
+	color: var(--plaidact-breves-accent);
 	font-weight: 600;
 	text-decoration: underline;
 	text-decoration-thickness: from-font;
@@ -328,14 +355,14 @@
 
 .plaidact-breve__excerpt a:hover,
 .plaidact-breve__excerpt a:focus-visible {
-	color: var(--plaidact-breves-accent);
+	color: var(--plaidact-breves-accent-2);
 }
 
 .plaidact-breves__nav {
 	display: flex;
-	gap: 0.5rem;
+	gap: 0.45rem;
 	justify-content: flex-end;
-	margin: 0.6rem 1rem 0;
+	margin: 0.75rem max(1rem, calc((100% - 1290px) / 2 + 1rem)) 0;
 }
 
 .plaidact-breves__arrow {

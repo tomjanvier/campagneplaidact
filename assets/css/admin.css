@@ -1,0 +1,468 @@
+/* PLAID·ACT — Administration
+ * Design éditorial raffiné : tons neutres chauds, accent rouge PLAID·ACT,
+ * cartes aérées, tabs pill, focus visibles, responsive.
+ * Chargé uniquement sur les pages du plugin via admin_enqueue_scripts.
+ */
+
+.plaidact-admin-wrap {
+  --plaidact-admin-bg: #f8fafc;
+  --plaidact-admin-surface: #ffffff;
+  --plaidact-admin-text: #0f172a;
+  --plaidact-admin-muted: #64748b;
+  --plaidact-admin-border: #e2e8f0;
+  --plaidact-admin-border-strong: #cbd5e1;
+  --plaidact-admin-accent: #cc1a2b;
+  --plaidact-admin-accent-hover: #a31622;
+  --plaidact-admin-accent-soft: #fef2f2;
+  --plaidact-admin-radius: 14px;
+  --plaidact-admin-radius-sm: 10px;
+  --plaidact-admin-shadow: 0 4px 24px rgba(15,23,42,.06), 0 1px 3px rgba(15,23,42,.05);
+  --plaidact-admin-shadow-hover: 0 8px 32px rgba(15,23,42,.08), 0 2px 6px rgba(15,23,42,.06);
+  --plaidact-admin-font: ui-sans-system, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --plaidact-admin-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+  font-family: var(--plaidact-admin-font);
+  color: var(--plaidact-admin-text);
+  max-width: 1100px;
+  margin: 0;
+}
+
+.plaidact-admin-wrap * {
+  box-sizing: border-box;
+}
+
+/* Header — carte d'identité du plugin */
+.plaidact-admin-header {
+  background: linear-gradient(135deg, #ffffff 0%, #fef2f2 52%, #f8fafc 100%);
+  border: 1px solid var(--plaidact-admin-border);
+  border-radius: var(--plaidact-admin-radius);
+  box-shadow: var(--plaidact-admin-shadow);
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.15rem 1.25rem;
+  margin: 1rem 0 1.25rem;
+  position: relative;
+  overflow: hidden;
+}
+.plaidact-admin-header::after {
+  background: radial-gradient(circle at 88% 20%, rgba(204,26,43,.08), transparent 42%);
+  content: "";
+  inset: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.plaidact-admin-header__icon {
+  align-items: center;
+  background: var(--plaidact-admin-accent);
+  border-radius: 12px;
+  color: #fff;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 1.35rem;
+  height: 44px;
+  justify-content: center;
+  position: relative;
+  width: 44px;
+  z-index: 1;
+}
+.plaidact-admin-header__icon .dashicons {
+  font-size: 22px;
+  height: 22px;
+  width: 22px;
+}
+.plaidact-admin-header__content { position: relative; z-index: 1; min-width: 0; }
+.plaidact-admin-header__title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0;
+}
+.plaidact-admin-header__desc {
+  color: var(--plaidact-admin-muted);
+  font-size: .92rem;
+  line-height: 1.5;
+  margin: .25rem 0 0;
+  max-width: 68ch;
+}
+
+/* Tabs — pill + indicateur */
+.plaidact-admin-tabs {
+  border-bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+.plaidact-admin-tabs .nav-tab {
+  background: var(--plaidact-admin-surface);
+  border: 1px solid var(--plaidact-admin-border);
+  border-radius: 999px;
+  color: var(--plaidact-admin-muted);
+  font-size: .87rem;
+  font-weight: 600;
+  line-height: 1;
+  margin: 0;
+  padding: .62rem .9rem;
+  transition: all 160ms ease;
+}
+.plaidact-admin-tabs .nav-tab:hover {
+  border-color: var(--plaidact-admin-border-strong);
+  color: var(--plaidact-admin-text);
+}
+.plaidact-admin-tabs .nav-tab-active,
+.plaidact-admin-tabs .nav-tab-active:hover {
+  background: var(--plaidact-admin-accent);
+  border-color: var(--plaidact-admin-accent);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(204,26,43,.22);
+}
+.plaidact-admin-tabs .nav-tab:focus-visible {
+  outline: 2px solid var(--plaidact-admin-accent);
+  outline-offset: 2px;
+}
+
+/* Panels */
+.plaidact-admin-tab-panel { display: none; }
+.plaidact-admin-tab-panel.is-active { display: block; animation: plaidact-admin-fade .22s ease; }
+@keyframes plaidact-admin-fade { from { opacity: 0; transform: translateY(4px);} to {opacity:1; transform:none;} }
+
+/* Cards */
+.plaidact-admin-card {
+  background: var(--plaidact-admin-surface);
+  border: 1px solid var(--plaidact-admin-border);
+  border-radius: var(--plaidact-admin-radius);
+  box-shadow: var(--plaidact-admin-shadow);
+  margin: 0 0 1rem;
+  overflow: hidden;
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+.plaidact-admin-card:hover { box-shadow: var(--plaidact-admin-shadow-hover); }
+.plaidact-admin-card__header {
+  border-bottom: 1px solid var(--plaidact-admin-border);
+  padding: 1rem 1.25rem .9rem;
+  background: linear-gradient(180deg, #ffffff, #fcfcfd);
+}
+.plaidact-admin-card__title {
+  font-size: .98rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.plaidact-admin-card__title .dashicons { color: var(--plaidact-admin-accent); font-size: 18px; width: 18px; height: 18px; }
+.plaidact-admin-card__desc {
+  color: var(--plaidact-admin-muted);
+  font-size: .86rem;
+  line-height: 1.5;
+  margin: .35rem 0 0;
+}
+.plaidact-admin-card__body {
+  padding: 1.1rem 1.25rem 1.25rem;
+}
+
+/* Grid util */
+.plaidact-admin-grid {
+  display: grid;
+  gap: 1rem;
+}
+.plaidact-admin-grid--2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+.plaidact-admin-grid--3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+@media (max-width: 960px) {
+  .plaidact-admin-grid--2, .plaidact-admin-grid--3 { grid-template-columns: 1fr; }
+}
+
+/* Fields */
+.plaidact-admin-field {
+  display: grid;
+  gap: .45rem;
+  margin: 0 0 1rem;
+}
+.plaidact-admin-field:last-child { margin-bottom: 0; }
+.plaidact-admin-field__label {
+  color: var(--plaidact-admin-text);
+  font-size: .86rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+.plaidact-admin-field__label small {
+  color: var(--plaidact-admin-muted);
+  font-weight: 500;
+}
+.plaidact-admin-field__help {
+  color: var(--plaidact-admin-muted);
+  font-size: .82rem;
+  line-height: 1.5;
+  margin: 0;
+}
+.plaidact-admin-field input[type="text"],
+.plaidact-admin-field input[type="email"],
+.plaidact-admin-field input[type="url"],
+.plaidact-admin-field input[type="number"],
+.plaidact-admin-field input[type="password"],
+.plaidact-admin-field select,
+.plaidact-admin-field textarea {
+  background: #fff;
+  border: 1px solid var(--plaidact-admin-border-strong);
+  border-radius: 10px;
+  color: var(--plaidact-admin-text);
+  font-size: .9rem;
+  line-height: 1.4;
+  padding: .62rem .75rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  width: 100%;
+}
+.plaidact-admin-field input::placeholder,
+.plaidact-admin-field textarea::placeholder { color: #94a3b8; }
+.plaidact-admin-field input:focus,
+.plaidact-admin-field select:focus,
+.plaidact-admin-field textarea:focus {
+  background: #fff;
+  border-color: var(--plaidact-admin-accent);
+  box-shadow: 0 0 0 3px rgba(204,26,43,.12);
+  outline: none;
+}
+.plaidact-admin-field textarea.code {
+  font-family: var(--plaidact-admin-mono);
+  font-size: .84rem;
+}
+.plaidact-admin-field--inline {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem .75rem;
+}
+.plaidact-admin-field--inline .plaidact-admin-field__label { margin: 0; }
+
+/* Checkbox / Switch */
+.plaidact-admin-switch {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  gap: .65rem;
+  user-select: none;
+}
+.plaidact-admin-switch__input {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  cursor: pointer;
+  height: 22px;
+  position: relative;
+  transition: background 160ms ease, border-color 160ms ease;
+  width: 42px;
+  flex: 0 0 auto;
+}
+.plaidact-admin-switch__input::after {
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(15,23,42,.2);
+  content: "";
+  height: 18px;
+  left: 1px;
+  position: absolute;
+  top: 1px;
+  transition: transform 160ms ease;
+  width: 18px;
+}
+.plaidact-admin-switch__input:checked {
+  background: var(--plaidact-admin-accent);
+  border-color: var(--plaidact-admin-accent);
+}
+.plaidact-admin-switch__input:checked::after { transform: translateX(20px); }
+.plaidact-admin-switch__input:focus-visible {
+  outline: 2px solid var(--plaidact-admin-accent);
+  outline-offset: 2px;
+}
+.plaidact-admin-switch__label {
+  font-size: .9rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.plaidact-admin-switch__desc {
+  color: var(--plaidact-admin-muted);
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+/* Modules grid — cartes avec switch */
+.plaidact-admin-modules {
+  display: grid;
+  gap: .9rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.plaidact-admin-module {
+  background: var(--plaidact-admin-surface);
+  border: 1px solid var(--plaidact-admin-border);
+  border-radius: var(--plaidact-admin-radius);
+  box-shadow: var(--plaidact-admin-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  padding: 1rem 1.05rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.plaidact-admin-module:hover {
+  border-color: var(--plaidact-admin-border-strong);
+  box-shadow: var(--plaidact-admin-shadow-hover);
+  transform: translateY(-1px);
+}
+.plaidact-admin-module.is-active {
+  border-color: rgba(204,26,43,.22);
+  background: linear-gradient(180deg, #fff, var(--plaidact-admin-accent-soft));
+}
+.plaidact-admin-module__head {
+  align-items: flex-start;
+  display: flex;
+  gap: .75rem;
+  justify-content: space-between;
+}
+.plaidact-admin-module__icon {
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 10px;
+  color: var(--plaidact-admin-muted);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+.plaidact-admin-module.is-active .plaidact-admin-module__icon {
+  background: var(--plaidact-admin-accent);
+  color: #fff;
+}
+.plaidact-admin-module__title {
+  font-size: .92rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0;
+}
+.plaidact-admin-module__desc {
+  color: var(--plaidact-admin-muted);
+  font-size: .82rem;
+  line-height: 1.5;
+  margin: .25rem 0 0;
+}
+
+/* Table signataires */
+.plaidact-admin-table-wrap {
+  background: var(--plaidact-admin-surface);
+  border: 1px solid var(--plaidact-admin-border);
+  border-radius: var(--plaidact-admin-radius);
+  box-shadow: var(--plaidact-admin-shadow);
+  overflow: hidden;
+}
+.plaidact-admin-table-wrap .tablenav {
+  padding: .75rem 1rem;
+}
+.plaidact-admin-table {
+  border-collapse: separate !important;
+  border-spacing: 0;
+  width: 100%;
+}
+.plaidact-admin-table thead th {
+  background: #f8fafc;
+  border-bottom: 1px solid var(--plaidact-admin-border);
+  color: var(--plaidact-admin-muted);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  padding: .7rem .9rem;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.plaidact-admin-table tbody td {
+  border-bottom: 1px solid #f1f5f9;
+  font-size: .88rem;
+  padding: .65rem .9rem;
+  vertical-align: middle;
+}
+.plaidact-admin-table tbody tr:last-child td { border-bottom: 0; }
+.plaidact-admin-table tbody tr:hover td { background: #f8fafc; }
+.plaidact-admin-badge {
+  background: #f1f5f9;
+  border: 1px solid var(--plaidact-admin-border);
+  border-radius: 999px;
+  color: var(--plaidact-admin-muted);
+  display: inline-flex;
+  font-size: .75rem;
+  font-weight: 650;
+  padding: .2rem .55rem;
+  white-space: nowrap;
+}
+.plaidact-admin-badge--success { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+.plaidact-admin-badge--warn { background: #fef3c7; border-color: #fde68a; color: #92400e; }
+
+/* Notices inline */
+.plaidact-admin-notice {
+  background: #f8fafc;
+  border: 1px solid var(--plaidact-admin-border);
+  border-left-width: 4px;
+  border-radius: 10px;
+  padding: .75rem .9rem;
+}
+.plaidact-admin-notice--info { border-left-color: var(--plaidact-admin-accent); background: var(--plaidact-admin-accent-soft); }
+.plaidact-admin-notice--success { border-left-color: #10b981; background: #ecfdf5; }
+.plaidact-admin-notice--warn { border-left-color: #f59e0b; background: #fffbeb; }
+
+/* Buttons */
+.plaidact-admin-wrap .button-primary {
+  background: var(--plaidact-admin-accent) !important;
+  border-color: var(--plaidact-admin-accent) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 2px 10px rgba(204,26,43,.18) !important;
+  font-weight: 700 !important;
+  padding: .15rem 1.1rem !important;
+}
+.plaidact-admin-wrap .button-primary:hover {
+  background: var(--plaidact-admin-accent-hover) !important;
+  border-color: var(--plaidact-admin-accent-hover) !important;
+}
+.plaidact-admin-wrap .button {
+  border-radius: 999px !important;
+  font-weight: 600;
+}
+
+/* Import pages */
+.plaidact-admin-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin: .75rem 0;
+}
+
+/* Utilities */
+.plaidact-admin-muted { color: var(--plaidact-admin-muted); }
+.plaidact-admin-mono { font-family: var(--plaidact-admin-mono); font-size: .84rem; }
+.plaidact-admin-divider { border: 0; border-top: 1px solid var(--plaidact-admin-border); margin: 1rem 0; }
+
+/* Responsive */
+@media (max-width: 782px) {
+  .plaidact-admin-header { padding: 1rem; }
+  .plaidact-admin-card__body { padding: 1rem; }
+  .plaidact-admin-tabs .nav-tab { font-size: .82rem; padding: .55rem .75rem; }
+}
+
+/* Focus visible global */
+.plaidact-admin-wrap :focus-visible {
+  outline: 2px solid var(--plaidact-admin-accent);
+  outline-offset: 2px;
+}
+
+/* Masque l'ancien form-table quand refacto en cards (rétrocompat) */
+.plaidact-admin-wrap .form-table { background: transparent; }
+.plaidact-admin-wrap .form-table th { font-weight: 650; }
+
+/* Animation réduite */
+@media (prefers-reduced-motion: reduce) {
+  .plaidact-admin-card, .plaidact-admin-module, .plaidact-admin-tabs .nav-tab { transition: none; }
+  .plaidact-admin-tab-panel.is-active { animation: none; }
+}
