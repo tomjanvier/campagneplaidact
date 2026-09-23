@@ -2330,6 +2330,8 @@ final class Shortcodes
                 "limit"       => 8,
                 "topic"       => "",
                 "layout"      => "scroll",
+                "autoplay"    => "1",
+                "interval"    => 4000,
                 "class"       => "",
                 "className"   => "",
             ],
@@ -2342,6 +2344,12 @@ final class Shortcodes
         $topic  = sanitize_title((string) $atts["topic"]);
         $title  = trim((string) $atts["title"]);
         $description = trim((string) $atts["description"]);
+        $autoplay = !in_array(strtolower(trim((string) $atts["autoplay"])), ["0", "false", "no", "off"], true);
+        $interval = max(1500, min(10000, absint($atts["interval"] ?? 4000)));
+        // Le défilement auto n'a de sens qu'en layout scroll avec plusieurs items.
+        if ("grid" === $layout) {
+            $autoplay = false;
+        }
         $extra_class = self::sanitize_css_classes((string) ($atts["class"] ?? "") . " " . (string) ($atts["className"] ?? ""));
 
         // Requête optimisée : pas de comptage total, cache méta inutile.
@@ -2371,20 +2379,30 @@ final class Shortcodes
         $breves = get_posts($query_args);
 
         // Construction du mapping thématique depuis le cache préchargé (1 requête, pas N+1).
+        // On conserve tous les tags pour affichage complet (pas seulement le premier).
         $breve_topic_map = [];
         if (!empty($breves)) {
             foreach ($breves as $breve) {
                 $post_terms = get_the_terms((int) $breve->ID, "plaid_breve_topic");
                 if (!is_wp_error($post_terms) && is_array($post_terms) && !empty($post_terms)) {
-                    $first = reset($post_terms);
-                    $breve_topic_map[(int) $breve->ID] = $first instanceof \WP_Term ? (string) $first->name : "";
+                    $terms = [];
+                    foreach ($post_terms as $term) {
+                        if ($term instanceof \WP_Term) {
+                            $terms[] = [
+                                "name" => (string) $term->name,
+                                "slug" => (string) $term->slug,
+                                "link" => get_term_link($term),
+                            ];
+                        }
+                    }
+                    $breve_topic_map[(int) $breve->ID] = $terms;
                 } else {
-                    $breve_topic_map[(int) $breve->ID] = "";
+                    $breve_topic_map[(int) $breve->ID] = [];
                 }
             }
         }
 
-        $section_id = "plaidact-breves-" . md5(serialize([$title, $topic, $limit, $layout]));
+        $section_id = "plaidact-breves-" . md5(serialize([$title, $topic, $limit, $layout, $autoplay, $interval]));
         $aria_label = $title !== "" ? $title : __("Les brèves", "plaidact-campaign-core");
         $has_breves = !empty($breves);
 
@@ -2395,6 +2413,8 @@ final class Shortcodes
             class="plaidact-breves plaidact-breves--<?php echo esc_attr($layout); ?> <?php echo esc_attr(trim(self::get_campaign_design_class($settings) . " " . $extra_class)); ?>"
             aria-label="<?php echo esc_attr($aria_label); ?>"
             data-plaidact-breves
+            data-autoplay="<?php echo $autoplay ? "1" : "0"; ?>"
+            data-interval="<?php echo esc_attr((string) $interval); ?>"
         >
             <?php if ("" !== $title || "" !== $description): ?>
             <div class="plaidact-breves__head">
@@ -2426,7 +2446,8 @@ final class Shortcodes
                             // Date localisée côté WordPress (respecte la locale du site).
                             $date_iso = get_the_date("c", $breve);
                             $date_display = get_the_date("j F Y", $breve);
-                            $topic_display = $breve_topic_map[$breve_id] ?? "";
+                            $topics = $breve_topic_map[$breve_id] ?? [];
+                            $first_topic = $topics[0]["name"] ?? "";
                             $excerpt_raw = get_the_excerpt($breve);
                             if ("" === trim((string) $excerpt_raw)) {
                                 $content_raw = (string) get_post_field("post_content", $breve_id, "raw");
@@ -2446,15 +2467,31 @@ final class Shortcodes
                             >
                                 <div class="plaidact-breve__meta">
                                     <time datetime="<?php echo esc_attr((string) $date_iso); ?>"><?php echo esc_html((string) $date_display); ?></time>
-                                    <?php if ("" !== $topic_display): ?>
+                                    <?php if ("" !== $first_topic): ?>
                                         <span class="plaidact-breve__sep" aria-hidden="true">|</span>
-                                        <span class="plaidact-breve__topic"><?php echo esc_html($topic_display); ?></span>
+                                        <span class="plaidact-breve__topic"><?php echo esc_html($first_topic); ?></span>
                                     <?php endif; ?>
                                 </div>
                                 <h3 id="<?php echo $heading_id; ?>" class="plaidact-breve__heading">
                                     <a href="<?php echo esc_url((string) $permalink); ?>"><?php echo esc_html((string) $breve_title); ?></a>
                                 </h3>
                                 <div class="plaidact-breve__excerpt"><?php echo $excerpt_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+                                <?php if (!empty($topics)): ?>
+                                <div class="plaidact-breve__tags" aria-label="<?php esc_attr_e("Thématiques", "plaidact-campaign-core"); ?>">
+                                    <?php foreach ($topics as $t):
+                                        $tag_link = $t["link"] ?? "";
+                                        $is_link = is_string($tag_link) && "" !== $tag_link && !is_wp_error($tag_link);
+                                        $tag_name = (string) ($t["name"] ?? "");
+                                        if ("" === $tag_name) { continue; }
+                                    ?>
+                                        <?php if ($is_link): ?>
+                                            <a href="<?php echo esc_url($tag_link); ?>" class="plaidact-breve__tag"><?php echo esc_html($tag_name); ?></a>
+                                        <?php else: ?>
+                                            <span class="plaidact-breve__tag"><?php echo esc_html($tag_name); ?></span>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </div>
+                                <?php endif; ?>
                             </article>
                         <?php endforeach; ?>
                     </div>

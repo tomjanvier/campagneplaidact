@@ -205,6 +205,8 @@
 			limit: { type: 'number', default: 8 },
 			topic: { type: 'string', default: '' },
 			layout: { type: 'string', default: 'scroll' },
+			autoplay: { type: 'boolean', default: true },
+			interval: { type: 'number', default: 4000 },
 		},
 		edit: function (props) {
 			var attrs = props.attributes;
@@ -251,7 +253,23 @@
 								{ label: __('Grille', 'plaidact-campaign-core'), value: 'grid' },
 							],
 							onChange: function (value) { props.setAttributes({ layout: value }); },
-						})
+						}),
+						el(ToggleControl, {
+							label: __('Défilement automatique', 'plaidact-campaign-core'),
+							checked: !!attrs.autoplay,
+							onChange: function (value) { props.setAttributes({ autoplay: !!value }); },
+							help: __('Fait défiler automatiquement le carrousel (pause au survol).', 'plaidact-campaign-core'),
+						}),
+						attrs.autoplay
+							? el(RangeControl, {
+									label: __('Intervalle (ms)', 'plaidact-campaign-core'),
+									value: attrs.interval || 4000,
+									min: 1500,
+									max: 10000,
+									step: 500,
+									onChange: function (value) { props.setAttributes({ interval: value }); },
+							  })
+							: null
 					)
 				),
 				el(
@@ -269,6 +287,10 @@
 							(attrs.topic ? ' topic="' + attrs.topic + '"' : '') +
 							' layout="' +
 							(attrs.layout || 'scroll') +
+							'" autoplay="' +
+							(attrs.autoplay ? '1' : '0') +
+							'" interval="' +
+							(attrs.interval || 4000) +
 							'"]',
 					})
 				)

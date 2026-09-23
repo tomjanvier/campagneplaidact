@@ -142,6 +142,8 @@ final class Blocks {
 							'limit'       => isset( $attributes['limit'] ) ? (int) $attributes['limit'] : 8,
 							'topic'       => isset( $attributes['topic'] ) ? (string) $attributes['topic'] : '',
 							'layout'      => isset( $attributes['layout'] ) ? (string) $attributes['layout'] : 'scroll',
+							'autoplay'    => isset( $attributes['autoplay'] ) ? (bool) $attributes['autoplay'] : true,
+							'interval'    => isset( $attributes['interval'] ) ? (int) $attributes['interval'] : 4000,
 						)
 					);
 				},
@@ -165,6 +167,14 @@ final class Blocks {
 					'layout'      => array(
 						'type'    => 'string',
 						'default' => 'scroll',
+					),
+					'autoplay'    => array(
+						'type'    => 'boolean',
+						'default' => true,
+					),
+					'interval'    => array(
+						'type'    => 'number',
+						'default' => 4000,
 					),
 				),
 				'supports'        => array(
