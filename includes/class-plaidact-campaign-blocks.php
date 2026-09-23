@@ -144,6 +144,8 @@ final class Blocks {
 							'layout'      => isset( $attributes['layout'] ) ? (string) $attributes['layout'] : 'scroll',
 							'autoplay'    => isset( $attributes['autoplay'] ) ? (bool) $attributes['autoplay'] : true,
 							'interval'    => isset( $attributes['interval'] ) ? (int) $attributes['interval'] : 4000,
+							'continuous'  => isset( $attributes['continuous'] ) ? (bool) $attributes['continuous'] : true,
+							'speed'       => isset( $attributes['speed'] ) ? (int) $attributes['speed'] : 40,
 						)
 					);
 				},
@@ -175,6 +177,14 @@ final class Blocks {
 					'interval'    => array(
 						'type'    => 'number',
 						'default' => 4000,
+					),
+					'continuous'  => array(
+						'type'    => 'boolean',
+						'default' => true,
+					),
+					'speed'       => array(
+						'type'    => 'number',
+						'default' => 40,
 					),
 				),
 				'supports'        => array(

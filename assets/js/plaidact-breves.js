@@ -123,18 +123,24 @@
 		var autoplayEnabled = autoplayAttr !== '0' && autoplayAttr !== 'false';
 		var intervalAttr = parseInt(root.getAttribute('data-interval') || '4000', 10);
 		var intervalMs = isNaN(intervalAttr) ? 4000 : Math.max(1500, Math.min(intervalAttr, 10000));
+		var continuousAttr = root.getAttribute('data-continuous');
+		var continuousEnabled = continuousAttr === '1' || continuousAttr === 'true';
+		var speedAttr = parseInt(root.getAttribute('data-speed') || '40', 10);
+		var speedPxPerSec = isNaN(speedAttr) ? 40 : Math.max(10, Math.min(speedAttr, 200));
 		var prefersReduced = false;
 		try { prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_e) {}
 		var autoplayTimer = null;
 		var isHovered = false;
 		var isFocused = false;
+		var marqueeRaf = null;
+		var lastMarqueeTime = 0;
 
 		function canAutoplay() {
 			return autoplayEnabled && needsScroll && !prefersReduced && !isHovered && !isFocused && !isDown && !document.hidden;
 		}
 
 		function scrollToNext() {
-			if (!canAutoplay()) return;
+			if (!canAutoplay() || continuousEnabled) return;
 			var maxScroll = viewport.scrollWidth - viewport.clientWidth - 2;
 			if (viewport.scrollLeft >= maxScroll) {
 				// Retour au début en douceur
@@ -146,7 +152,7 @@
 
 		function startAutoplay() {
 			stopAutoplay();
-			if (!autoplayEnabled || prefersReduced) return;
+			if (!autoplayEnabled || prefersReduced || continuousEnabled) return;
 			autoplayTimer = window.setInterval(scrollToNext, intervalMs);
 		}
 
@@ -155,20 +161,20 @@
 		}
 
 		// Pause au survol / focus
-		root.addEventListener('mouseenter', function () { isHovered = true; stopAutoplay(); });
-		root.addEventListener('mouseleave', function () { isHovered = false; startAutoplay(); });
-		viewport.addEventListener('focusin', function () { isFocused = true; stopAutoplay(); });
-		viewport.addEventListener('focusout', function () { isFocused = false; startAutoplay(); });
+		root.addEventListener('mouseenter', function () { isHovered = true; stopAutoplay(); if (continuousEnabled) stopMarquee(); });
+		root.addEventListener('mouseleave', function () { isHovered = false; startAutoplay(); if (continuousEnabled) startMarquee(); });
+		viewport.addEventListener('focusin', function () { isFocused = true; stopAutoplay(); if (continuousEnabled) stopMarquee(); });
+		viewport.addEventListener('focusout', function () { isFocused = false; startAutoplay(); if (continuousEnabled) startMarquee(); });
 		// Pause pendant le drag
-		viewport.addEventListener('mousedown', function () { stopAutoplay(); });
-		viewport.addEventListener('mouseup', function () { startAutoplay(); });
-		viewport.addEventListener('touchstart', function () { stopAutoplay(); }, { passive: true });
-		viewport.addEventListener('touchend', function () { startAutoplay(); });
-		document.addEventListener('visibilitychange', function () { if (document.hidden) stopAutoplay(); else startAutoplay(); });
-		// Pause quand l'utilisateur scroll manuellement
+		viewport.addEventListener('mousedown', function () { stopAutoplay(); if (continuousEnabled) stopMarquee(); });
+		viewport.addEventListener('mouseup', function () { startAutoplay(); if (continuousEnabled) startMarquee(); });
+		viewport.addEventListener('touchstart', function () { stopAutoplay(); if (continuousEnabled) stopMarquee(); }, { passive: true });
+		viewport.addEventListener('touchend', function () { startAutoplay(); if (continuousEnabled) startMarquee(); });
+		document.addEventListener('visibilitychange', function () { if (document.hidden) { stopAutoplay(); stopMarquee(); } else { startAutoplay(); if (continuousEnabled) startMarquee(); } });
+		// Pause quand l'utilisateur scroll manuellement (mode discret uniquement)
 		var scrollDebounce = null;
 		viewport.addEventListener('scroll', function () {
-			if (!autoplayEnabled) return;
+			if (!autoplayEnabled || continuousEnabled) return;
 			stopAutoplay();
 			if (scrollDebounce) window.clearTimeout(scrollDebounce);
 			scrollDebounce = window.setTimeout(startAutoplay, 2500);
@@ -178,9 +184,59 @@
 		if (prev) prev.addEventListener('click', function () { stopAutoplay(); window.setTimeout(startAutoplay, 3000); });
 		if (next) next.addEventListener('click', function () { stopAutoplay(); window.setTimeout(startAutoplay, 3000); });
 
-		if (autoplayEnabled && !prefersReduced) {
+		if (autoplayEnabled && !prefersReduced && !continuousEnabled) {
 			// Démarre après un court délai pour laisser le temps de voir la première carte
 			window.setTimeout(startAutoplay, 1800);
+		}
+
+		// --- Mode continu (marquee) à la Focus 2030 ---
+		var track = viewport.querySelector('.plaidact-breves__track');
+		function cloneForMarquee() {
+			if (!track || track.dataset.marqueeCloned) return;
+			var originals = Array.from(track.children);
+			originals.forEach(function (child) {
+				var clone = child.cloneNode(true);
+				clone.removeAttribute('id');
+				clone.querySelectorAll('[id]').forEach(function (el) { el.removeAttribute('id'); });
+				clone.setAttribute('aria-hidden', 'true');
+				clone.querySelectorAll('a, button, [tabindex]').forEach(function (el) { el.setAttribute('tabindex', '-1'); });
+				track.appendChild(clone);
+			});
+			track.dataset.marqueeCloned = '1';
+			viewport.style.scrollSnapType = 'none';
+			viewport.style.scrollBehavior = 'auto';
+		}
+		function canMarquee() {
+			return continuousEnabled && autoplayEnabled && needsScroll && !prefersReduced && !isHovered && !isFocused && !isDown && !document.hidden;
+		}
+		function stopMarquee() {
+			if (marqueeRaf) { window.cancelAnimationFrame(marqueeRaf); marqueeRaf = null; lastMarqueeTime = 0; }
+		}
+		function startMarquee() {
+			stopMarquee();
+			if (!continuousEnabled || !autoplayEnabled || prefersReduced || !needsScroll) return;
+			if (track && !track.dataset.marqueeCloned) {
+				cloneForMarquee();
+			}
+			lastMarqueeTime = 0;
+			function step(timestamp) {
+				if (!lastMarqueeTime) lastMarqueeTime = timestamp;
+				var delta = timestamp - lastMarqueeTime;
+				lastMarqueeTime = timestamp;
+				if (canMarquee()) {
+					viewport.scrollLeft += (speedPxPerSec * delta / 1000);
+					var half = viewport.scrollWidth / 2;
+					if (half > 0 && viewport.scrollLeft >= half) {
+						viewport.scrollLeft -= half;
+					}
+				}
+				marqueeRaf = window.requestAnimationFrame(step);
+			}
+			marqueeRaf = window.requestAnimationFrame(step);
+		}
+		if (continuousEnabled && autoplayEnabled && !prefersReduced) {
+			window.setTimeout(function () { needsScroll = updateNav(); if (needsScroll) startMarquee(); }, 300);
+			window.addEventListener('resize', function () { needsScroll = updateNav(); if (!needsScroll) stopMarquee(); else if (continuousEnabled) startMarquee(); }, { passive: true });
 		}
 	}
 
