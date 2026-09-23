@@ -2306,9 +2306,9 @@ final class Shortcodes
      * Les alias sont conservés pour permettre aux pages historiques de
      * continuer à fonctionner après la centralisation du CPT dans le plugin.
      * Le rendu reproduit la maquette « ACTUALITÉS » : bande horizontale
-     * avec défilement natif, snap, séparateur vertical et métadonnée
-     * date | thématique. Le CSS assure le défilement sans JS ; un script
-     * léger ajoute le drag et les flèches clavier pour le confort.
+     * avec défilement natif, snap, date et badges de thématiques au-dessus
+     * du titre. Le CSS assure le défilement sans JS ; un script léger ajoute
+     * le drag et les flèches clavier pour le confort.
      *
      * @param array<string,mixed> $atts Attributs du shortcode.
      * @return string
@@ -2457,7 +2457,6 @@ final class Shortcodes
                             $date_iso = get_the_date("c", $breve);
                             $date_display = get_the_date("j F Y", $breve);
                             $topics = $breve_topic_map[$breve_id] ?? [];
-                            $first_topic = $topics[0]["name"] ?? "";
                             $excerpt_raw = get_the_excerpt($breve);
                             if ("" === trim((string) $excerpt_raw)) {
                                 $content_raw = (string) get_post_field("post_content", $breve_id, "raw");
@@ -2477,17 +2476,9 @@ final class Shortcodes
                             >
                                 <div class="plaidact-breve__meta">
                                     <time datetime="<?php echo esc_attr((string) $date_iso); ?>"><?php echo esc_html((string) $date_display); ?></time>
-                                    <?php if ("" !== $first_topic): ?>
-                                        <span class="plaidact-breve__sep" aria-hidden="true">|</span>
-                                        <span class="plaidact-breve__topic"><?php echo esc_html($first_topic); ?></span>
-                                    <?php endif; ?>
                                 </div>
-                                <h3 id="<?php echo $heading_id; ?>" class="plaidact-breve__heading">
-                                    <a href="<?php echo esc_url((string) $permalink); ?>"><?php echo esc_html((string) $breve_title); ?></a>
-                                </h3>
-                                <div class="plaidact-breve__excerpt"><?php echo $excerpt_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
                                 <?php if (!empty($topics)): ?>
-                                <div class="plaidact-breve__tags" aria-label="<?php esc_attr_e("Thématiques", "plaidact-campaign-core"); ?>">
+                                <div class="plaidact-breve__tags plaidact-breve__tags--above" aria-label="<?php esc_attr_e("Thématiques", "plaidact-campaign-core"); ?>">
                                     <?php foreach ($topics as $t):
                                         $tag_link = $t["link"] ?? "";
                                         $is_link = is_string($tag_link) && "" !== $tag_link && !is_wp_error($tag_link);
@@ -2495,13 +2486,17 @@ final class Shortcodes
                                         if ("" === $tag_name) { continue; }
                                     ?>
                                         <?php if ($is_link): ?>
-                                            <a href="<?php echo esc_url($tag_link); ?>" class="plaidact-breve__tag"><?php echo esc_html($tag_name); ?></a>
+                                            <a href="<?php echo esc_url($tag_link); ?>" class="plaidact-breve__tag">#<?php echo esc_html(ltrim($tag_name, "#")); ?></a>
                                         <?php else: ?>
-                                            <span class="plaidact-breve__tag"><?php echo esc_html($tag_name); ?></span>
+                                            <span class="plaidact-breve__tag">#<?php echo esc_html(ltrim($tag_name, "#")); ?></span>
                                         <?php endif; ?>
                                     <?php endforeach; ?>
                                 </div>
                                 <?php endif; ?>
+                                <h3 id="<?php echo $heading_id; ?>" class="plaidact-breve__heading">
+                                    <a href="<?php echo esc_url((string) $permalink); ?>"><?php echo esc_html((string) $breve_title); ?></a>
+                                </h3>
+                                <div class="plaidact-breve__excerpt"><?php echo $excerpt_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
                             </article>
                         <?php endforeach; ?>
                     </div>
