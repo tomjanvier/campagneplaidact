@@ -56,6 +56,7 @@ final class Shortcodes
         add_action("admin_menu", [__CLASS__, "register_admin_pages"]);
         add_action("admin_init", [__CLASS__, "register_settings"]);
         add_action("wp_enqueue_scripts", [__CLASS__, "enqueue_assets"]);
+        add_action("admin_enqueue_scripts", [__CLASS__, "enqueue_admin_assets"]);
         add_filter("av_petitioner_labels_defaults", [__CLASS__, "translate_petitioner_labels"]);
         add_filter("av_petitioner_form_attributes", [__CLASS__, "customize_petitioner_form_attributes"], 10, 2);
         add_action("admin_post_nopriv_plaidact_newsletter_submit", [
@@ -136,6 +137,35 @@ final class Shortcodes
                 ]
             );
         }
+    }
+
+    /**
+     * Charge les styles et scripts de l'administration (uniquement sur les pages du plugin).
+     *
+     * @param string $hook_suffix Identifiant de la page d'admin courante.
+     * @return void
+     */
+    public static function enqueue_admin_assets(string $hook_suffix): void
+    {
+        // Ne charge que sur les pages PLAID·ACT pour éviter d'alourdir tout l'admin.
+        if (false === strpos($hook_suffix, "plaidact")) {
+            return;
+        }
+
+        wp_enqueue_style(
+            "plaidact-admin",
+            PLAIDACT_CORE_URL . "assets/css/admin.css",
+            [],
+            plaidact_campaign_core_asset_version("assets/css/admin.css")
+        );
+
+        wp_enqueue_script(
+            "plaidact-admin",
+            PLAIDACT_CORE_URL . "assets/js/admin.js",
+            [],
+            plaidact_campaign_core_asset_version("assets/js/admin.js"),
+            true
+        );
     }
 
     /**
@@ -2293,7 +2323,9 @@ final class Shortcodes
         $settings = self::get_settings(true, $language);
         $atts = shortcode_atts(
             [
-                "title"       => __("ACTUALITÉS", "plaidact-campaign-core"),
+                // Pas de titre par défaut : le bloc s'intègre sans en-tête,
+                // l'utilisateur ajoute un titre s'il le souhaite côté éditeur.
+                "title"       => "",
                 "description" => "",
                 "limit"       => 8,
                 "topic"       => "",
@@ -2364,6 +2396,7 @@ final class Shortcodes
             aria-label="<?php echo esc_attr($aria_label); ?>"
             data-plaidact-breves
         >
+            <?php if ("" !== $title || "" !== $description): ?>
             <div class="plaidact-breves__head">
                 <?php if ("" !== $title): ?>
                     <h2 class="plaidact-breves__title"><?php echo esc_html($title); ?></h2>
@@ -2372,6 +2405,7 @@ final class Shortcodes
                     <p class="plaidact-breves__desc"><?php echo esc_html($description); ?></p>
                 <?php endif; ?>
             </div>
+            <?php endif; ?>
 
             <?php if ($has_breves): ?>
                 <div
