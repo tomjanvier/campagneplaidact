@@ -1555,27 +1555,31 @@ final class CPT {
 			return new \WP_Error( 'plaidact_image_create_failed', __( 'Impossible de créer l’image.', 'plaidact-campaign-core' ) );
 		}
 
-			// Palette PLAID·ACT — fond sombre uni pour lisibilité maximale (cf. maquette capture).
-		$color_bg     = imagecolorallocate( $image, 47, 20, 53 );   // #2f1435 — aubergine
-		$color_white  = imagecolorallocate( $image, 255, 255, 255 );
-		$color_light  = imagecolorallocate( $image, 240, 242, 243 ); // #F0F2F3 — tag
-		$color_muted  = imagecolorallocate( $image, 203, 213, 225 ); // #CBD5E1 — source sur fond sombre
-		$color_border = imagecolorallocate( $image, 61, 33, 68 );   // bordure subtile sur sombre
+			// Palette — fond clair propre (maquette Snapzy) pour vignette d'article/embed, très lisible.
+		$color_bg     = imagecolorallocate( $image, 255, 255, 255 ); // blanc pur — propre
+		$color_text   = imagecolorallocate( $image, 47, 20, 53 );   // #2f1435 — aubergine (titre/logo)
+		$color_white  = $color_text; // alias pour logo sombre
+		$color_light  = imagecolorallocate( $image, 47, 20, 53 );   // tag sombre sur clair
+		$color_muted  = imagecolorallocate( $image, 100, 116, 139 ); // #64748b — source
+		$color_border = imagecolorallocate( $image, 226, 232, 240 ); // #e2e8f0 — liseré clair
 
 		imagefilledrectangle( $image, 0, 0, $width, $height, $color_bg );
-		// Liseré fin pour détacher du fond blanc WP lors de l’aperçu.
 		imagerectangle( $image, 0, 0, $width - 1, $height - 1, $color_border );
 		if ( function_exists( 'imageantialias' ) ) {
 			imageantialias( $image, true );
 		}
 
-		// Police — on privilégie une Bold lisible (Rubik si bundlée, sinon DejaVu).
+		// Police — Rubik Black (bundle) pour un rendu WordPress propre et très lisible.
 		$font_bold    = self::locate_breve_font( 'bold' );
 		$font_regular = self::locate_breve_font( 'regular' );
 		$use_ttf      = ( null !== $font_bold && file_exists( $font_bold ) );
 
-		// Logo — vrai fichier PNG (blanc sur transparent), centré, net et fidèle à la charte.
-		$logo_path   = PLAIDACT_CORE_PATH . 'assets/images/logo-plaidact-white.png';
+		// Logo — vrai fichier PNG sombre sur transparent, centré, net.
+		$logo_path     = PLAIDACT_CORE_PATH . 'assets/images/logo-plaidact-dark.png';
+		$logo_fallback = PLAIDACT_CORE_PATH . 'assets/images/logo-plaidact-white.png';
+		if ( ! file_exists( $logo_path ) ) {
+			$logo_path = $logo_fallback;
+		}
 		$logo_rendered = false;
 		if ( file_exists( $logo_path ) && function_exists( 'imagecreatefrompng' ) ) {
 			$logo_src = @imagecreatefrompng( $logo_path );
@@ -1584,37 +1588,33 @@ final class CPT {
 				$src_w = imagesx( $logo_src );
 				$src_h = imagesy( $logo_src );
 				if ( $src_w > 0 && $src_h > 0 ) {
-					// Largeur cible calibrée sur la maquette (2000×362 → 420×76 pour 1200 de large).
-					$target_w = 440;
+					$target_w = 460; // légèrement plus large pour impact
 					$target_h = (int) ( $src_h * $target_w / $src_w );
 					$logo_x   = (int) ( ( $width - $target_w ) / 2 );
-					$logo_y   = 48;
-					// Fond dark : le PNG blanc reste net, pas de fond à gérer.
+					$logo_y   = 52;
 					imagecopyresampled( $image, $logo_src, $logo_x, $logo_y, 0, 0, $target_w, $target_h, $src_w, $src_h );
 					$logo_rendered = true;
-					// Trait fin sous le logo pour aérer, comme sur la capture Snapzy.
-					$line_y = $logo_y + $target_h + 16;
-					imageline( $image, (int) ( $width / 2 - 32 ), $line_y, (int) ( $width / 2 + 32 ), $line_y, $color_muted );
+					$line_y = $logo_y + $target_h + 18;
+					imageline( $image, (int) ( $width / 2 - 36 ), $line_y, (int) ( $width / 2 + 36 ), $line_y, $color_border );
 				}
 				imagedestroy( $logo_src );
 			}
 		}
 		if ( ! $logo_rendered ) {
-			// Repli texte si logo manquant — reste lisible.
 			$logo_text = 'PLAID·ACT';
 			if ( $use_ttf ) {
-				$logo_size = 54;
+				$logo_size = 56;
 				$bbox      = imagettfbbox( $logo_size, 0, $font_bold, $logo_text );
 				$logo_w    = $bbox[2] - $bbox[0];
 				$logo_x    = (int) ( ( $width - $logo_w ) / 2 );
-				$logo_y    = 88;
-				imagettftext( $image, $logo_size, 0, $logo_x, $logo_y, $color_white, $font_bold, $logo_text );
-				imageline( $image, (int) ( $width / 2 - 28 ), 108, (int) ( $width / 2 + 28 ), 108, $color_muted );
+				$logo_y    = 90;
+				imagettftext( $image, $logo_size, 0, $logo_x, $logo_y, $color_text, $font_bold, $logo_text );
+				imageline( $image, (int) ( $width / 2 - 36 ), 110, (int) ( $width / 2 + 36 ), 110, $color_border );
 			} else {
 				$font   = 5;
 				$logo_w = imagefontwidth( $font ) * strlen( $logo_text );
 				$logo_x = (int) ( ( $width - $logo_w ) / 2 );
-				imagestring( $image, $font, $logo_x, 42, $logo_text, $color_white );
+				imagestring( $image, $font, $logo_x, 42, $logo_text, $color_text );
 			}
 		}
 
