@@ -298,6 +298,62 @@
 	font-weight: 700;
 }
 
+/* Vignette auto-générée (1200×630) — ratio 1.91:1 */
+.plaidact-breve--has-thumb {
+	padding-top: 0;
+	overflow: hidden;
+}
+.plaidact-breve__thumb {
+	background: #F0F2F3;
+	border-bottom: 1px solid var(--plaidact-breves-border);
+	margin: 0 0 0.7rem;
+	overflow: hidden;
+}
+.plaidact-breve__thumb a {
+	display: block;
+}
+.plaidact-breve__thumb-img {
+	display: block;
+	width: 100%;
+	height: auto;
+	aspect-ratio: 1.91 / 1;
+	object-fit: cover;
+}
+.plaidact-breve__source {
+	color: var(--plaidact-breves-muted);
+	font-weight: 700;
+	text-decoration: none;
+}
+.plaidact-breve__source:hover,
+.plaidact-breve__source:focus-visible {
+	color: var(--plaidact-breves-accent);
+	text-decoration: underline;
+	outline: none;
+}
+.plaidact-breve__cta {
+	margin: 0.45rem 0 0;
+}
+.plaidact-breve__link {
+	color: var(--plaidact-breves-accent);
+	font-family: Rubik, sans-serif;
+	font-size: 0.82rem;
+	font-weight: 700;
+	text-decoration: none;
+}
+.plaidact-breve__link:hover,
+.plaidact-breve__link:focus-visible {
+	color: var(--plaidact-breves-accent-2);
+	text-decoration: underline;
+	outline: none;
+}
+.plaidact-breve--has-thumb .plaidact-breve__meta,
+.plaidact-breve--has-thumb .plaidact-breve__tags--above,
+.plaidact-breve--has-thumb .plaidact-breve__heading,
+.plaidact-breve--has-thumb .plaidact-breve__excerpt,
+.plaidact-breve--has-thumb .plaidact-breve__cta {
+	padding-inline: 0;
+}
+
 .plaidact-breve__heading {
 	color: var(--plaidact-breves-text);
 	font-family: Rubik, sans-serif;

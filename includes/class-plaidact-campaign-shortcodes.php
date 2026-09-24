@@ -2360,8 +2360,8 @@ final class Shortcodes
         }
         $extra_class = self::sanitize_css_classes((string) ($atts["class"] ?? "") . " " . (string) ($atts["className"] ?? ""));
 
-        // Requête optimisée : pas de comptage total, cache méta inutile.
-        // On précharge les termes en une seule requête via update_post_term_cache.
+        // Requête optimisée : pas de comptage total, pré-chargement des termes + métas
+        // nécessaires à l'affichage des liens/sources et des vignettes.
         $query_args = [
             "post_type"              => "plaid_breve",
             "post_status"            => "publish",
@@ -2369,7 +2369,7 @@ final class Shortcodes
             "orderby"                => "date",
             "order"                  => "DESC",
             "no_found_rows"          => true,
-            "update_post_meta_cache" => false,
+            "update_post_meta_cache" => true,
             "update_post_term_cache" => true,
             "ignore_sticky_posts"    => true,
         ];
@@ -2386,26 +2386,37 @@ final class Shortcodes
 
         $breves = get_posts($query_args);
 
-        // Construction du mapping thématique depuis le cache préchargé (1 requête, pas N+1).
-        // On conserve tous les tags pour affichage complet (pas seulement le premier).
+        // Construction du mapping thématique via le helper canonique
+        // (taxonomie + repli sur métadonnées historiques). On évite le N+1
+        // en pré-chargeant déjà le cache des termes, mais on passe par
+        // CPT::get_breve_topics() pour récupérer aussi les thématiques orphelines.
         $breve_topic_map = [];
         if (!empty($breves)) {
             foreach ($breves as $breve) {
-                $post_terms = get_the_terms((int) $breve->ID, "plaid_breve_topic");
-                if (!is_wp_error($post_terms) && is_array($post_terms) && !empty($post_terms)) {
-                    $terms = [];
-                    foreach ($post_terms as $term) {
-                        if ($term instanceof \WP_Term) {
-                            $terms[] = [
-                                "name" => (string) $term->name,
-                                "slug" => (string) $term->slug,
-                                "link" => get_term_link($term),
-                            ];
-                        }
-                    }
-                    $breve_topic_map[(int) $breve->ID] = $terms;
+                $breve_topic_map[(int) $breve->ID] = \Plaidact\CampaignCore\CPT::get_breve_topics((int) $breve->ID);
+            }
+        }
+
+        // Mapping des métadonnées de lien/source et des vignettes pour ne pas
+        // multiplier les lectures de post_meta dans la boucle d'affichage.
+        $breve_link_map   = [];
+        $breve_source_map = [];
+        $breve_thumb_map  = [];
+        if (!empty($breves)) {
+            foreach ($breves as $breve) {
+                $bid = (int) $breve->ID;
+                $breve_link_map[$bid]   = \Plaidact\CampaignCore\CPT::get_breve_link($bid);
+                $source                 = \Plaidact\CampaignCore\CPT::get_breve_source($bid);
+                $source_url             = \Plaidact\CampaignCore\CPT::get_breve_source_url($bid);
+                $breve_source_map[$bid] = [
+                    'name' => $source,
+                    'url'  => $source_url,
+                ];
+                // Vignette : on prépare le HTML une seule fois.
+                if (has_post_thumbnail($bid)) {
+                    $breve_thumb_map[$bid] = get_the_post_thumbnail($bid, 'medium', ['loading' => 'lazy', 'decoding' => 'async', 'class' => 'plaidact-breve__thumb-img']);
                 } else {
-                    $breve_topic_map[(int) $breve->ID] = [];
+                    $breve_thumb_map[$bid] = '';
                 }
             }
         }
@@ -2448,7 +2459,6 @@ final class Shortcodes
                     <div class="plaidact-breves__track">
                         <?php foreach ($breves as $index => $breve):
                             $breve_id = (int) $breve->ID;
-                            $permalink = get_permalink($breve);
                             $breve_title = get_the_title($breve);
                             if ("" === trim((string) $breve_title)) {
                                 $breve_title = sprintf(__("Brève #%d", "plaidact-campaign-core"), $breve_id);
@@ -2465,17 +2475,50 @@ final class Shortcodes
                             // L'extrait conserve les liens et la mise en forme légère.
                             $excerpt_html = wp_kses_post(wpautop($excerpt_raw));
                             $heading_id = esc_attr($section_id . "-breve-" . $breve_id);
+
+                            // Lien externe restauré : si la brève a un lien canonique, le titre pointe vers l'extérieur.
+                            $external_link = (string) ($breve_link_map[$breve_id] ?? "");
+                            $has_external  = "" !== $external_link && filter_var($external_link, FILTER_VALIDATE_URL);
+                            $permalink     = $has_external ? $external_link : (string) get_permalink($breve);
+                            $link_attrs    = $has_external ? ' target="_blank" rel="noopener noreferrer"' : "";
+
+                            // Source : nom + URL éventuelle.
+                            $source_name = (string) ($breve_source_map[$breve_id]['name'] ?? "");
+                            $source_url  = (string) ($breve_source_map[$breve_id]['url'] ?? "");
+                            // Si la source est vide mais qu'un lien externe existe, on affiche son domaine comme source.
+                            if ("" === $source_name && $has_external) {
+                                $host = wp_parse_url($external_link, PHP_URL_HOST);
+                                if (is_string($host) && "" !== $host) {
+                                    $source_name = $host;
+                                }
+                            }
+                            $thumb_html = (string) ($breve_thumb_map[$breve_id] ?? "");
                             ?>
                             <article
-                                class="plaidact-breve"
+                                class="plaidact-breve<?php echo "" !== $thumb_html ? " plaidact-breve--has-thumb" : ""; ?>"
                                 aria-labelledby="<?php echo $heading_id; ?>"
                                 aria-posinset="<?php echo esc_attr((string) ($index + 1)); ?>"
                                 aria-setsize="<?php echo esc_attr((string) count($breves)); ?>"
                                 role="group"
                                 aria-roledescription="slide"
                             >
+                                <?php if ("" !== $thumb_html): ?>
+                                <div class="plaidact-breve__thumb">
+                                    <a href="<?php echo esc_url($permalink); ?>"<?php echo $link_attrs; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> aria-hidden="true" tabindex="-1">
+                                        <?php echo $thumb_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                    </a>
+                                </div>
+                                <?php endif; ?>
                                 <div class="plaidact-breve__meta">
                                     <time datetime="<?php echo esc_attr((string) $date_iso); ?>"><?php echo esc_html((string) $date_display); ?></time>
+                                    <?php if ("" !== $source_name): ?>
+                                        <span class="plaidact-breve__sep" aria-hidden="true">·</span>
+                                        <?php if ("" !== $source_url && filter_var($source_url, FILTER_VALIDATE_URL)): ?>
+                                            <a class="plaidact-breve__source" href="<?php echo esc_url($source_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($source_name); ?></a>
+                                        <?php else: ?>
+                                            <span class="plaidact-breve__source"><?php echo esc_html($source_name); ?></span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
                                 </div>
                                 <?php if (!empty($topics)): ?>
                                 <div class="plaidact-breve__tags plaidact-breve__tags--above" aria-label="<?php esc_attr_e("Thématiques", "plaidact-campaign-core"); ?>">
@@ -2494,9 +2537,14 @@ final class Shortcodes
                                 </div>
                                 <?php endif; ?>
                                 <h3 id="<?php echo $heading_id; ?>" class="plaidact-breve__heading">
-                                    <a href="<?php echo esc_url((string) $permalink); ?>"><?php echo esc_html((string) $breve_title); ?></a>
+                                    <a href="<?php echo esc_url($permalink); ?>"<?php echo $link_attrs; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html((string) $breve_title); ?><?php if ($has_external): ?> <span aria-hidden="true">↗</span><span class="screen-reader-text"><?php esc_html_e("(lien externe)", "plaidact-campaign-core"); ?></span><?php endif; ?></a>
                                 </h3>
                                 <div class="plaidact-breve__excerpt"><?php echo $excerpt_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+                                <?php if ($has_external): ?>
+                                <p class="plaidact-breve__cta">
+                                    <a class="plaidact-breve__link" href="<?php echo esc_url($external_link); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e("Lire la source", "plaidact-campaign-core"); ?> <span aria-hidden="true">→</span></a>
+                                </p>
+                                <?php endif; ?>
                             </article>
                         <?php endforeach; ?>
                     </div>

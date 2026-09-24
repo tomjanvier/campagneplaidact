@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PLAID·ACT Core
  * Description: Noyau PLAID·ACT (pétitions, newsletters, contenus et shortcodes).
- * Version: 2.3.0
+ * Version: 2.4.0
  * Author: PLAID·ACT
  * Requires at least: 6.5
  * Requires PHP: 8.1
@@ -13,7 +13,7 @@ if (!defined("ABSPATH")) {
     exit();
 }
 
-define("PLAIDACT_CORE_VERSION", "2.3.0");
+define("PLAIDACT_CORE_VERSION", "2.4.0");
 define("PLAIDACT_CORE_PATH", plugin_dir_path(__FILE__));
 define("PLAIDACT_CORE_URL", plugin_dir_url(__FILE__));
 define("PLAIDACT_CORE_BASENAME", plugin_basename(__FILE__));
