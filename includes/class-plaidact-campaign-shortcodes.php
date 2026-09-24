@@ -2361,7 +2361,7 @@ final class Shortcodes
         $extra_class = self::sanitize_css_classes((string) ($atts["class"] ?? "") . " " . (string) ($atts["className"] ?? ""));
 
         // Requête optimisée : pas de comptage total, pré-chargement des termes + métas
-        // nécessaires à l'affichage des liens/sources et des vignettes.
+        // nécessaires à l'affichage des liens/sources.
         $query_args = [
             "post_type"              => "plaid_breve",
             "post_status"            => "publish",
@@ -2397,27 +2397,17 @@ final class Shortcodes
             }
         }
 
-        // Mapping des métadonnées de lien/source et des vignettes pour ne pas
-        // multiplier les lectures de post_meta dans la boucle d'affichage.
+        // Mapping lien/source (vignette réservée au single/embed, pas au carrousel).
         $breve_link_map   = [];
         $breve_source_map = [];
-        $breve_thumb_map  = [];
         if (!empty($breves)) {
             foreach ($breves as $breve) {
                 $bid = (int) $breve->ID;
                 $breve_link_map[$bid]   = \Plaidact\CampaignCore\CPT::get_breve_link($bid);
-                $source                 = \Plaidact\CampaignCore\CPT::get_breve_source($bid);
-                $source_url             = \Plaidact\CampaignCore\CPT::get_breve_source_url($bid);
                 $breve_source_map[$bid] = [
-                    'name' => $source,
-                    'url'  => $source_url,
+                    'name' => \Plaidact\CampaignCore\CPT::get_breve_source($bid),
+                    'url'  => \Plaidact\CampaignCore\CPT::get_breve_source_url($bid),
                 ];
-                // Vignette : on prépare le HTML une seule fois.
-                if (has_post_thumbnail($bid)) {
-                    $breve_thumb_map[$bid] = get_the_post_thumbnail($bid, 'medium', ['loading' => 'lazy', 'decoding' => 'async', 'class' => 'plaidact-breve__thumb-img']);
-                } else {
-                    $breve_thumb_map[$bid] = '';
-                }
             }
         }
 
@@ -2482,33 +2472,24 @@ final class Shortcodes
                             $permalink     = $has_external ? $external_link : (string) get_permalink($breve);
                             $link_attrs    = $has_external ? ' target="_blank" rel="noopener noreferrer"' : "";
 
-                            // Source : nom + URL éventuelle.
+                            // Source : nom + URL éventuelle (domaine en repli si vide).
                             $source_name = (string) ($breve_source_map[$breve_id]['name'] ?? "");
                             $source_url  = (string) ($breve_source_map[$breve_id]['url'] ?? "");
-                            // Si la source est vide mais qu'un lien externe existe, on affiche son domaine comme source.
                             if ("" === $source_name && $has_external) {
                                 $host = wp_parse_url($external_link, PHP_URL_HOST);
                                 if (is_string($host) && "" !== $host) {
                                     $source_name = $host;
                                 }
                             }
-                            $thumb_html = (string) ($breve_thumb_map[$breve_id] ?? "");
                             ?>
                             <article
-                                class="plaidact-breve<?php echo "" !== $thumb_html ? " plaidact-breve--has-thumb" : ""; ?>"
+                                class="plaidact-breve"
                                 aria-labelledby="<?php echo $heading_id; ?>"
                                 aria-posinset="<?php echo esc_attr((string) ($index + 1)); ?>"
                                 aria-setsize="<?php echo esc_attr((string) count($breves)); ?>"
                                 role="group"
                                 aria-roledescription="slide"
                             >
-                                <?php if ("" !== $thumb_html): ?>
-                                <div class="plaidact-breve__thumb">
-                                    <a href="<?php echo esc_url($permalink); ?>"<?php echo $link_attrs; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> aria-hidden="true" tabindex="-1">
-                                        <?php echo $thumb_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                                    </a>
-                                </div>
-                                <?php endif; ?>
                                 <div class="plaidact-breve__meta">
                                     <time datetime="<?php echo esc_attr((string) $date_iso); ?>"><?php echo esc_html((string) $date_display); ?></time>
                                     <?php if ("" !== $source_name): ?>

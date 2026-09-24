@@ -1555,176 +1555,174 @@ final class CPT {
 			return new \WP_Error( 'plaidact_image_create_failed', __( 'Impossible de créer l’image.', 'plaidact-campaign-core' ) );
 		}
 
-		// Palette PLAID·ACT.
-		$color_bg       = imagecolorallocate( $image, 248, 250, 251 ); // #F8FAFB
-		$color_banner   = imagecolorallocate( $image, 47, 20, 53 );   // #2f1435
-		$color_accent   = imagecolorallocate( $image, 139, 53, 158 ); // #8b359e
-		$color_text     = imagecolorallocate( $image, 15, 26, 23 );   // #0f1a17
-		$color_muted    = imagecolorallocate( $image, 71, 85, 105 );  // #475569
-		$color_tag_bg   = imagecolorallocate( $image, 240, 242, 243 ); // #F0F2F3
-		$color_white    = imagecolorallocate( $image, 255, 255, 255 );
-		$color_border   = imagecolorallocate( $image, 226, 232, 240 ); // #e2e8f0
+			// Palette PLAID·ACT — fond sombre uni pour lisibilité maximale (cf. maquette capture).
+		$color_bg     = imagecolorallocate( $image, 47, 20, 53 );   // #2f1435 — aubergine
+		$color_white  = imagecolorallocate( $image, 255, 255, 255 );
+		$color_light  = imagecolorallocate( $image, 240, 242, 243 ); // #F0F2F3 — tag
+		$color_muted  = imagecolorallocate( $image, 203, 213, 225 ); // #CBD5E1 — source sur fond sombre
+		$color_border = imagecolorallocate( $image, 61, 33, 68 );   // bordure subtile sur sombre
 
 		imagefilledrectangle( $image, 0, 0, $width, $height, $color_bg );
-		// Bannière haute.
-		imagefilledrectangle( $image, 0, 0, $width, 110, $color_banner );
-
-		// Bordure fine.
+		// Liseré fin pour détacher du fond blanc WP lors de l’aperçu.
 		imagerectangle( $image, 0, 0, $width - 1, $height - 1, $color_border );
+		if ( function_exists( 'imageantialias' ) ) {
+			imageantialias( $image, true );
+		}
 
-		// Recherche d'une police TTF pour un rendu net.
+		// Police — on privilégie une Bold lisible (Rubik si bundlée, sinon DejaVu).
 		$font_bold    = self::locate_breve_font( 'bold' );
 		$font_regular = self::locate_breve_font( 'regular' );
+		$use_ttf      = ( null !== $font_bold && file_exists( $font_bold ) );
 
-		$use_ttf = ( null !== $font_bold && file_exists( $font_bold ) );
-
-		// Logo PLAID·ACT dans la bannière.
+		// Logo PLAID·ACT — blanc, centré en haut, très bold comme sur la capture.
 		$logo_text = 'PLAID·ACT';
 		if ( $use_ttf ) {
-			// Centré dans la bannière.
-			$logo_size = 36;
+			$logo_size = 54; // plus grand et plus propre que 36
 			$bbox      = imagettfbbox( $logo_size, 0, $font_bold, $logo_text );
 			$logo_w    = $bbox[2] - $bbox[0];
 			$logo_x    = (int) ( ( $width - $logo_w ) / 2 );
-			$logo_y    = 72;
+			$logo_y    = 88;
 			imagettftext( $image, $logo_size, 0, $logo_x, $logo_y, $color_white, $font_bold, $logo_text );
+			// Petit trait fin sous le logo pour aérer (comme la maquette).
+			$line_y = 108;
+			imageline( $image, (int) ( $width / 2 - 28 ), $line_y, (int) ( $width / 2 + 28 ), $line_y, $color_muted );
 		} else {
-			// Repli GD natif.
-			$font = 5;
+			$font   = 5;
 			$logo_w = imagefontwidth( $font ) * strlen( $logo_text );
 			$logo_x = (int) ( ( $width - $logo_w ) / 2 );
-			imagestring( $image, $font, $logo_x, 38, $logo_text, $color_white );
+			imagestring( $image, $font, $logo_x, 42, $logo_text, $color_white );
 		}
 
-		// Titre — centré, multi-lignes, wrap intelligent.
+		// Titre — blanc sur fond sombre, très lisible, centré verticalement.
 		$title = html_entity_decode( $title, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-		// Nettoyage des retours et limitation.
 		$title = trim( preg_replace( '/\s+/', ' ', $title ) );
-		if ( mb_strlen( $title ) > 140 ) {
-			$title = mb_substr( $title, 0, 137 ) . '…';
+		if ( mb_strlen( $title ) > 160 ) {
+			$title = mb_substr( $title, 0, 157 ) . '…';
 		}
 
-		$margin_x = 60;
+		$margin_x    = 64;
 		$available_w = $width - 2 * $margin_x;
 
 		if ( $use_ttf ) {
-			$title_size = 42;
-			// Ajuste la taille si le titre est très long.
-			if ( mb_strlen( $title ) > 80 ) {
-				$title_size = 36;
-			}
-			if ( mb_strlen( $title ) > 110 ) {
-				$title_size = 32;
+			// Taille adaptative : le titre reste dominant et lisible.
+			$len = mb_strlen( $title );
+			if ( $len <= 60 ) {
+				$title_size = 52;
+			} elseif ( $len <= 90 ) {
+				$title_size = 44;
+			} elseif ( $len <= 120 ) {
+				$title_size = 38;
+			} else {
+				$title_size = 34;
 			}
 			$lines = self::wrap_text_ttf( $title, $font_bold, $title_size, $available_w );
-			// Limite à 4 lignes.
-			if ( count( $lines ) > 4 ) {
-				$lines = array_slice( $lines, 0, 4 );
-				$lines[3] = rtrim( $lines[3], " \t\n\r\0\x0B…" ) . '…';
+			// 3 lignes max pour rester aéré.
+			if ( count( $lines ) > 3 ) {
+				$lines = array_slice( $lines, 0, 3 );
+				$lines[2] = rtrim( $lines[2], " \t\n\r\0\x0B…" ) . '…';
 			}
-			$line_h = (int) ( $title_size * 1.25 );
+			$line_h  = (int) ( $title_size * 1.18 );
 			$total_h = count( $lines ) * $line_h;
-			// Zone verticale disponible : sous la bannière (130) jusqu'au dessus des tags (500).
-			$area_top = 150;
-			$area_bottom = 500;
-			$area_h = $area_bottom - $area_top;
-			$start_y = $area_top + (int) ( ( $area_h - $total_h ) / 2 ) + $title_size;
+			// Zone utile : entre logo (120) et pied (520).
+			$area_top    = 128;
+			$area_bottom = 520;
+			$area_h      = $area_bottom - $area_top;
+			$start_y     = $area_top + (int) ( ( $area_h - $total_h ) / 2 ) + $title_size;
 
 			foreach ( $lines as $i => $line ) {
-				$bbox = imagettfbbox( $title_size, 0, $font_bold, $line );
+				$bbox   = imagettfbbox( $title_size, 0, $font_bold, $line );
 				$line_w = $bbox[2] - $bbox[0];
-				$x = (int) ( ( $width - $line_w ) / 2 );
-				$y = $start_y + $i * $line_h;
-				imagettftext( $image, $title_size, 0, $x, $y, $color_text, $font_bold, $line );
+				$x      = (int) ( ( $width - $line_w ) / 2 );
+				$y      = $start_y + $i * $line_h;
+				// Léger contour pour renforcer la lisibilité sur fond sombre.
+				imagettftext( $image, $title_size, 0, $x, $y, $color_white, $font_bold, $line );
 			}
 		} else {
-			// Repli GD natif — titre sur 2-3 lignes avec wordwrap.
-			$font = 5;
-			$char_w = imagefontwidth( $font );
+			// Repli GD natif — plus lisible qu’avant : fond sombre + blanc.
+			$font           = 5;
+			$char_w         = imagefontwidth( $font );
 			$chars_per_line = (int) ( $available_w / $char_w );
-			$wrapped = wordwrap( $title, $chars_per_line, "\n", true );
-			$lines = explode( "\n", $wrapped );
+			$wrapped        = wordwrap( $title, $chars_per_line, "\n", true );
+			$lines          = explode( "\n", $wrapped );
 			if ( count( $lines ) > 3 ) {
 				$lines = array_slice( $lines, 0, 3 );
 				$lines[2] .= '…';
 			}
-			$line_h = imagefontheight( $font ) + 6;
+			$line_h  = imagefontheight( $font ) + 8;
 			$total_h = count( $lines ) * $line_h;
-			$start_y = 200 + (int) ( ( 300 - $total_h ) / 2 );
+			$start_y = 180 + (int) ( ( 340 - $total_h ) / 2 );
 			foreach ( $lines as $i => $line ) {
 				$line_w = $char_w * strlen( $line );
-				$x = (int) ( ( $width - $line_w ) / 2 );
-				$y = $start_y + $i * $line_h;
-				imagestring( $image, $font, $x, $y, $line, $color_text );
+				$x      = (int) ( ( $width - $line_w ) / 2 );
+				$y      = $start_y + $i * $line_h;
+				imagestring( $image, $font, $x, $y, $line, $color_white );
 			}
 		}
 
-		// Thématique — badge en bas à gauche.
-		if ( '' !== trim( $topic_name ) ) {
+		// Pied : thématique (pill clair) à gauche, source (muted) à droite.
+		$has_topic  = '' !== trim( $topic_name );
+		$has_source = '' !== trim( $source );
+
+		if ( $has_topic ) {
 			$tag_text = '#' . ltrim( trim( $topic_name ), '#' );
 			$tag_text = mb_strtoupper( $tag_text, 'UTF-8' );
-			if ( mb_strlen( $tag_text ) > 28 ) {
-				$tag_text = mb_substr( $tag_text, 0, 27 ) . '…';
+			if ( mb_strlen( $tag_text ) > 26 ) {
+				$tag_text = mb_substr( $tag_text, 0, 25 ) . '…';
 			}
 
 			if ( $use_ttf ) {
-				$tag_size = 16;
-				$bbox = imagettfbbox( $tag_size, 0, $font_bold, $tag_text );
-				$text_w = $bbox[2] - $bbox[0];
-				$text_h = $bbox[1] - $bbox[7];
-				$pad_x = 18;
-				$pad_y = 10;
-				$tag_w = $text_w + 2 * $pad_x;
-				$tag_h = $text_h + 2 * $pad_y;
-				$tag_x = $margin_x;
-				$tag_y = $height - 70;
-				// Fond arrondi simulé par rectangle + cercles.
-				imagefilledrectangle( $image, $tag_x, $tag_y, $tag_x + $tag_w, $tag_y + $tag_h, $color_tag_bg );
-				imagerectangle( $image, $tag_x, $tag_y, $tag_x + $tag_w, $tag_y + $tag_h, $color_border );
+				$tag_size = 15;
+				$bbox     = imagettfbbox( $tag_size, 0, $font_bold, $tag_text );
+				$text_w   = $bbox[2] - $bbox[0];
+				$text_h   = $bbox[1] - $bbox[7];
+				$pad_x    = 18;
+				$pad_y    = 10;
+				$tag_w    = $text_w + 2 * $pad_x;
+				$tag_h    = $text_h + 2 * $pad_y;
+				$tag_x    = $margin_x;
+				$tag_y    = $height - 72;
+				imagefilledrectangle( $image, $tag_x, $tag_y, $tag_x + $tag_w, $tag_y + $tag_h, $color_light );
 				$text_x = $tag_x + $pad_x;
-				$text_y = $tag_y + $tag_h - $pad_y - 2;
-				imagettftext( $image, $tag_size, 0, $text_x, $text_y, $color_banner, $font_bold, $tag_text );
+				$text_y = $tag_y + $tag_h - $pad_y - 3;
+				imagettftext( $image, $tag_size, 0, $text_x, $text_y, $color_bg, $font_bold, $tag_text );
 			} else {
-				$font = 3;
+				$font   = 3;
 				$text_w = imagefontwidth( $font ) * strlen( $tag_text );
-				$pad_x = 10;
-				$tag_w = $text_w + 2 * $pad_x;
-				$tag_h = imagefontheight( $font ) + 8;
-				$tag_x = $margin_x;
-				$tag_y = $height - 60;
-				imagefilledrectangle( $image, $tag_x, $tag_y, $tag_x + $tag_w, $tag_y + $tag_h, $color_tag_bg );
-				imagerectangle( $image, $tag_x, $tag_y, $tag_x + $tag_w, $tag_y + $tag_h, $color_border );
-				imagestring( $image, $font, $tag_x + $pad_x, $tag_y + 4, $tag_text, $color_banner );
+				$pad_x  = 12;
+				$tag_w  = $text_w + 2 * $pad_x;
+				$tag_h  = imagefontheight( $font ) + 10;
+				$tag_x  = $margin_x;
+				$tag_y  = $height - 64;
+				imagefilledrectangle( $image, $tag_x, $tag_y, $tag_x + $tag_w, $tag_y + $tag_h, $color_light );
+				imagestring( $image, $font, $tag_x + $pad_x, $tag_y + 5, $tag_text, $color_bg );
 			}
 		}
 
-		// Source — en bas à droite.
-		if ( '' !== trim( $source ) ) {
+		if ( $has_source ) {
 			$source_display = trim( $source );
-			// Si c'est une URL, on n'affiche que le domaine pour rester lisible.
 			if ( filter_var( $source_display, FILTER_VALIDATE_URL ) ) {
 				$host = wp_parse_url( $source_display, PHP_URL_HOST );
 				if ( is_string( $host ) && '' !== $host ) {
 					$source_display = $host;
 				}
 			}
-			if ( mb_strlen( $source_display ) > 36 ) {
-				$source_display = mb_substr( $source_display, 0, 35 ) . '…';
+			if ( mb_strlen( $source_display ) > 32 ) {
+				$source_display = mb_substr( $source_display, 0, 31 ) . '…';
 			}
 			$source_label = 'Source : ' . $source_display;
 
 			if ( $use_ttf && null !== $font_regular ) {
-				$src_size = 15;
-				$bbox = imagettfbbox( $src_size, 0, $font_regular, $source_label );
-				$src_w = $bbox[2] - $bbox[0];
-				$src_x = $width - $margin_x - $src_w;
-				$src_y = $height - 32;
+				$src_size = 14;
+				$bbox     = imagettfbbox( $src_size, 0, $font_regular, $source_label );
+				$src_w    = $bbox[2] - $bbox[0];
+				$src_x    = $width - $margin_x - $src_w;
+				$src_y    = $height - 30;
 				imagettftext( $image, $src_size, 0, $src_x, $src_y, $color_muted, $font_regular, $source_label );
 			} else {
-				$font = 3;
+				$font  = 3;
 				$src_w = imagefontwidth( $font ) * strlen( $source_label );
 				$src_x = $width - $margin_x - $src_w;
-				$src_y = $height - 28;
+				$src_y = $height - 26;
 				imagestring( $image, $font, $src_x, $src_y, $source_label, $color_muted );
 			}
 		}
