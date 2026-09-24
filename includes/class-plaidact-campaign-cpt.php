@@ -1629,16 +1629,16 @@ final class CPT {
 		$available_w = $width - 2 * $margin_x;
 
 		if ( $use_ttf ) {
-			// Taille adaptative : le titre reste dominant et lisible.
+			// Taille fortement augmentée et police WordPress/Rubik Black pour un rendu propre et très lisible.
 			$len = mb_strlen( $title );
-			if ( $len <= 60 ) {
-				$title_size = 52;
-			} elseif ( $len <= 90 ) {
-				$title_size = 44;
-			} elseif ( $len <= 120 ) {
-				$title_size = 38;
+			if ( $len <= 50 ) {
+				$title_size = 68;
+			} elseif ( $len <= 80 ) {
+				$title_size = 58;
+			} elseif ( $len <= 110 ) {
+				$title_size = 48;
 			} else {
-				$title_size = 34;
+				$title_size = 40;
 			}
 			$lines = self::wrap_text_ttf( $title, $font_bold, $title_size, $available_w );
 			// 3 lignes max pour rester aéré.
@@ -1646,10 +1646,10 @@ final class CPT {
 				$lines = array_slice( $lines, 0, 3 );
 				$lines[2] = rtrim( $lines[2], " \t\n\r\0\x0B…" ) . '…';
 			}
-			$line_h  = (int) ( $title_size * 1.18 );
+			$line_h  = (int) ( $title_size * 1.10 );
 			$total_h = count( $lines ) * $line_h;
-			// Zone utile : entre logo (120) et pied (520).
-			$area_top    = 128;
+			// Zone utile : entre logo (env. 140) et pied (520) — aérée pour grande typo.
+			$area_top    = 150;
 			$area_bottom = 520;
 			$area_h      = $area_bottom - $area_top;
 			$start_y     = $area_top + (int) ( ( $area_h - $total_h ) / 2 ) + $title_size;
@@ -1819,6 +1819,7 @@ final class CPT {
 
 		if ( 'bold' === $weight ) {
 			$candidates = array(
+				PLAIDACT_CORE_PATH . 'assets/fonts/Rubik-Black.ttf',
 				PLAIDACT_CORE_PATH . 'assets/fonts/Rubik-Bold.ttf',
 				PLAIDACT_CORE_PATH . 'assets/fonts/Inter-Bold.ttf',
 				'/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
