@@ -1574,23 +1574,48 @@ final class CPT {
 		$font_regular = self::locate_breve_font( 'regular' );
 		$use_ttf      = ( null !== $font_bold && file_exists( $font_bold ) );
 
-		// Logo PLAID·ACT — blanc, centré en haut, très bold comme sur la capture.
-		$logo_text = 'PLAID·ACT';
-		if ( $use_ttf ) {
-			$logo_size = 54; // plus grand et plus propre que 36
-			$bbox      = imagettfbbox( $logo_size, 0, $font_bold, $logo_text );
-			$logo_w    = $bbox[2] - $bbox[0];
-			$logo_x    = (int) ( ( $width - $logo_w ) / 2 );
-			$logo_y    = 88;
-			imagettftext( $image, $logo_size, 0, $logo_x, $logo_y, $color_white, $font_bold, $logo_text );
-			// Petit trait fin sous le logo pour aérer (comme la maquette).
-			$line_y = 108;
-			imageline( $image, (int) ( $width / 2 - 28 ), $line_y, (int) ( $width / 2 + 28 ), $line_y, $color_muted );
-		} else {
-			$font   = 5;
-			$logo_w = imagefontwidth( $font ) * strlen( $logo_text );
-			$logo_x = (int) ( ( $width - $logo_w ) / 2 );
-			imagestring( $image, $font, $logo_x, 42, $logo_text, $color_white );
+		// Logo — vrai fichier PNG (blanc sur transparent), centré, net et fidèle à la charte.
+		$logo_path   = PLAIDACT_CORE_PATH . 'assets/images/logo-plaidact-white.png';
+		$logo_rendered = false;
+		if ( file_exists( $logo_path ) && function_exists( 'imagecreatefrompng' ) ) {
+			$logo_src = @imagecreatefrompng( $logo_path );
+			if ( $logo_src ) {
+				imagesavealpha( $logo_src, true );
+				$src_w = imagesx( $logo_src );
+				$src_h = imagesy( $logo_src );
+				if ( $src_w > 0 && $src_h > 0 ) {
+					// Largeur cible calibrée sur la maquette (2000×362 → 420×76 pour 1200 de large).
+					$target_w = 440;
+					$target_h = (int) ( $src_h * $target_w / $src_w );
+					$logo_x   = (int) ( ( $width - $target_w ) / 2 );
+					$logo_y   = 48;
+					// Fond dark : le PNG blanc reste net, pas de fond à gérer.
+					imagecopyresampled( $image, $logo_src, $logo_x, $logo_y, 0, 0, $target_w, $target_h, $src_w, $src_h );
+					$logo_rendered = true;
+					// Trait fin sous le logo pour aérer, comme sur la capture Snapzy.
+					$line_y = $logo_y + $target_h + 16;
+					imageline( $image, (int) ( $width / 2 - 32 ), $line_y, (int) ( $width / 2 + 32 ), $line_y, $color_muted );
+				}
+				imagedestroy( $logo_src );
+			}
+		}
+		if ( ! $logo_rendered ) {
+			// Repli texte si logo manquant — reste lisible.
+			$logo_text = 'PLAID·ACT';
+			if ( $use_ttf ) {
+				$logo_size = 54;
+				$bbox      = imagettfbbox( $logo_size, 0, $font_bold, $logo_text );
+				$logo_w    = $bbox[2] - $bbox[0];
+				$logo_x    = (int) ( ( $width - $logo_w ) / 2 );
+				$logo_y    = 88;
+				imagettftext( $image, $logo_size, 0, $logo_x, $logo_y, $color_white, $font_bold, $logo_text );
+				imageline( $image, (int) ( $width / 2 - 28 ), 108, (int) ( $width / 2 + 28 ), 108, $color_muted );
+			} else {
+				$font   = 5;
+				$logo_w = imagefontwidth( $font ) * strlen( $logo_text );
+				$logo_x = (int) ( ( $width - $logo_w ) / 2 );
+				imagestring( $image, $font, $logo_x, 42, $logo_text, $color_white );
+			}
 		}
 
 		// Titre — blanc sur fond sombre, très lisible, centré verticalement.
