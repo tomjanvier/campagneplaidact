@@ -5,15 +5,15 @@
  */
 
 .plaidact-admin-wrap {
-  --plaidact-admin-bg: #f8fafc;
-  --plaidact-admin-surface: #ffffff;
-  --plaidact-admin-text: #0f172a;
-  --plaidact-admin-muted: #64748b;
-  --plaidact-admin-border: #e2e8f0;
-  --plaidact-admin-border-strong: #cbd5e1;
-  --plaidact-admin-accent: #cc1a2b;
-  --plaidact-admin-accent-hover: #a31622;
-  --plaidact-admin-accent-soft: #fef2f2;
+  --plaidact-admin-bg: #F7F1E8;
+  --plaidact-admin-surface: #FFFCF7;
+  --plaidact-admin-text: #16091C;
+  --plaidact-admin-muted: #65556A;
+  --plaidact-admin-border: #E6DDCF;
+  --plaidact-admin-border-strong: #CEC0AF;
+  --plaidact-admin-accent: #C4B5FD;
+  --plaidact-admin-accent-hover: #A892F0;
+  --plaidact-admin-accent-soft: #F1EDFE;
   --plaidact-admin-radius: 14px;
   --plaidact-admin-radius-sm: 10px;
   --plaidact-admin-shadow: 0 4px 24px rgba(15,23,42,.06), 0 1px 3px rgba(15,23,42,.05);
@@ -466,3 +466,10 @@
   .plaidact-admin-card, .plaidact-admin-module, .plaidact-admin-tabs .nav-tab { transition: none; }
   .plaidact-admin-tab-panel.is-active { animation: none; }
 }
+
+
+/* Identité ACT : lavande, noir prune et crème. */
+.plaidact-brand-banner { display: flex; align-items: center; width: fit-content; max-width: 100%; padding: 14px 18px; margin: 0 0 18px; border: 1px solid var(--plaidact-admin-border); border-radius: 12px; background: var(--plaidact-admin-surface); }
+.plaidact-brand-banner img { display: block; width: min(240px, 100%); height: auto; }
+.plaidact-brand-banner__dark { display: none !important; }
+@media (prefers-color-scheme: dark) { .plaidact-brand-banner { background: #16091C; border-color: rgba(247,241,232,.16); } .plaidact-brand-banner__light { display: none !important; } .plaidact-brand-banner__dark { display: block !important; } }
