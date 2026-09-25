@@ -972,7 +972,9 @@ final class Act_SSO
         $label = Polylang::translate_string(trim((string) ($settings["button_label"] ?? "")));
 
         echo '<p class="plaidact-act-sso-login"><a class="button button-secondary button-large" href="'
-            . esc_url(self::get_start_url()) . '">'
+            . esc_url(self::get_start_url()) . '"><img src="'
+            . esc_url(PLAIDACT_CORE_URL . "assets/brand/act-clair-icone.svg")
+            . '" width="24" height="24" alt="" aria-hidden="true" />'
             . esc_html("" !== $label ? $label : __("Se connecter avec Act", "plaidact-campaign-core"))
             . "</a></p>";
     }
@@ -1038,8 +1040,9 @@ final class Act_SSO
         $redirect = trim((string) $atts["redirect"]);
 
         return sprintf(
-            '<p class="plaidact-act-sso-login"><a class="button button-secondary" href="%s">%s</a></p>',
+            '<p class="plaidact-act-sso-login"><a class="button button-secondary" href="%s"><img src="%s" width="24" height="24" alt="" aria-hidden="true" />%s</a></p>',
             esc_url(self::get_start_url(self::safe_relative_path($redirect))),
+            esc_url(PLAIDACT_CORE_URL . "assets/brand/act-clair-icone.svg"),
             esc_html($label)
         );
     }
