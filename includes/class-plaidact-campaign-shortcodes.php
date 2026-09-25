@@ -301,7 +301,7 @@ final class Shortcodes
             "manage_options",
             "plaidact-campaign-admin",
             [__CLASS__, "render_modules_page"],
-            "dashicons-megaphone",
+            PLAIDACT_CORE_URL . "assets/brand/act-clair-icone.svg",
             20
         );
 
@@ -1082,7 +1082,11 @@ final class Shortcodes
         $settings = self::get_settings(false);
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e("Modules PLAID·ACT", "plaidact-campaign-core"); ?></h1>
+            <h1><picture class="plaidact-brand-banner" role="img" aria-label="<?php esc_attr_e("Act par PLAID·ACT", "plaidact-campaign-core"); ?>">
+                <source class="plaidact-brand-banner__dark" media="(prefers-color-scheme: dark)" srcset="<?php echo esc_url(PLAIDACT_CORE_URL . "assets/brand/act-sombre-logo.svg"); ?>" />
+                <img class="plaidact-brand-banner__light" src="<?php echo esc_url(PLAIDACT_CORE_URL . "assets/brand/act-clair-logo.svg"); ?>" alt="<?php esc_attr_e("Act par PLAID·ACT", "plaidact-campaign-core"); ?>" />
+            </picture>
+            <h1><?php esc_html_e("Modules PLAID·ACT", "plaidact-campaign-core"); ?></h1></h1>
             <p><?php esc_html_e("Activez ici les modules disponibles en shortcodes et en blocs Gutenberg. Les réglages techniques restent dans Réglages > PLAID·ACT.", "plaidact-campaign-core"); ?></p>
             <form method="post" action="options.php">
                 <?php settings_fields("plaidact_campaign_settings"); ?>
