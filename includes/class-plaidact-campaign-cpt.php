@@ -2132,26 +2132,14 @@ final class CPT {
 	}
 
 	/**
-	 * Enrichit l'affichage d'une brève isolée (single et archive) avec source et lien.
+	 * Enrichit l'affichage d'une brève isolée avec sa source.
 	 *
 	 * @param string $content Contenu filtré.
 	 * @return string
 	 */
 	public static function filter_breve_content( string $content ): string {
-		if ( is_admin() || is_feed() ) {
+		if ( is_admin() || is_feed() || ! is_singular( self::BREVE_POST_TYPE ) ) {
 			return $content;
-		}
-
-		if ( ! is_singular( self::BREVE_POST_TYPE ) && ! is_post_type_archive( self::BREVE_POST_TYPE ) && ! is_tax( 'plaid_breve_topic' ) ) {
-			// On limite au front et au type brève pour ne pas polluer d'autres contenus.
-			global $post;
-			if ( ! $post instanceof \WP_Post || self::BREVE_POST_TYPE !== $post->post_type ) {
-				return $content;
-			}
-			// Hors boucle principale, on ne touche pas.
-			if ( ! in_the_loop() || ! is_main_query() ) {
-				return $content;
-			}
 		}
 
 		$post_id = get_the_ID();
@@ -2190,23 +2178,28 @@ final class CPT {
 		}
 
 		if ( '' !== $source ) {
+			$source_url = '' !== $source_url ? $source_url : $link;
 			$source_html = '';
 			if ( '' !== $source_url && filter_var( $source_url, FILTER_VALIDATE_URL ) ) {
-				$source_html = sprintf( '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', esc_url( $source_url ), esc_html( $source ) );
+				$source_html = sprintf(
+					'<a class="plaidact-breve__source-link" href="%s" target="_blank" rel="noopener noreferrer">%s<span aria-hidden="true"> ↗</span></a>',
+					esc_url( $source_url ),
+					esc_html( $source )
+				);
 			} else {
 				$source_html = esc_html( $source );
 			}
-			$extra .= '<p class="plaidact-breve__source-line"><strong>' . esc_html__( 'Source :', 'plaidact-campaign-core' ) . '</strong> ' . $source_html . '</p>';
-		}
-
-		if ( '' !== $link ) {
-			$extra .= '<p class="plaidact-breve__source-cta"><a class="plaidact-breve__link" href="' . esc_url( $link ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Lire la source', 'plaidact-campaign-core' ) . ' <span aria-hidden="true">↗</span></a></p>';
+			$extra .= '<p class="plaidact-breve__source-line"><span>' . esc_html__( 'Source', 'plaidact-campaign-core' ) . '</span> ' . $source_html . '</p>';
+		} elseif ( '' !== $link ) {
+			$source_host = (string) wp_parse_url( $link, PHP_URL_HOST );
+			$source_label = '' !== $source_host ? $source_host : __( 'Source externe', 'plaidact-campaign-core' );
+			$extra .= '<p class="plaidact-breve__source-line"><span>' . esc_html__( 'Source', 'plaidact-campaign-core' ) . '</span> <a class="plaidact-breve__source-link" href="' . esc_url( $link ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $source_label ) . '<span aria-hidden="true"> ↗</span></a></p>';
 		}
 
 		if ( '' === $extra ) {
 			return $content;
 		}
 
-		return $content . '<footer class="plaidact-breve__footer" style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid #e5e7eb;">' . $extra . '</footer>';
+		return $content . '<footer class="plaidact-breve__footer">' . $extra . '</footer>';
 	}
 }

@@ -2360,8 +2360,8 @@ final class Shortcodes
         }
         $extra_class = self::sanitize_css_classes((string) ($atts["class"] ?? "") . " " . (string) ($atts["className"] ?? ""));
 
-        // Requête optimisée : pas de comptage total, pré-chargement des termes + métas
-        // nécessaires à l'affichage des liens/sources.
+        // Requête optimisée : pas de comptage total, pré-chargement des termes et métas
+        // nécessaires à l'affichage des thématiques et des permaliens.
         $query_args = [
             "post_type"              => "plaid_breve",
             "post_status"            => "publish",
@@ -2394,20 +2394,6 @@ final class Shortcodes
         if (!empty($breves)) {
             foreach ($breves as $breve) {
                 $breve_topic_map[(int) $breve->ID] = \Plaidact\CampaignCore\CPT::get_breve_topics((int) $breve->ID);
-            }
-        }
-
-        // Mapping lien/source (vignette réservée au single/embed, pas au carrousel).
-        $breve_link_map   = [];
-        $breve_source_map = [];
-        if (!empty($breves)) {
-            foreach ($breves as $breve) {
-                $bid = (int) $breve->ID;
-                $breve_link_map[$bid]   = \Plaidact\CampaignCore\CPT::get_breve_link($bid);
-                $breve_source_map[$bid] = [
-                    'name' => \Plaidact\CampaignCore\CPT::get_breve_source($bid),
-                    'url'  => \Plaidact\CampaignCore\CPT::get_breve_source_url($bid),
-                ];
             }
         }
 
@@ -2466,21 +2452,7 @@ final class Shortcodes
                             $excerpt_html = wp_kses_post(wpautop($excerpt_raw));
                             $heading_id = esc_attr($section_id . "-breve-" . $breve_id);
 
-                            // Lien externe restauré : si la brève a un lien canonique, le titre pointe vers l'extérieur.
-                            $external_link = (string) ($breve_link_map[$breve_id] ?? "");
-                            $has_external  = "" !== $external_link && filter_var($external_link, FILTER_VALIDATE_URL);
-                            $permalink     = $has_external ? $external_link : (string) get_permalink($breve);
-                            $link_attrs    = $has_external ? ' target="_blank" rel="noopener noreferrer"' : "";
-
-                            // Source : nom + URL éventuelle (domaine en repli si vide).
-                            $source_name = (string) ($breve_source_map[$breve_id]['name'] ?? "");
-                            $source_url  = (string) ($breve_source_map[$breve_id]['url'] ?? "");
-                            if ("" === $source_name && $has_external) {
-                                $host = wp_parse_url($external_link, PHP_URL_HOST);
-                                if (is_string($host) && "" !== $host) {
-                                    $source_name = $host;
-                                }
-                            }
+                            $permalink = (string) get_permalink($breve);
                             ?>
                             <article
                                 class="plaidact-breve"
@@ -2492,14 +2464,6 @@ final class Shortcodes
                             >
                                 <div class="plaidact-breve__meta">
                                     <time datetime="<?php echo esc_attr((string) $date_iso); ?>"><?php echo esc_html((string) $date_display); ?></time>
-                                    <?php if ("" !== $source_name): ?>
-                                        <span class="plaidact-breve__sep" aria-hidden="true">·</span>
-                                        <?php if ("" !== $source_url && filter_var($source_url, FILTER_VALIDATE_URL)): ?>
-                                            <a class="plaidact-breve__source" href="<?php echo esc_url($source_url); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html($source_name); ?></a>
-                                        <?php else: ?>
-                                            <span class="plaidact-breve__source"><?php echo esc_html($source_name); ?></span>
-                                        <?php endif; ?>
-                                    <?php endif; ?>
                                 </div>
                                 <?php if (!empty($topics)): ?>
                                 <div class="plaidact-breve__tags plaidact-breve__tags--above" aria-label="<?php esc_attr_e("Thématiques", "plaidact-campaign-core"); ?>">
@@ -2518,14 +2482,12 @@ final class Shortcodes
                                 </div>
                                 <?php endif; ?>
                                 <h3 id="<?php echo $heading_id; ?>" class="plaidact-breve__heading">
-                                    <a href="<?php echo esc_url($permalink); ?>"<?php echo $link_attrs; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>><?php echo esc_html((string) $breve_title); ?><?php if ($has_external): ?> <span aria-hidden="true">↗</span><span class="screen-reader-text"><?php esc_html_e("(lien externe)", "plaidact-campaign-core"); ?></span><?php endif; ?></a>
+                                    <a href="<?php echo esc_url($permalink); ?>"><?php echo esc_html((string) $breve_title); ?></a>
                                 </h3>
                                 <div class="plaidact-breve__excerpt"><?php echo $excerpt_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
-                                <?php if ($has_external): ?>
                                 <p class="plaidact-breve__cta">
-                                    <a class="plaidact-breve__link" href="<?php echo esc_url($external_link); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e("Lire la source", "plaidact-campaign-core"); ?> <span aria-hidden="true">→</span></a>
+                                    <a class="plaidact-breve__link" href="<?php echo esc_url($permalink); ?>"><?php esc_html_e("Lire la brève", "plaidact-campaign-core"); ?> <span aria-hidden="true">→</span></a>
                                 </p>
-                                <?php endif; ?>
                             </article>
                         <?php endforeach; ?>
                     </div>
