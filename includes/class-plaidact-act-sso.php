@@ -109,6 +109,7 @@ final class Act_SSO
         add_action("admin_post_nopriv_plaidact_act_sso_callback", [__CLASS__, "handle_sso_callback"]);
         add_action("admin_post_plaidact_act_sso_callback", [__CLASS__, "handle_sso_callback"]);
         add_action("admin_post_plaidact_act_sso_discover", [__CLASS__, "handle_discover"]);
+        add_action("admin_post_plaidact_act_sso_test_client", [__CLASS__, "handle_test_client"]);
         add_action("admin_post_plaidact_act_sso_logout", [__CLASS__, "handle_sso_logout"]);
 
         // Bouton sur l'écran de connexion natif + shortcode public.
@@ -1084,6 +1085,10 @@ final class Act_SSO
         $settings = self::get_sso_settings();
         $discovery = get_transient(self::DISCOVERY_TRANSIENT);
         $status = isset($_GET["act_sso"]) ? sanitize_key(wp_unslash($_GET["act_sso"])) : "";
+        $campaign_settings = Shortcodes::get_settings(false);
+        $module_enabled = !empty($campaign_settings["enable_sso"]);
+        $client_configured = "" !== trim((string) ($settings["client_id"] ?? ""));
+        $secret_configured = "" !== trim((string) ($settings["client_secret"] ?? ""));
         ?>
         <div class="wrap">
             <h2><?php esc_html_e("Connexion Act (SSO)", "plaidact-campaign-core"); ?></h2>
@@ -1091,8 +1096,26 @@ final class Act_SSO
                 <div class="notice notice-success"><p><?php esc_html_e("Découverte OIDC réussie.", "plaidact-campaign-core"); ?></p></div>
             <?php elseif ("discovery_failed" === $status) : ?>
                 <div class="notice notice-error"><p><?php esc_html_e("Découverte OIDC impossible : vérifiez l’URL Act.", "plaidact-campaign-core"); ?></p></div>
+            <?php elseif ("client_ready" === $status) : ?>
+                <div class="notice notice-success"><p><?php esc_html_e("Le client Act est actif et l’URL de rappel correspond. Le secret sera vérifié lors d’une vraie connexion.", "plaidact-campaign-core"); ?></p></div>
+            <?php elseif ("client_invalid" === $status) : ?>
+                <div class="notice notice-error"><p><?php esc_html_e("Act refuse le client ou l’URL de rappel. Comparez l’identifiant et l’URL affichée avec la configuration du client dans Act.", "plaidact-campaign-core"); ?></p></div>
+            <?php elseif ("client_unreachable" === $status) : ?>
+                <div class="notice notice-error"><p><?php esc_html_e("Act ne répond pas au test du client. Vérifiez la disponibilité de l’émetteur et réessayez.", "plaidact-campaign-core"); ?></p></div>
+            <?php elseif ("client_incomplete" === $status) : ?>
+                <div class="notice notice-warning"><p><?php esc_html_e("Renseignez l’identifiant client et son secret avant de tester la configuration.", "plaidact-campaign-core"); ?></p></div>
             <?php endif; ?>
             <p><?php esc_html_e("Act authentifie les utilisateurs ; WordPress suit et provisionne les comptes de façon additive. Activez le module dans PLAID·ACT → Modules, puis renseignez le client enregistré côté Act.", "plaidact-campaign-core"); ?></p>
+            <p>
+                <strong><?php esc_html_e("État du module :", "plaidact-campaign-core"); ?></strong>
+                <?php if (!$module_enabled) : ?>
+                    <?php esc_html_e("désactivé dans PLAID·ACT → Modules", "plaidact-campaign-core"); ?>
+                <?php elseif (!$client_configured || !$secret_configured) : ?>
+                    <?php esc_html_e("activé, mais identifiants client incomplets", "plaidact-campaign-core"); ?>
+                <?php else : ?>
+                    <?php esc_html_e("activé, identifiants client enregistrés", "plaidact-campaign-core"); ?>
+                <?php endif; ?>
+            </p>
             <p>
                 <label for="plaidact_sso_redirect_uri"><strong><?php esc_html_e("URL de rappel à enregistrer côté Act", "plaidact-campaign-core"); ?></strong></label><br />
                 <input id="plaidact_sso_redirect_uri" type="text" class="large-text code" readonly value="<?php echo esc_attr(self::get_redirect_uri()); ?>" onclick="this.select();" />
@@ -1119,6 +1142,12 @@ final class Act_SSO
                 <input type="hidden" name="action" value="plaidact_act_sso_discover" />
                 <?php submit_button(__("Tester la découverte OIDC", "plaidact-campaign-core"), "secondary"); ?>
             </form>
+            <form method="post" action="<?php echo esc_url(admin_url("admin-post.php")); ?>">
+                <?php wp_nonce_field("plaidact_act_sso_test_client"); ?>
+                <input type="hidden" name="action" value="plaidact_act_sso_test_client" />
+                <?php submit_button(__("Tester le client et l’URL de rappel", "plaidact-campaign-core"), "secondary"); ?>
+                <p class="description"><?php esc_html_e("Ce contrôle confirme que Act reconnaît l’identifiant et l’URL de rappel. Il ne connecte aucun utilisateur et ne vérifie pas le secret, qui n’est vérifié qu’à l’échange du code.", "plaidact-campaign-core"); ?></p>
+            </form>
         </div>
         <?php
     }
@@ -1143,6 +1172,85 @@ final class Act_SSO
             add_query_arg(
                 "act_sso",
                 "" !== $discovery["authorization_endpoint"] ? "discovered" : "discovery_failed",
+                wp_get_referer() ?: admin_url("options-general.php?page=plaidact-campaign-settings")
+            )
+        );
+        exit;
+    }
+
+    /**
+     * Vérifie que le client et l'URL de rappel sont acceptés par Act.
+     *
+     * Le test s'arrête à la redirection vers la page de connexion Act : aucun
+     * compte n'est authentifié et aucun code OAuth n'est créé.
+     *
+     * @return void
+     */
+    public static function handle_test_client(): void
+    {
+        if (!current_user_can("manage_options")) {
+            wp_die(esc_html__("Accès refusé.", "plaidact-campaign-core"));
+        }
+
+        check_admin_referer("plaidact_act_sso_test_client");
+        $settings = self::get_sso_settings();
+        if ("" === trim((string) ($settings["client_id"] ?? "")) || "" === trim((string) ($settings["client_secret"] ?? ""))) {
+            self::redirect_with_sso_status("client_incomplete");
+        }
+
+        delete_transient(self::DISCOVERY_TRANSIENT);
+        $discovery = self::get_discovery();
+        if ("" === $discovery["authorization_endpoint"]) {
+            self::redirect_with_sso_status("client_unreachable");
+        }
+
+        try {
+            $verifier = rtrim(strtr(base64_encode(random_bytes(48)), "+/", "-_"), "=");
+            $state = rtrim(strtr(base64_encode(random_bytes(24)), "+/", "-_"), "=");
+        } catch (\Throwable $exception) {
+            self::redirect_with_sso_status("client_unreachable");
+        }
+
+        $response = wp_remote_get(
+            self::build_authorize_url(
+                $discovery,
+                trim((string) $settings["client_id"]),
+                self::get_redirect_uri(),
+                $state,
+                $verifier
+            ),
+            ["timeout" => 8, "redirection" => 0, "limit_response_size" => 2048]
+        );
+
+        if (is_wp_error($response)) {
+            self::redirect_with_sso_status("client_unreachable");
+        }
+
+        $status_code = (int) wp_remote_retrieve_response_code($response);
+        $location = (string) wp_remote_retrieve_header($response, "location");
+        $issuer_host = strtolower((string) wp_parse_url((string) $settings["issuer"], PHP_URL_HOST));
+        $location_host = strtolower((string) wp_parse_url($location, PHP_URL_HOST));
+        $location_path = (string) wp_parse_url($location, PHP_URL_PATH);
+        $valid_login_redirect = in_array($status_code, [302, 303, 307, 308], true)
+            && $issuer_host !== ""
+            && $location_host === $issuer_host
+            && $location_path === "/login";
+
+        self::redirect_with_sso_status($valid_login_redirect ? "client_ready" : "client_invalid");
+    }
+
+    /** Redirige vers les réglages avec un état de résultat borné. */
+    private static function redirect_with_sso_status(string $status): void
+    {
+        $allowed_statuses = ["client_incomplete", "client_unreachable", "client_invalid", "client_ready"];
+        if (!in_array($status, $allowed_statuses, true)) {
+            $status = "client_unreachable";
+        }
+
+        wp_safe_redirect(
+            add_query_arg(
+                "act_sso",
+                $status,
                 wp_get_referer() ?: admin_url("options-general.php?page=plaidact-campaign-settings")
             )
         );
