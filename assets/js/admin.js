@@ -2,8 +2,12 @@
   'use strict';
 
   /**
-   * Administration PLAID·ACT — onglets et améliorations mineures.
-   * Progressif : sans JS, toutes les sections restent lisibles (fallback empilé).
+   * Administration PLAID·ACT — onglets de la page de réglages.
+   *
+   * Amélioration progressive : les panneaux sont visibles et les onglets
+   * pointent vers des ancres tant que ce script n'a pas pris la main. Une
+   * fois initialisé, il masque les panneaux inactifs et gère la navigation au
+   * clavier.
    */
 
   function initTabs(root) {
@@ -83,9 +87,6 @@
 
   function init() {
     document.querySelectorAll('.plaidact-admin-wrap').forEach(initTabs);
-
-    // Améliore les notices WP en les déplaçant dans le header admin si besoin
-    // (non bloquant, purement visuel)
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

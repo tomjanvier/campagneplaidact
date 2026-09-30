@@ -101,6 +101,35 @@ final class Test_Plaidact_Act_SSO extends BaseTestCase
         $this->assertStringContainsString('state=etat-aleatoire', $url);
     }
 
+    public function test_client_probe_authorization_url_never_contains_client_secret(): void
+    {
+        update_option('plaidact_sso_settings', [
+            'issuer' => 'https://act.plaidact.org',
+            'client_id' => 'wp-client',
+            'client_secret' => 'secret-ne-doit-pas-sortir',
+        ]);
+        add_filter('plaidact_act_sso_discovery', static function () {
+            return [
+                'authorization_endpoint' => 'https://act.plaidact.org/authorize',
+                'token_endpoint' => 'https://act.plaidact.org/token',
+                'userinfo_endpoint' => 'https://act.plaidact.org/userinfo',
+            ];
+        });
+
+        $url = Act_SSO::build_authorize_url(
+            ['authorization_endpoint' => 'https://act.plaidact.org/authorize'],
+            'wp-client',
+            Act_SSO::get_redirect_uri(),
+            'etat-aleatoire',
+            'verificateur-pkce'
+        );
+
+        $this->assertStringContainsString('client_id=wp-client', $url);
+        $this->assertStringNotContainsString('secret-ne-doit-pas-sortir', $url);
+
+        remove_all_filters('plaidact_act_sso_discovery');
+    }
+
     public function test_role_mapping_uses_act_roles_with_subscriber_fallback(): void
     {
         $this->assertSame('administrator', Act_SSO::map_act_roles_to_wp_role(['admin']));

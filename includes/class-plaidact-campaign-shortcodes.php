@@ -56,7 +56,7 @@ final class Shortcodes
         add_action("admin_menu", [__CLASS__, "register_admin_pages"]);
         add_action("admin_init", [__CLASS__, "register_settings"]);
         add_action("wp_enqueue_scripts", [__CLASS__, "enqueue_assets"]);
-        add_action("admin_enqueue_scripts", [__CLASS__, "enqueue_admin_assets"]);
+        // Le chargement des ressources admin est centralisé dans Admin_UI.
         add_filter("av_petitioner_labels_defaults", [__CLASS__, "translate_petitioner_labels"]);
         add_filter("av_petitioner_form_attributes", [__CLASS__, "customize_petitioner_form_attributes"], 10, 2);
         add_action("admin_post_nopriv_plaidact_newsletter_submit", [
@@ -142,30 +142,16 @@ final class Shortcodes
     /**
      * Charge les styles et scripts de l'administration (uniquement sur les pages du plugin).
      *
+     * Le chargement est désormais centralisé dans Admin_UI, qui connaît aussi
+     * les écrans de contenu et de pétition où le plugin affiche son interface.
+     * Cette méthode est conservée comme point d'entrée pour compatibilité.
+     *
      * @param string $hook_suffix Identifiant de la page d'admin courante.
      * @return void
      */
     public static function enqueue_admin_assets(string $hook_suffix): void
     {
-        // Ne charge que sur les pages PLAID·ACT pour éviter d'alourdir tout l'admin.
-        if (false === strpos($hook_suffix, "plaidact")) {
-            return;
-        }
-
-        wp_enqueue_style(
-            "plaidact-admin",
-            PLAIDACT_CORE_URL . "assets/css/admin.css",
-            [],
-            plaidact_campaign_core_asset_version("assets/css/admin.css")
-        );
-
-        wp_enqueue_script(
-            "plaidact-admin",
-            PLAIDACT_CORE_URL . "assets/js/admin.js",
-            [],
-            plaidact_campaign_core_asset_version("assets/js/admin.js"),
-            true
-        );
+        Admin_UI::enqueue_assets($hook_suffix);
     }
 
     /**
@@ -197,23 +183,7 @@ final class Shortcodes
         }
 
         if (!$uses_petition) {
-            // Les shortcodes Petitioner peuvent aussi être placés dans des widgets Texte.
-            $widgets = get_option("widget_text", []);
-            if (is_array($widgets)) {
-                foreach ($widgets as $widget) {
-                    if (!is_array($widget)) {
-                        continue;
-                    }
-                    $widget_content = (string) ($widget["text"] ?? "");
-                    if (
-                        has_shortcode($widget_content, "petition_form") ||
-                        has_shortcode($widget_content, "plaid_petition_gauge")
-                    ) {
-                        $uses_petition = true;
-                        break;
-                    }
-                }
-            }
+            $uses_petition = self::text_widgets_use_shortcode_group("petition");
         }
 
         /**
@@ -261,23 +231,7 @@ final class Shortcodes
         }
 
         if (!$uses_breves) {
-            $widgets = get_option("widget_text", []);
-            if (is_array($widgets)) {
-                foreach ($widgets as $widget) {
-                    if (!is_array($widget)) {
-                        continue;
-                    }
-                    $widget_content = (string) ($widget["text"] ?? "");
-                    if (
-                        has_shortcode($widget_content, "plaidact_breves") ||
-                        has_shortcode($widget_content, "plaid_breves") ||
-                        has_shortcode($widget_content, "breves")
-                    ) {
-                        $uses_breves = true;
-                        break;
-                    }
-                }
-            }
+            $uses_breves = self::text_widgets_use_shortcode_group("breves");
         }
 
         /**
@@ -293,6 +247,36 @@ final class Shortcodes
         return $uses_breves_cache;
     }
 
+    /** Détecte une seule fois les shortcodes utiles dans les widgets texte. */
+    private static function text_widgets_use_shortcode_group(string $group): bool
+    {
+        static $matches = null;
+        if (null === $matches) {
+            $matches = ["petition" => false, "breves" => false];
+            $widgets = get_option("widget_text", []);
+            if (is_array($widgets)) {
+                foreach ($widgets as $widget) {
+                    if (!is_array($widget)) {
+                        continue;
+                    }
+                    $content = (string) ($widget["text"] ?? "");
+                    $matches["petition"] = $matches["petition"]
+                        || has_shortcode($content, "petition_form")
+                        || has_shortcode($content, "plaid_petition_gauge");
+                    $matches["breves"] = $matches["breves"]
+                        || has_shortcode($content, "plaidact_breves")
+                        || has_shortcode($content, "plaid_breves")
+                        || has_shortcode($content, "breves");
+                    if ($matches["petition"] && $matches["breves"]) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return !empty($matches[$group]);
+    }
+
     public static function register_admin_pages(): void
     {
         add_menu_page(
@@ -300,9 +284,18 @@ final class Shortcodes
             __("PLAID·ACT", "plaidact-campaign-core"),
             "manage_options",
             "plaidact-campaign-admin",
-            [__CLASS__, "render_modules_page"],
+            [__CLASS__, "render_dashboard_page"],
             PLAIDACT_CORE_URL . "assets/brand/act-clair-icone.svg",
             20
+        );
+
+        add_submenu_page(
+            "plaidact-campaign-admin",
+            __("Vue d’ensemble", "plaidact-campaign-core"),
+            __("Vue d’ensemble", "plaidact-campaign-core"),
+            "manage_options",
+            "plaidact-campaign-admin",
+            [__CLASS__, "render_dashboard_page"]
         );
 
         add_submenu_page(
@@ -310,7 +303,7 @@ final class Shortcodes
             __("Modules", "plaidact-campaign-core"),
             __("Modules", "plaidact-campaign-core"),
             "manage_options",
-            "plaidact-campaign-admin",
+            "plaidact-campaign-modules",
             [__CLASS__, "render_modules_page"]
         );
 
@@ -865,6 +858,472 @@ final class Shortcodes
         ];
     }
 
+    /**
+     * Groupes de la page de réglages.
+     *
+     * Description déclarative des onglets et de leurs champs : la page se
+     * déduit de cette structure au lieu de répéter le balisage d'un formulaire
+     * par ligne. Le nom des champs reste la seule source de vérité des clés
+     * enregistrées dans l'option, et `get_translatable_setting_keys()` demeure
+     * indépendante de cette mise en forme.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    private static function get_settings_groups(): array
+    {
+        return [
+            [
+                "id" => "petition",
+                "label" => __("Pétition", "plaidact-campaign-core"),
+                "icon" => "dashicons-megaphone",
+                "description" => __(
+                    "Rattachement du formulaire, affichage des signataires et options de signature.",
+                    "plaidact-campaign-core"
+                ),
+                "fields" => [
+                    [
+                        "key" => "petition_form_id",
+                        "type" => "number",
+                        "label" => __("ID formulaire pétition", "plaidact-campaign-core"),
+                        "help" => __(
+                            "Le module pétition embarqué prendra en charge la pétition. Avec Polylang, sa traduction sera résolue automatiquement.",
+                            "plaidact-campaign-core"
+                        ),
+                    ],
+                    [
+                        "key" => "petition_sign_url",
+                        "type" => "url",
+                        "label" => __("URL page personnalisée de signature", "plaidact-campaign-core"),
+                        "placeholder" => "https://example.org/signer",
+                        "help" => __(
+                            "Utilisée par le compteur [plaid_petition_gauge] pour le bouton Signer la pétition. Laissez vide pour utiliser la page de la pétition Petitioner traduite.",
+                            "plaidact-campaign-core"
+                        ),
+                    ],
+                    [
+                        "key" => "petition_show_signers",
+                        "type" => "checkbox",
+                        "default" => "1",
+                        "label" => __("Signataires publics", "plaidact-campaign-core"),
+                        "help" => __(
+                            "Afficher la liste publique des signataires sous le formulaire Petitioner.",
+                            "plaidact-campaign-core"
+                        ),
+                        "description" => __(
+                            "Le titre, le texte, la lettre, les couleurs et les champs de la pétition se modifient directement dans Petitioner. PLAID·ACT n’affiche plus les anciens réglages du formulaire natif.",
+                            "plaidact-campaign-core"
+                        ),
+                    ],
+                    [
+                        "key" => "petition_org_signature",
+                        "type" => "checkbox",
+                        "default" => "1",
+                        "label" => __("Signature d’organisation", "plaidact-campaign-core"),
+                        "help" => __(
+                            "Proposer sur chaque pétition les champs « signer en tant qu’organisation » et « titre et fonction ».",
+                            "plaidact-campaign-core"
+                        ),
+                        "description" => __(
+                            "Les champs sont insérés après l’email ; le basculement organisation/personne est géré automatiquement côté navigateur.",
+                            "plaidact-campaign-core"
+                        ),
+                    ],
+                    [
+                        "label" => __("Design de la pétition", "plaidact-campaign-core"),
+                        "render" => static function (): void {
+                            ?>
+                            <p class="plaidact-admin-field__help"><?php esc_html_e("Les couleurs et le CSS du formulaire se règlent à un seul endroit : directement dans Petitioner. Le shortcode y applique automatiquement les variables Petitioner, puis laisse le CSS personnalisé de Petitioner surcharger le rendu.", "plaidact-campaign-core"); ?></p>
+                            <p>
+                                <a class="button" href="<?php echo esc_url(admin_url("edit.php?post_type=petitioner-petition&page=petition-settings")); ?>">
+                                    <?php esc_html_e("Ouvrir les réglages Petitioner", "plaidact-campaign-core"); ?>
+                                </a>
+                            </p>
+                            <?php
+                        },
+                    ],
+                    [
+                        "label" => __("Email de confirmation de signature", "plaidact-campaign-core"),
+                        "render" => static function (): void {
+                            ?>
+                            <p class="plaidact-admin-field__help"><?php esc_html_e("Pour modifier cet email, ouvrez la pétition concernée, puis Réglages avancés. Activez « Remplacer l’email de confirmation ? » et personnalisez son sujet et son contenu.", "plaidact-campaign-core"); ?></p>
+                            <p class="plaidact-admin-field__help"><?php esc_html_e("Si la confirmation par email est activée, conservez impérativement la variable {{confirmation_link}} dans le message afin que la signature puisse être validée.", "plaidact-campaign-core"); ?></p>
+                            <?php
+                        },
+                    ],
+                ],
+            ],
+            [
+                "id" => "brevo",
+                "label" => __("Brevo", "plaidact-campaign-core"),
+                "icon" => "dashicons-email-alt",
+                "description" => __(
+                    "Connexion à l’API Brevo, listes de contacts et double opt-in.",
+                    "plaidact-campaign-core"
+                ),
+                "fields" => [
+                    [
+                        "key" => "notification_email",
+                        "type" => "email",
+                        "label" => __("Email de notification", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "brevo_api_key",
+                        "type" => "text",
+                        "label" => __("Clé API Brevo", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "brevo_list_plaidact",
+                        "type" => "number",
+                        "label" => __("ID liste newsletter PLAID·ACT", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "brevo_list_petition",
+                        "type" => "number",
+                        "label" => __("ID liste Brevo pétition", "plaidact-campaign-core"),
+                        "help" => __(
+                            "Les personnes qui signent la pétition, y compris via le module pétition embarqué, sont ajoutées à cette liste en plus de la liste newsletter si l’opt-in est coché.",
+                            "plaidact-campaign-core"
+                        ),
+                    ],
+                    [
+                        "key" => "brevo_doi_enabled",
+                        "type" => "checkbox",
+                        "label" => __("Double opt-in Brevo", "plaidact-campaign-core"),
+                        "help" => __(
+                            "Utiliser /contacts/doubleOptinConfirmation au lieu de créer directement le contact.",
+                            "plaidact-campaign-core"
+                        ),
+                    ],
+                    [
+                        "key" => "brevo_doi_template_id",
+                        "type" => "number",
+                        "label" => __("ID template double opt-in", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "brevo_redirection_url",
+                        "type" => "url",
+                        "label" => __("URL de retour double opt-in", "plaidact-campaign-core"),
+                        "placeholder" => "https://example.org/merci",
+                    ],
+                ],
+            ],
+            [
+                "id" => "givoly",
+                "label" => __("Don Givoly", "plaidact-campaign-core"),
+                "icon" => "dashicons-heart",
+                "description" => __(
+                    "Appel à don affiché après une signature réussie. Laisser l’URL vide désactive le bouton.",
+                    "plaidact-campaign-core"
+                ),
+                "fields" => [
+                    [
+                        "key" => "givoly_donation_url",
+                        "type" => "url",
+                        "label" => __("URL page de don", "plaidact-campaign-core"),
+                        "placeholder" => "https://example.org/donner",
+                        "help" => __(
+                            "Si renseignée, un bouton de don apparaît après une signature Petitioner réussie et transmet les coordonnées du signataire en paramètres d’URL pour préremplir Givoly.",
+                            "plaidact-campaign-core"
+                        ),
+                    ],
+                    [
+                        "key" => "givoly_amount",
+                        "type" => "number",
+                        "label" => __("Montant suggéré", "plaidact-campaign-core"),
+                        "min" => 0,
+                    ],
+                    [
+                        "key" => "givoly_button_label",
+                        "type" => "text",
+                        "label" => __("Texte du bouton", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "givoly_cta_text",
+                        "type" => "text",
+                        "label" => __("Texte d’invitation au don", "plaidact-campaign-core"),
+                    ],
+                ],
+            ],
+            [
+                "id" => "newsletter",
+                "label" => __("Newsletter", "plaidact-campaign-core"),
+                "icon" => "dashicons-email-alt2",
+                "description" => __(
+                    "Textes du bloc d’inscription et surcouche CSS spécifique.",
+                    "plaidact-campaign-core"
+                ),
+                "fields" => [
+                    [
+                        "key" => "newsletter_title",
+                        "type" => "text",
+                        "label" => __("Titre du bloc", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "newsletter_intro",
+                        "type" => "text",
+                        "label" => __("Texte d’introduction", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "newsletter_button_label",
+                        "type" => "text",
+                        "label" => __("Libellé du bouton", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "newsletter_custom_css",
+                        "type" => "code",
+                        "rows" => 10,
+                        "placeholder" => ".plaidact-card--newsletter { … }",
+                        "label" => __("CSS personnalisé", "plaidact-campaign-core"),
+                        "help" => __(
+                            "CSS injecté après les styles PLAID·ACT. Ciblez .plaidact-card--newsletter pour personnaliser uniquement le bloc newsletter.",
+                            "plaidact-campaign-core"
+                        ),
+                    ],
+                ],
+            ],
+            [
+                "id" => "decideurs",
+                "label" => __("Décideurs & partage", "plaidact-campaign-core"),
+                "icon" => "dashicons-share",
+                "description" => __(
+                    "Messages envoyés aux décideurs et textes de partage par email.",
+                    "plaidact-campaign-core"
+                ),
+                "fields" => [
+                    [
+                        "key" => "campaign_share_mail_title",
+                        "type" => "text",
+                        "label" => __("Titre de l’email de partage", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "send_mail_intro",
+                        "type" => "text",
+                        "label" => __("Texte du bloc de partage", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "send_mail_button_label",
+                        "type" => "text",
+                        "label" => __("Libellé du bouton de partage", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "decision_maker_name",
+                        "type" => "text",
+                        "label" => __("Nom du décideur", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "decision_maker_email",
+                        "type" => "email",
+                        "label" => __("Email du décideur", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "decision_mail_subject",
+                        "type" => "text",
+                        "label" => __("Sujet de l’email au décideur", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "decision_mail_placeholder",
+                        "type" => "textarea",
+                        "rows" => 5,
+                        "label" => __("Texte pré-rempli de l’email", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "decision_mail_button_label",
+                        "type" => "text",
+                        "label" => __("Libellé du bouton décideur", "plaidact-campaign-core"),
+                    ],
+                ],
+            ],
+            [
+                "id" => "contenus",
+                "label" => __("Contenus & rapport", "plaidact-campaign-core"),
+                "icon" => "dashicons-media-document",
+                "description" => __(
+                    "Titres de sections publiques et informations du rapport mis en avant.",
+                    "plaidact-campaign-core"
+                ),
+                "fields" => [
+                    [
+                        "key" => "articles_section_title",
+                        "type" => "text",
+                        "label" => __("Titre des articles", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "social_wall_title",
+                        "type" => "text",
+                        "label" => __("Titre du social wall", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "social_wall_description",
+                        "type" => "text",
+                        "label" => __("Description du social wall", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "social_share_text",
+                        "type" => "textarea",
+                        "rows" => 4,
+                        "label" => __("Texte par défaut pour les partages sociaux", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "report_title",
+                        "type" => "text",
+                        "label" => __("Titre du rapport", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "report_excerpt",
+                        "type" => "text",
+                        "label" => __("Texte du rapport", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "report_pdf_url",
+                        "type" => "url",
+                        "label" => __("URL du PDF du rapport", "plaidact-campaign-core"),
+                    ],
+                    [
+                        "key" => "report_button_label",
+                        "type" => "text",
+                        "label" => __("Libellé du bouton du rapport", "plaidact-campaign-core"),
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Affiche un champ de la page de réglages d'après sa description.
+     *
+     * @param array<string,mixed> $field    Description du champ.
+     * @param array<string,mixed> $settings Réglages courants.
+     * @return void
+     */
+    private static function render_settings_field(array $field, array $settings): void
+    {
+        // Champ libre : la page fournit son propre rendu (liens vers un autre
+        // écran, explications qui ne correspondent à aucune option).
+        if (isset($field["render"]) && is_callable($field["render"])) {
+            self::render_settings_field_frame(
+                $field,
+                static function () use ($field): void {
+                    call_user_func($field["render"]);
+                }
+            );
+            return;
+        }
+
+        $key = (string) ($field["key"] ?? "");
+        $type = (string) ($field["type"] ?? "text");
+        $name = sprintf("plaidact_campaign_settings[%s]", $key);
+        $id = sprintf("plaidact-setting-%s", $key);
+        $value = (string) ($settings[$key] ?? ($field["default"] ?? ""));
+        $help = (string) ($field["help"] ?? "");
+        $description = (string) ($field["description"] ?? "");
+
+        self::render_settings_field_frame($field, static function () use (
+            $type,
+            $name,
+            $id,
+            $value,
+            $field,
+            $help
+        ): void {
+            if ("checkbox" === $type) {
+                printf(
+                    '<label class="plaidact-admin-switch"><input class="plaidact-admin-switch__input" name="%1$s" id="%2$s" type="checkbox" value="1" %3$s /><span class="plaidact-admin-switch__label">%4$s</span></label>',
+                    esc_attr($name),
+                    esc_attr($id),
+                    checked("1", $value, false),
+                    esc_html((string) ($field["label"] ?? ""))
+                );
+
+                // Le résumé de l'option accompagne l'interrupteur ; l'explication
+                // longue se lit ensuite, hors du libellé du contrôle.
+                if ("" !== $help) {
+                    printf(
+                        '<p class="plaidact-admin-switch__desc">%s</p>',
+                        esc_html($help)
+                    );
+                }
+                return;
+            }
+
+            $placeholder = isset($field["placeholder"]) ? (string) $field["placeholder"] : "";
+            $placeholder_attr = "" !== $placeholder
+                ? sprintf(' placeholder="%s"', esc_attr($placeholder))
+                : "";
+
+            if ("textarea" === $type || "code" === $type) {
+                printf(
+                    '<textarea name="%1$s" id="%2$s" rows="%3$d"%4$s%5$s>%6$s</textarea>',
+                    esc_attr($name),
+                    esc_attr($id),
+                    absint((int) ($field["rows"] ?? 4)),
+                    "code" === $type ? ' class="code"' : "",
+                    $placeholder_attr,
+                    esc_textarea($value)
+                );
+                return;
+            }
+
+            $min_attr = isset($field["min"]) ? sprintf(' min="%s"', esc_attr((string) $field["min"])) : "";
+
+            printf(
+                '<input name="%1$s" id="%2$s" type="%3$s" value="%4$s"%5$s%6$s />',
+                esc_attr($name),
+                esc_attr($id),
+                esc_attr($type),
+                esc_attr($value),
+                $placeholder_attr,
+                $min_attr
+            );
+        // Pour une case à cocher, l'aide courte suit l'interrupteur : c'est
+        // l'explication longue qui est renvoyée en texte d'après.
+        }, "checkbox" === $type ? $description : $help);
+    }
+
+    /**
+     * Affiche l'habillage commun d'un champ : libellé, contenu et aide.
+     *
+     * Le libellé n'est un élément <label> que s'il existe une option
+     * correspondante ; les champs libres et les cases à cocher — où le libellé
+     * fait partie du contrôle — sont annoncés par un simple repère textuel.
+     *
+     * @param array<string,mixed> $field Description du champ.
+     * @param callable            $body  Rendu du contrôle.
+     * @param string              $help  Texte d'aide, redéfini si non vide.
+     * @return void
+     */
+    private static function render_settings_field_frame(
+        array $field,
+        callable $body,
+        string $help = ""
+    ): void {
+        $key = (string) ($field["key"] ?? "");
+        $label = (string) ($field["label"] ?? "");
+        $help = "" !== $help ? $help : (string) ($field["help"] ?? "");
+        $is_switch = isset($field["type"]) && "checkbox" === $field["type"];
+        $is_textarea = in_array(
+            (string) ($field["type"] ?? ""),
+            ["textarea", "code"],
+            true
+        );
+        ?>
+        <div class="plaidact-admin-field<?php echo $is_textarea ? " plaidact-admin-field--wide" : ""; ?>">
+            <?php if (!$is_switch && "" !== $label) : ?>
+                <?php if ("" !== $key) : ?>
+                    <label class="plaidact-admin-field__label" for="plaidact-setting-<?php echo esc_attr($key); ?>">
+                        <?php echo esc_html($label); ?>
+                    </label>
+                <?php else : ?>
+                    <p class="plaidact-admin-field__label"><?php echo esc_html($label); ?></p>
+                <?php endif; ?>
+            <?php endif; ?>
+            <?php $body(); ?>
+            <?php if ("" !== $help) : ?>
+                <p class="plaidact-admin-field__help"><?php echo esc_html($help); ?></p>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
     public static function render_settings_page(): void
     {
         if (!current_user_can("manage_options")) {
@@ -872,205 +1331,55 @@ final class Shortcodes
         }
 
         $settings = self::get_settings(false);
-        ?>
-		<div class="wrap">
-			<h1><?php esc_html_e("Réglages PLAID·ACT", "plaidact-campaign-core"); ?></h1>
-			<form method="post" action="options.php">
-				<?php settings_fields("plaidact_campaign_settings"); ?>
-					<table class="form-table" role="presentation">
-						<tr><th scope="row"><?php esc_html_e(
-          "ID formulaire pétition",
-          "plaidact-campaign-core"
-      ); ?></th><td><input name="plaidact_campaign_settings[petition_form_id]" type="number" value="<?php echo esc_attr(
-    (string) $settings["petition_form_id"]
-); ?>" class="small-text" /><p class="description"><?php esc_html_e(
-    "Le module pétition embarqué prendra en charge la pétition. Avec Polylang, sa traduction sera résolue automatiquement.",
-    "plaidact-campaign-core"
-); ?></p></td></tr>
-                        <tr><th scope="row"><?php esc_html_e("URL page personnalisée de signature", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[petition_sign_url]" type="url" value="<?php echo esc_attr((string) ($settings["petition_sign_url"] ?? "")); ?>" class="regular-text" placeholder="https://example.org/signer" /><p class="description"><?php esc_html_e("Utilisée par le compteur [plaid_petition_gauge] pour le bouton Signer la pétition. Laissez vide pour utiliser la page de la pétition Petitioner traduite.", "plaidact-campaign-core"); ?></p></td></tr>
-						<tr><th scope="row"><?php esc_html_e(
-          "Email notification",
-          "plaidact-campaign-core"
-      ); ?></th><td><input name="plaidact_campaign_settings[notification_email]" type="email" value="<?php echo esc_attr(
-    (string) $settings["notification_email"]
-); ?>" class="regular-text" /></td></tr>
-						<tr><th scope="row"><?php esc_html_e(
-          "Brevo API key",
-          "plaidact-campaign-core"
-      ); ?></th><td><input name="plaidact_campaign_settings[brevo_api_key]" type="text" value="<?php echo esc_attr(
-    (string) $settings["brevo_api_key"]
-); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "ID liste newsletter PLAID·ACT",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_plaidact]" type="number" value="<?php echo esc_attr(
-    (string) $settings["brevo_list_plaidact"]
-); ?>" class="small-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "ID liste Brevo pétition",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[brevo_list_petition]" type="number" value="<?php echo esc_attr(
-    (string) $settings["brevo_list_petition"]
-); ?>" class="small-text" /><p class="description"><?php esc_html_e("Les personnes qui signent la pétition, y compris via le module pétition embarqué, sont ajoutées à cette liste en plus de la liste newsletter si l’opt-in est coché.", "plaidact-campaign-core"); ?></p></td></tr>
+        $groups = self::get_settings_groups();
 
-					<tr><th scope="row"><?php esc_html_e("Titre articles", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[articles_section_title]" type="text" value="<?php echo esc_attr((string) $settings["articles_section_title"]); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e("Titre social wall", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[social_wall_title]" type="text" value="<?php echo esc_attr((string) $settings["social_wall_title"]); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e("Description social wall", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[social_wall_description]" type="text" value="<?php echo esc_attr((string) $settings["social_wall_description"]); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e("Titre rapport", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[report_title]" type="text" value="<?php echo esc_attr((string) $settings["report_title"]); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e("Texte rapport", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[report_excerpt]" type="text" value="<?php echo esc_attr((string) $settings["report_excerpt"]); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e("URL PDF rapport", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[report_pdf_url]" type="url" value="<?php echo esc_attr((string) $settings["report_pdf_url"]); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e("Bouton rapport", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[report_button_label]" type="text" value="<?php echo esc_attr((string) $settings["report_button_label"]); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "Double opt-in Brevo",
-         "plaidact-campaign-core"
-     ); ?></th><td><label><input name="plaidact_campaign_settings[brevo_doi_enabled]" type="checkbox" value="1" <?php checked(
-    (string) $settings["brevo_doi_enabled"],
-    "1"
-); ?> /> <?php esc_html_e(
-     "Utiliser /contacts/doubleOptinConfirmation au lieu de créer directement le contact.",
-     "plaidact-campaign-core"
- ); ?></label></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "ID template double opt-in",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[brevo_doi_template_id]" type="number" value="<?php echo esc_attr(
-    (string) $settings["brevo_doi_template_id"]
-); ?>" class="small-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "URL de retour double opt-in",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[brevo_redirection_url]" type="url" value="<?php echo esc_attr(
-    (string) $settings["brevo_redirection_url"]
-); ?>" class="regular-text" placeholder="https://example.org/merci" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e("URL page de don Givoly", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_donation_url]" type="url" value="<?php echo esc_attr((string) ($settings["givoly_donation_url"] ?? "")); ?>" class="regular-text" placeholder="https://example.org/donner" /><p class="description"><?php esc_html_e("Si renseignée, un bouton de don apparaît après une signature Petitioner réussie et transmet les coordonnées du signataire en paramètres d’URL pour préremplir Givoly.", "plaidact-campaign-core"); ?></p></td></tr>
-					<tr><th scope="row"><?php esc_html_e("Montant suggéré Givoly", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_amount]" type="number" min="0" value="<?php echo esc_attr((string) ($settings["givoly_amount"] ?? "")); ?>" class="small-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e("Texte bouton don", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_button_label]" type="text" value="<?php echo esc_attr((string) ($settings["givoly_button_label"] ?? "")); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e("Texte invitation au don", "plaidact-campaign-core"); ?></th><td><input name="plaidact_campaign_settings[givoly_cta_text]" type="text" value="<?php echo esc_attr((string) ($settings["givoly_cta_text"] ?? "")); ?>" class="regular-text" /></td></tr>
-                    <tr><th scope="row"><?php esc_html_e("Design pétition Petitioner", "plaidact-campaign-core"); ?></th><td>
-                        <p><?php esc_html_e("Les couleurs et le CSS du formulaire se règlent maintenant à un seul endroit : directement dans Petitioner.", "plaidact-campaign-core"); ?></p>
-                        <p><a class="button" href="<?php echo esc_url(admin_url('edit.php?post_type=petitioner-petition&page=petition-settings')); ?>"><?php esc_html_e("Ouvrir les réglages Petitioner", "plaidact-campaign-core"); ?></a></p>
-                        <p class="description"><?php esc_html_e("Le shortcode PLAID·ACT ne duplique plus ces champs : il applique automatiquement les variables Petitioner au rendu public, puis laisse le CSS personnalisé de Petitioner surcharger le tout.", "plaidact-campaign-core"); ?></p>
-                    </td></tr>
-                    <tr><th scope="row"><?php esc_html_e("Email de confirmation de signature", "plaidact-campaign-core"); ?></th><td>
-                        <p><?php esc_html_e("Pour modifier cet email, ouvrez la pétition concernée, puis Réglages avancés. Activez « Remplacer l’email de confirmation ? » et personnalisez son sujet et son contenu.", "plaidact-campaign-core"); ?></p>
-                        <p class="description"><?php esc_html_e("Si la confirmation par email est activée, conservez impérativement la variable {{confirmation_link}} dans le message afin que la signature puisse être validée.", "plaidact-campaign-core"); ?></p>
-                    </td></tr>
-                    <tr><th scope="row"><?php esc_html_e(
-         "Signataires publics",
-         "plaidact-campaign-core"
-     ); ?></th><td><label><input name="plaidact_campaign_settings[petition_show_signers]" type="checkbox" value="1" <?php checked(
-    (string) ($settings["petition_show_signers"] ?? "1"),
-    "1"
-); ?> /> <?php esc_html_e(
-     "Afficher la liste publique des signataires sous le formulaire Petitioner.",
-     "plaidact-campaign-core"
- ); ?></label><p class="description"><?php esc_html_e(
-    "Le titre, le texte, la lettre, les couleurs et les champs de la pétition se modifient directement dans Petitioner. PLAID·ACT n’affiche plus les anciens réglages du formulaire natif.",
-    "plaidact-campaign-core"
-); ?></p></td></tr>
-    					<tr><th scope="row"><?php esc_html_e(
-         "Signature d’organisation", "plaidact-campaign-core"
-     ); ?></th><td><label><input name="plaidact_campaign_settings[petition_org_signature]" type="checkbox" value="1" <?php checked(
-    (string) ($settings["petition_org_signature"] ?? "1"),
-    "1"
-); ?> /> <?php esc_html_e(
-     "Proposer sur chaque pétition les champs « signer en tant qu’organisation » et « titre et fonction ».",
-     "plaidact-campaign-core"
- ); ?></label><p class="description"><?php esc_html_e(
-    "Les champs sont insérés après l’email ; le basculement organisation/personne est géré automatiquement côté navigateur.",
-    "plaidact-campaign-core"
-); ?></p></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "Titre email de partage",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[campaign_share_mail_title]" type="text" value="<?php echo esc_attr(
-    (string) $settings["campaign_share_mail_title"]
-); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "Texte bloc partage email",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[send_mail_intro]" type="text" value="<?php echo esc_attr(
-    (string) $settings["send_mail_intro"]
-); ?>" class="regular-text" /></td></tr>
-<tr><th scope="row"><?php esc_html_e(
-         "Nom du décideur",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[decision_maker_name]" type="text" value="<?php echo esc_attr(
-    (string) $settings["decision_maker_name"]
-); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "Email du décideur",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[decision_maker_email]" type="email" value="<?php echo esc_attr(
-    (string) $settings["decision_maker_email"]
-); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "Sujet email décideur",
-         "plaidact-campaign-core"
-     ); ?></th><td><input name="plaidact_campaign_settings[decision_mail_subject]" type="text" value="<?php echo esc_attr(
-    (string) $settings["decision_mail_subject"]
-); ?>" class="regular-text" /></td></tr>
-					<tr><th scope="row"><?php esc_html_e(
-         "Texte pré-rempli email décideur",
-         "plaidact-campaign-core"
-     ); ?></th><td><textarea name="plaidact_campaign_settings[decision_mail_placeholder]" class="large-text" rows="5"><?php echo esc_textarea(
-    (string) $settings["decision_mail_placeholder"]
-); ?></textarea></td></tr>
-						<tr><th scope="row"><?php esc_html_e(
-          "Texte par défaut pour les partages sociaux",
-          "plaidact-campaign-core"
-      ); ?></th><td><textarea name="plaidact_campaign_settings[social_share_text]" class="large-text" rows="4"><?php echo esc_textarea(
-    (string) $settings["social_share_text"]
-); ?></textarea></td></tr>
-						<tr><th scope="row"><?php esc_html_e(
-          "Titre bloc newsletter",
-          "plaidact-campaign-core"
-      ); ?></th><td><input name="plaidact_campaign_settings[newsletter_title]" type="text" value="<?php echo esc_attr(
-    (string) $settings["newsletter_title"]
-); ?>" class="regular-text" /></td></tr>
-						<tr><th scope="row"><?php esc_html_e(
-          "Texte bloc newsletter",
-          "plaidact-campaign-core"
-      ); ?></th><td><input name="plaidact_campaign_settings[newsletter_intro]" type="text" value="<?php echo esc_attr(
-    (string) $settings["newsletter_intro"]
-); ?>" class="regular-text" /></td></tr>
-						<tr><th scope="row"><?php esc_html_e(
-          "Libellé bouton newsletter",
-          "plaidact-campaign-core"
-      ); ?></th><td><input name="plaidact_campaign_settings[newsletter_button_label]" type="text" value="<?php echo esc_attr(
-    (string) $settings["newsletter_button_label"]
-); ?>" class="regular-text" /></td></tr>
-						<tr><th scope="row"><?php esc_html_e(
-          "CSS personnalisé newsletter",
-          "plaidact-campaign-core"
-      ); ?></th><td><textarea name="plaidact_campaign_settings[newsletter_custom_css]" class="large-text code" rows="10" placeholder=".plaidact-card--newsletter { ... }"><?php echo esc_textarea(
-    (string) ($settings["newsletter_custom_css"] ?? "")
-); ?></textarea><p class="description"><?php esc_html_e("CSS injecté après les styles PLAID·ACT. Ciblez .plaidact-card--newsletter pour personnaliser uniquement le bloc newsletter.", "plaidact-campaign-core"); ?></p></td></tr>
-						<tr><th scope="row"><?php esc_html_e(
-          "Libellé bouton partage email",
-          "plaidact-campaign-core"
-      ); ?></th><td><input name="plaidact_campaign_settings[send_mail_button_label]" type="text" value="<?php echo esc_attr(
-    (string) $settings["send_mail_button_label"]
-); ?>" class="regular-text" /></td></tr>
-						<tr><th scope="row"><?php esc_html_e(
-          "Libellé bouton décideur",
-          "plaidact-campaign-core"
-      ); ?></th><td><input name="plaidact_campaign_settings[decision_mail_button_label]" type="text" value="<?php echo esc_attr(
-    (string) $settings["decision_mail_button_label"]
-); ?>" class="regular-text" /></td></tr>
-					</table>
-					<p class="description"><?php esc_html_e(
-         "Quand Polylang est actif, les champs textuels ci-dessus sont enregistrés comme chaînes traduisibles dans Polylang > Traductions des chaînes.",
-         "plaidact-campaign-core"
-     ); ?></p>
-					<?php submit_button(); ?>
-				</form>
-		</div>
-		<?php
+        Admin_UI::page_start([
+            "title" => __("Réglages PLAID·ACT", "plaidact-campaign-core"),
+            "description" => __(
+                "Connecteurs, textes de campagne et options d’affichage. Tout est enregistré dans une seule option, la clé API Brevo y compris.",
+                "plaidact-campaign-core"
+            ),
+        ]);
+        ?>
+        <form method="post" action="options.php">
+            <?php settings_fields("plaidact_campaign_settings"); ?>
+            <nav class="plaidact-admin-tabs" aria-label="<?php esc_attr_e("Groupes de réglages", "plaidact-campaign-core"); ?>">
+                <?php foreach ($groups as $group) : ?>
+                    <a class="nav-tab"
+                       href="#plaidact-onglet-<?php echo esc_attr((string) $group["id"]); ?>"
+                       data-tab="<?php echo esc_attr((string) $group["id"]); ?>">
+                        <?php echo esc_html((string) $group["label"]); ?>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+            <?php foreach ($groups as $group) : ?>
+                <div class="plaidact-admin-tab-panel"
+                     id="plaidact-onglet-<?php echo esc_attr((string) $group["id"]); ?>"
+                     data-panel="<?php echo esc_attr((string) $group["id"]); ?>">
+                    <?php
+                    Admin_UI::section_start(
+                        (string) $group["label"],
+                        (string) $group["description"],
+                        (string) $group["icon"]
+                    );
+                    ?>
+                    <div class="plaidact-admin-fields">
+                        <?php foreach ((array) $group["fields"] as $field) : ?>
+                            <?php self::render_settings_field((array) $field, $settings); ?>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php Admin_UI::section_end(); ?>
+                </div>
+            <?php endforeach; ?>
+            <?php submit_button(); ?>
+        </form>
+        <?php
         // Point d'ancrage pour les sections de réglages additionnelles
-        // (ex. connexion Actyl) : rendu après le formulaire principal, avec
-        // leur propre formulaire et leur propre option.
+        // (connexion Actyl, connexion Act) : rendu après le formulaire
+        // principal, avec leur propre formulaire et leur propre option, mais
+        // à l'intérieur de la charte de la page.
         do_action("plaidact_campaign_settings_page_end");
+        Admin_UI::page_end();
     }
 
     public static function render_modules_page(): void
@@ -1080,28 +1389,182 @@ final class Shortcodes
         }
 
         $settings = self::get_settings(false);
+
+        Admin_UI::page_start([
+            "title" => __("Modules PLAID·ACT", "plaidact-campaign-core"),
+            "description" => __(
+                "Activez ici les modules disponibles en shortcodes et en blocs Gutenberg. Les réglages techniques restent dans Réglages > PLAID·ACT.",
+                "plaidact-campaign-core"
+            ),
+        ]);
         ?>
-        <div class="wrap">
-            <picture class="plaidact-brand-banner" role="img" aria-label="<?php esc_attr_e("Act par PLAID·ACT", "plaidact-campaign-core"); ?>">
-                <source class="plaidact-brand-banner__dark" media="(prefers-color-scheme: dark)" srcset="<?php echo esc_url(PLAIDACT_CORE_URL . "assets/brand/act-sombre-logo.svg"); ?>" />
-                <img class="plaidact-brand-banner__light" src="<?php echo esc_url(PLAIDACT_CORE_URL . "assets/brand/act-clair-logo.svg"); ?>" alt="<?php esc_attr_e("Act par PLAID·ACT", "plaidact-campaign-core"); ?>" />
-            </picture>
-            <h1><?php esc_html_e("Modules PLAID·ACT", "plaidact-campaign-core"); ?></h1>
-            <p><?php esc_html_e("Activez ici les modules disponibles en shortcodes et en blocs Gutenberg. Les réglages techniques restent dans Réglages > PLAID·ACT.", "plaidact-campaign-core"); ?></p>
-            <form method="post" action="options.php">
-                <?php settings_fields("plaidact_campaign_settings"); ?>
-                <input type="hidden" name="plaidact_campaign_settings[_plaidact_modules_form]" value="1" />
-                <table class="form-table" role="presentation">
-                    <tr><th scope="row"><?php esc_html_e("Modules actifs", "plaidact-campaign-core"); ?></th><td>
-                        <?php foreach (self::get_module_labels() as $key => $label) : ?>
-                            <label><input name="plaidact_campaign_settings[<?php echo esc_attr($key); ?>]" type="checkbox" value="1" <?php checked((string) $settings[$key], "1"); ?> /> <?php echo esc_html($label); ?></label><br />
-                        <?php endforeach; ?>
-                    </td></tr>
-                </table>
-                <?php submit_button(); ?>
-            </form>
+        <form method="post" action="options.php">
+            <?php settings_fields("plaidact_campaign_settings"); ?>
+            <input type="hidden" name="plaidact_campaign_settings[_plaidact_modules_form]" value="1" />
+            <div class="plaidact-admin-modules">
+                <?php foreach (self::get_module_labels() as $key => $label) : ?>
+                    <?php
+                    $active = "1" === (string) ($settings[$key] ?? "1");
+                    $module_details = self::get_module_details($key);
+                    ?>
+                    <section class="plaidact-admin-module<?php echo $active ? " is-active" : ""; ?>">
+                        <div class="plaidact-admin-module__head">
+                            <div>
+                                <h2 class="plaidact-admin-module__title"><?php echo esc_html($label); ?></h2>
+                                <p class="plaidact-admin-module__desc"><?php echo esc_html($module_details["description"]); ?></p>
+                            </div>
+                            <?php
+                            Admin_UI::status(
+                                $active
+                                    ? __("Actif", "plaidact-campaign-core")
+                                    : __("Inactif", "plaidact-campaign-core"),
+                                $active ? Admin_UI::STATE_SUCCESS : Admin_UI::STATE_NEUTRAL
+                            );
+                            ?>
+                        </div>
+                        <code class="plaidact-admin-module__shortcode"><?php echo esc_html($module_details["shortcode"]); ?></code>
+                        <?php if (!$module_details["implemented"]) : ?>
+                            <p class="plaidact-admin-module__desc"><?php esc_html_e("Aucun rendu public n’est encore relié à ce réglage.", "plaidact-campaign-core"); ?></p>
+                        <?php endif; ?>
+                        <label class="plaidact-admin-switch">
+                            <input class="plaidact-admin-switch__input" name="plaidact_campaign_settings[<?php echo esc_attr($key); ?>]" type="checkbox" value="1" <?php checked($active); ?> />
+                            <span class="plaidact-admin-switch__label"><?php esc_html_e("Afficher ce module sur le site", "plaidact-campaign-core"); ?></span>
+                        </label>
+                    </section>
+                <?php endforeach; ?>
+            </div>
+            <?php submit_button(__("Enregistrer les modules", "plaidact-campaign-core")); ?>
+        </form>
+        <?php
+        Admin_UI::page_end();
+    }
+
+    /** Affiche un tableau de bord avec accès directs aux tâches courantes. */
+    public static function render_dashboard_page(): void
+    {
+        if (!current_user_can("manage_options")) {
+            return;
+        }
+
+        $settings = self::get_settings(false);
+        $modules = self::get_module_labels();
+        $active_count = 0;
+        foreach ($modules as $key => $_label) {
+            if ("1" === (string) ($settings[$key] ?? "1")) {
+                $active_count++;
+            }
+        }
+        $configured_brevo = "" !== trim((string) ($settings["brevo_api_key"] ?? ""));
+        $actyl = class_exists(Actyl::class) ? Actyl::init() : null;
+        $actyl_configured = $actyl instanceof Actyl && $actyl->is_configured();
+        $actyl_active = $actyl instanceof Actyl && $actyl->is_active();
+        Admin_UI::page_start([
+            "title" => __("Espace PLAID·ACT", "plaidact-campaign-core"),
+            "description" => __(
+                "Retrouvez les modules, les contenus et les intégrations de campagne depuis un seul endroit.",
+                "plaidact-campaign-core"
+            ),
+            "actions" => [
+                [
+                    "label" => __("Configurer les modules", "plaidact-campaign-core"),
+                    "url" => admin_url("admin.php?page=plaidact-campaign-modules"),
+                    "primary" => true,
+                ],
+            ],
+        ]);
+        ?>
+        <div class="plaidact-admin-grid plaidact-admin-grid--3">
+            <?php
+            Admin_UI::section_start(
+                __("Modules actifs", "plaidact-campaign-core"),
+                __("Les modules activés sont exposés en shortcodes et en blocs Gutenberg.", "plaidact-campaign-core"),
+                "dashicons-grid-view"
+            );
+            ?>
+            <p class="plaidact-admin-dashboard__metric"><?php echo esc_html((string) $active_count); ?><span> / <?php echo esc_html((string) count($modules)); ?></span></p>
+            <a class="button" href="<?php echo esc_url(admin_url("admin.php?page=plaidact-campaign-modules")); ?>"><?php esc_html_e("Gérer les modules", "plaidact-campaign-core"); ?></a>
+            <?php Admin_UI::section_end(); ?>
+
+            <?php
+            Admin_UI::section_start(
+                __("Brevo", "plaidact-campaign-core"),
+                __("Connecte les signatures et inscriptions à vos listes.", "plaidact-campaign-core"),
+                "dashicons-email-alt"
+            );
+            ?>
+            <?php
+            Admin_UI::status(
+                $configured_brevo
+                    ? __("Clé configurée", "plaidact-campaign-core")
+                    : __("Configuration requise", "plaidact-campaign-core"),
+                $configured_brevo ? Admin_UI::STATE_SUCCESS : Admin_UI::STATE_WARNING
+            );
+            ?>
+            <p class="plaidact-admin-item__meta"><?php esc_html_e("Réglages > PLAID·ACT, onglet Brevo.", "plaidact-campaign-core"); ?></p>
+            <a class="button" href="<?php echo esc_url(admin_url("options-general.php?page=plaidact-campaign-settings&plaidact_tab=brevo")); ?>"><?php esc_html_e("Ouvrir les réglages", "plaidact-campaign-core"); ?></a>
+            <?php Admin_UI::section_end(); ?>
+
+            <?php
+            $actyl_state = $actyl_active
+                ? Admin_UI::STATE_SUCCESS
+                : ($actyl_configured ? Admin_UI::STATE_WARNING : Admin_UI::STATE_NEUTRAL);
+            $actyl_label = $actyl_active
+                ? __("Opérationnelle", "plaidact-campaign-core")
+                : ($actyl_configured
+                    ? __("Identifiants présents, test requis", "plaidact-campaign-core")
+                    : __("Non configurée", "plaidact-campaign-core"));
+
+            Admin_UI::section_start(
+                __("Synchronisation Actyl", "plaidact-campaign-core"),
+                __("Pousse les signatures confirmées vers votre instance Actyl.", "plaidact-campaign-core"),
+                "dashicons-update"
+            );
+            ?>
+            <?php Admin_UI::status($actyl_label, $actyl_state); ?>
+            <p class="plaidact-admin-item__meta"><?php esc_html_e("Réglages > PLAID·ACT, section Connexion Actyl.", "plaidact-campaign-core"); ?></p>
+            <a class="button" href="<?php echo esc_url(admin_url("options-general.php?page=plaidact-campaign-settings")); ?>"><?php esc_html_e("Voir l’état et les réglages", "plaidact-campaign-core"); ?></a>
+            <?php Admin_UI::section_end(); ?>
+        </div>
+
+        <?php
+        Admin_UI::section_start(
+            __("Accès rapides", "plaidact-campaign-core"),
+            __("Les écrans les plus utilisés de l’extension.", "plaidact-campaign-core"),
+            "dashicons-lightbulb"
+        );
+        ?>
+        <div class="plaidact-admin-quick-links">
+            <a class="button button-primary" href="<?php echo esc_url(admin_url("post-new.php?post_type=plaid_breve")); ?>"><?php esc_html_e("Rédiger une brève", "plaidact-campaign-core"); ?></a>
+            <a class="button" href="<?php echo esc_url(admin_url("edit.php?post_type=petitioner-petition")); ?>"><?php esc_html_e("Gérer les pétitions", "plaidact-campaign-core"); ?></a>
+            <a class="button" href="<?php echo esc_url(admin_url("admin.php?page=plaidact-campaign-signers")); ?>"><?php esc_html_e("Consulter les signataires", "plaidact-campaign-core"); ?></a>
+            <a class="button" href="<?php echo esc_url(admin_url("admin.php?page=plaidact-contact-directory")); ?>"><?php esc_html_e("Répertoire de contacts", "plaidact-campaign-core"); ?></a>
+            <a class="button" href="<?php echo esc_url(admin_url("edit.php?post_type=associations")); ?>"><?php esc_html_e("Répertoire associatif", "plaidact-campaign-core"); ?></a>
+            <a class="button" href="<?php echo esc_url(admin_url("options-general.php?page=plaidact-campaign-settings")); ?>"><?php esc_html_e("Réglages PLAID·ACT", "plaidact-campaign-core"); ?></a>
         </div>
         <?php
+        Admin_UI::section_end();
+        Admin_UI::page_end();
+    }
+
+    /** Retourne le contrat public et l'état d'implémentation d'un module. */
+    private static function get_module_details(string $key): array
+    {
+        $details = [
+            "enable_petition" => ["[petition_form] · [plaid_petition_gauge]", true, __("Gestion du formulaire, de la jauge et des signatures Petitioner.", "plaidact-campaign-core")],
+            "enable_newsletter" => ["[plaid_newsletter_form]", true, __("Collecte des inscriptions et synchronisation Brevo.", "plaidact-campaign-core")],
+            "enable_send_campaign" => ["[plaid_send_campaign]", true, __("Formulaire d’envoi de messages aux décideurs.", "plaidact-campaign-core")],
+            "enable_directory" => ["[plaidact_asso_directory] · [plaidact_contact_directory]", true, __("Répertoires associatif et de contacts.", "plaidact-campaign-core")],
+            "enable_breves" => ["[plaidact_breves]", true, __("Publication et affichage des brèves de campagne.", "plaidact-campaign-core")],
+            "enable_out" => ["—", false, __("Réglage conservé pour compatibilité ; aucune vue de sorties n’est branchée actuellement.", "plaidact-campaign-core")],
+            "enable_agenda" => ["[plaidact_timeline]", true, __("Agenda public avec navigation temporelle et export iCal.", "plaidact-campaign-core")],
+            "enable_sso" => ["[plaidact_act_login]", true, __("Connexion des comptes WordPress via Act.", "plaidact-campaign-core")],
+            "enable_socialwall" => ["[plaid_social_wall]", true, __("Mur des contenus sociaux intégrés.", "plaidact-campaign-core")],
+            "enable_articles" => ["—", false, __("Le titre est configurable, mais aucune vue d’articles dédiée n’est branchée.", "plaidact-campaign-core")],
+            "enable_partners" => ["[plaid_partners]", true, __("Affichage des partenaires de campagne.", "plaidact-campaign-core")],
+            "enable_report_highlight" => ["—", false, __("Les champs du rapport PDF sont conservés, mais aucun rendu public n’est branché.", "plaidact-campaign-core")],
+        ];
+        $item = $details[$key] ?? ["—", false, "Aucune description disponible."];
+        return ["shortcode" => $item[0], "implemented" => $item[1], "description" => $item[2]];
     }
 
     private static function get_module_labels(): array
@@ -1157,30 +1620,70 @@ final class Shortcodes
 
         $total = absint($result["total"] ?? 0);
         $total_pages = max(1, (int) ceil($total / $per_page));
+        $has_signers = $form_id > 0
+            && class_exists("AV_Petitioner_Submissions_Model")
+            && !empty($result["submissions"]);
+
+        Admin_UI::page_start([
+            "title" => __("Signataires de la pétition", "plaidact-campaign-core"),
+            "description" => __(
+                "Consultez les signatures Petitioner sans ouvrir ni modifier la spécification de la pétition.",
+                "plaidact-campaign-core"
+            ),
+            "actions" => $form_id > 0 && class_exists("AV_Petitioner_Submissions_Model")
+                ? [
+                    [
+                        "label" => __("Exporter tout en CSV", "plaidact-campaign-core"),
+                        "url" => wp_nonce_url(
+                            admin_url("admin-post.php?action=plaidact_export_signers_csv"),
+                            "plaidact_export_signers_csv"
+                        ),
+                    ],
+                ]
+                : [],
+        ]);
         ?>
-        <div class="wrap">
-            <h1><?php esc_html_e("Signataires de la pétition", "plaidact-campaign-core"); ?></h1>
-            <p><?php esc_html_e("Consultez les signatures Petitioner sans ouvrir ni modifier la pétition.", "plaidact-campaign-core"); ?></p>
-            <?php if ($form_id <= 0 || !class_exists("AV_Petitioner_Submissions_Model")) : ?>
-                <div class="notice notice-warning"><p><?php esc_html_e("Aucun formulaire Petitioner publié ou module de signatures indisponible.", "plaidact-campaign-core"); ?></p></div>
-            <?php else : ?>
-                <p>
-                    <strong><?php esc_html_e("Formulaires liés", "plaidact-campaign-core"); ?> :</strong> #<?php echo esc_html(implode(", #", self::get_linked_petitioner_form_ids($form_id))); ?> — <strong><?php esc_html_e("Total", "plaidact-campaign-core"); ?> :</strong> <?php echo esc_html((string) $total); ?>
-                    <a class="button" style="float:right" href="<?php echo esc_url(wp_nonce_url(
-                        admin_url("admin-post.php?action=plaidact_export_signers_csv"),
-                        "plaidact_export_signers_csv"
-                    )); ?>"><?php esc_html_e("Exporter tout en CSV (toutes traductions)", "plaidact-campaign-core"); ?></a>
-                </p>
-                <table class="widefat striped">
+
+        <?php if ($form_id <= 0 || !class_exists("AV_Petitioner_Submissions_Model")) : ?>
+            <?php
+            Admin_UI::notice(
+                __("Aucun formulaire Petitioner publié, ou module de signatures indisponible.", "plaidact-campaign-core"),
+                Admin_UI::STATE_WARNING
+            );
+            ?>
+        <?php elseif (!$has_signers) : ?>
+            <?php
+            Admin_UI::notice(
+                __("Aucune signature enregistrée pour le moment. Le tableau se remplira dès la première signature.", "plaidact-campaign-core"),
+                Admin_UI::STATE_INFO
+            );
+            ?>
+        <?php endif; ?>
+
+        <?php if ($form_id > 0 && class_exists("AV_Petitioner_Submissions_Model")) : ?>
+            <?php
+            Admin_UI::section_start(
+                __("Signatures reçues", "plaidact-campaign-core"),
+                sprintf(
+                    /* translators: 1: nombre de signatures, 2: formulaires liés */
+                    __("%1$d signature(s) — formulaires liés : %2$s", "plaidact-campaign-core"),
+                    $total,
+                    "#" . implode(", #", self::get_linked_petitioner_form_ids($form_id))
+                ),
+                "dashicons-groups"
+            );
+            ?>
+            <div class="plaidact-admin-table-wrap">
+                <table class="plaidact-admin-table">
                     <thead><tr>
-                        <th><?php esc_html_e("Pétition", "plaidact-campaign-core"); ?></th>
-                        <th><?php esc_html_e("Nom", "plaidact-campaign-core"); ?></th>
-                        <th><?php esc_html_e("Email", "plaidact-campaign-core"); ?></th>
-                        <th><?php esc_html_e("Code postal", "plaidact-campaign-core"); ?></th>
-                        <th><?php esc_html_e("Téléphone", "plaidact-campaign-core"); ?></th>
-                        <th><?php esc_html_e("Newsletter", "plaidact-campaign-core"); ?></th>
-                        <th><?php esc_html_e("Statut", "plaidact-campaign-core"); ?></th>
-                        <th><?php esc_html_e("Date", "plaidact-campaign-core"); ?></th>
+                        <th scope="col"><?php esc_html_e("Pétition", "plaidact-campaign-core"); ?></th>
+                        <th scope="col"><?php esc_html_e("Nom", "plaidact-campaign-core"); ?></th>
+                        <th scope="col"><?php esc_html_e("Email", "plaidact-campaign-core"); ?></th>
+                        <th scope="col"><?php esc_html_e("Code postal", "plaidact-campaign-core"); ?></th>
+                        <th scope="col"><?php esc_html_e("Téléphone", "plaidact-campaign-core"); ?></th>
+                        <th scope="col"><?php esc_html_e("Newsletter", "plaidact-campaign-core"); ?></th>
+                        <th scope="col"><?php esc_html_e("Statut", "plaidact-campaign-core"); ?></th>
+                        <th scope="col"><?php esc_html_e("Date", "plaidact-campaign-core"); ?></th>
                     </tr></thead>
                     <tbody>
                     <?php foreach ((array) ($result["submissions"] ?? []) as $submission) : ?>
@@ -1198,15 +1701,21 @@ final class Shortcodes
                     </tbody>
                 </table>
                 <?php if ($total_pages > 1) : ?>
-                    <p class="tablenav-pages">
+                    <div class="tablenav">
                         <?php for ($i = 1; $i <= $total_pages; $i++) : ?>
-                            <a class="button<?php echo $i === $page ? " button-primary" : ""; ?>" href="<?php echo esc_url(add_query_arg(["page" => "plaidact-campaign-signers", "paged" => $i], admin_url("admin.php"))); ?>"><?php echo esc_html((string) $i); ?></a>
+                            <a class="button button-small<?php echo $i === $page ? " button-primary" : ""; ?>"
+                               href="<?php echo esc_url(add_query_arg(["page" => "plaidact-campaign-signers", "paged" => $i], admin_url("admin.php"))); ?>">
+                                <?php echo esc_html((string) $i); ?>
+                            </a>
                         <?php endfor; ?>
-                    </p>
+                    </div>
                 <?php endif; ?>
-            <?php endif; ?>
-        </div>
+            </div>
+            <?php Admin_UI::section_end(); ?>
+        <?php endif; ?>
+
         <?php
+        Admin_UI::page_end();
     }
 
     public static function render_petition_form(array $atts = []): string

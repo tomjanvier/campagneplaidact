@@ -1569,82 +1569,86 @@ final class Actyl
         $active = $this->is_active();
         $configured = $this->is_configured();
         $ping_at = (int) get_option(self::OPTION_PING_OK_AT, 0);
+
+        Admin_UI::section_start(
+            __("Connexion Actyl", "plaidact-campaign-core"),
+            __(
+                "Pousse en temps réel les signatures confirmées et les inscriptions newsletter vers votre instance Actyl. La synchronisation ne démarre qu’après un test de connexion réussi.",
+                "plaidact-campaign-core"
+            ),
+            "dashicons-update"
+        );
         ?>
-        <hr />
-        <h2 id="actyl"><?php esc_html_e("Connexion Actyl", "plaidact-campaign-core"); ?></h2>
-        <p><?php esc_html_e(
-            "Pousse en temps réel les signatures confirmées et les inscriptions newsletter vers votre instance Actyl. La synchronisation ne démarre qu’après un test de connexion réussi.",
-            "plaidact-campaign-core"
-        ); ?></p>
 
         <?php $this->render_section_notices(); ?>
 
         <form method="post" action="<?php echo esc_url(admin_url("options.php")); ?>">
             <?php settings_fields(self::OPTION_SETTINGS); ?>
-            <table class="form-table" role="presentation">
-                <tr>
-                    <th scope="row"><label for="plaidact_actyl_url"><?php esc_html_e("URL de l’instance Actyl", "plaidact-campaign-core"); ?></label></th>
-                    <td>
-                        <input type="url" id="plaidact_actyl_url" name="plaidact_actyl_settings[actyl_url]" value="<?php echo esc_attr((string) $settings["actyl_url"]); ?>" class="regular-text" placeholder="https://mon-instance.vercel.app" />
-                        <p class="description"><?php esc_html_e("HTTPS uniquement, sans slash final.", "plaidact-campaign-core"); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="plaidact_actyl_token"><?php esc_html_e("Token API", "plaidact-campaign-core"); ?></label></th>
-                    <td>
-                        <input type="password" id="plaidact_actyl_token" name="plaidact_actyl_settings[actyl_api_token]" value="" class="regular-text" autocomplete="new-password" placeholder="<?php echo esc_attr("" !== (string) $settings["actyl_api_token"] ? "•••••••••••••••• (token enregistré)" : "actyl_…"); ?>" />
-                        <button type="button" class="button button-small" id="plaidact_actyl_token_toggle"><?php esc_html_e("Remplacer", "plaidact-campaign-core"); ?></button>
-                        <p class="description"><?php esc_html_e(
-                            "Token créé dans Actyl → Réglages. Jamais affiché : laissez vide pour conserver la valeur enregistrée, cliquez sur « Remplacer » pour en saisir un nouveau.",
-                            "plaidact-campaign-core"
-                        ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e("Synchronisation", "plaidact-campaign-core"); ?></th>
-                    <td>
-                        <label>
-                            <input type="checkbox" name="plaidact_actyl_settings[actyl_enabled]" value="1" <?php checked((string) $settings["actyl_enabled"], "1"); ?> />
-                            <?php esc_html_e("Activer la synchronisation", "plaidact-campaign-core"); ?>
-                        </label>
-                        <p class="description"><?php esc_html_e(
-                            "Aucun envoi tant qu’un test de connexion n’a pas réussi ; modifier l’URL ou le token exige un nouveau test.",
-                            "plaidact-campaign-core"
-                        ); ?></p>
-                    </td>
-                </tr>
-            </table>
+            <div class="plaidact-admin-fields">
+                <div class="plaidact-admin-field">
+                    <label class="plaidact-admin-field__label" for="plaidact_actyl_url"><?php esc_html_e("URL de l’instance Actyl", "plaidact-campaign-core"); ?></label>
+                    <input type="url" id="plaidact_actyl_url" name="plaidact_actyl_settings[actyl_url]" value="<?php echo esc_attr((string) $settings["actyl_url"]); ?>" placeholder="https://mon-instance.vercel.app" />
+                    <p class="plaidact-admin-field__help"><?php esc_html_e("HTTPS uniquement, sans slash final.", "plaidact-campaign-core"); ?></p>
+                </div>
+                <div class="plaidact-admin-field">
+                    <label class="plaidact-admin-field__label" for="plaidact_actyl_token"><?php esc_html_e("Token API", "plaidact-campaign-core"); ?></label>
+                    <div class="plaidact-admin-field--inline">
+                        <input type="password" id="plaidact_actyl_token" name="plaidact_actyl_settings[actyl_api_token]" value="" autocomplete="new-password" placeholder="<?php echo esc_attr("" !== (string) $settings["actyl_api_token"] ? "•••••••••••••••• (token enregistré)" : "actyl_…"); ?>" />
+                        <button type="button" class="button" id="plaidact_actyl_token_toggle"><?php esc_html_e("Remplacer", "plaidact-campaign-core"); ?></button>
+                    </div>
+                    <p class="plaidact-admin-field__help"><?php esc_html_e(
+                        "Token créé dans Actyl → Réglages. Jamais affiché : laissez vide pour conserver la valeur enregistrée, cliquez sur « Remplacer » pour en saisir un nouveau.",
+                        "plaidact-campaign-core"
+                    ); ?></p>
+                </div>
+            </div>
+            <div class="plaidact-admin-field">
+                <label class="plaidact-admin-switch">
+                    <input class="plaidact-admin-switch__input" name="plaidact_actyl_settings[actyl_enabled]" type="checkbox" value="1" <?php checked((string) $settings["actyl_enabled"], "1"); ?> />
+                    <span class="plaidact-admin-switch__label"><?php esc_html_e("Activer la synchronisation", "plaidact-campaign-core"); ?></span>
+                </label>
+                <p class="plaidact-admin-field__help"><?php esc_html_e(
+                    "Aucun envoi tant qu’un test de connexion n’a pas réussi ; modifier l’URL ou le token exige un nouveau test.",
+                    "plaidact-campaign-core"
+                ); ?></p>
+            </div>
             <?php submit_button(__("Enregistrer la connexion Actyl", "plaidact-campaign-core"), "primary", "submit", false); ?>
         </form>
 
-        <p>
-            <strong><?php esc_html_e("État :", "plaidact-campaign-core"); ?></strong>
+        <div class="plaidact-admin-item__actions">
             <?php if ($active) : ?>
-                <span style="color:#00a32a;font-weight:600;"><?php esc_html_e("Synchro active", "plaidact-campaign-core"); ?></span>
-                — <?php echo esc_html(sprintf(
-                    /* translators: %s: date/heure du dernier ping réussi */
-                    __("dernière validation le %s", "plaidact-campaign-core"),
-                    wp_date("d/m/Y H:i", $ping_at)
-                )); ?>
+                <?php
+                Admin_UI::status(
+                    sprintf(
+                        /* translators: %s: date et heure du dernier ping réussi */
+                        __("Synchro active, dernière validation le %s", "plaidact-campaign-core"),
+                        wp_date("d/m/Y H:i", $ping_at)
+                    ),
+                    Admin_UI::STATE_SUCCESS
+                );
+                ?>
             <?php elseif ($configured) : ?>
-                <span style="color:#dba617;font-weight:600;"><?php esc_html_e("Configurée mais inactive", "plaidact-campaign-core"); ?></span>
-                — <?php esc_html_e("lancez un test de connexion puis enregistrez avec l’activation cochée.", "plaidact-campaign-core"); ?>
+                <?php
+                Admin_UI::status(
+                    __("Configurée mais inactive : lancez un test de connexion", "plaidact-campaign-core"),
+                    Admin_UI::STATE_WARNING
+                );
+                ?>
             <?php else : ?>
-                <span style="color:#646970;font-weight:600;"><?php esc_html_e("Non configurée", "plaidact-campaign-core"); ?></span>
+                <?php Admin_UI::status(__("Non configurée", "plaidact-campaign-core"), Admin_UI::STATE_NEUTRAL); ?>
             <?php endif; ?>
-        </p>
 
-        <p>
-            <a class="button button-secondary" href="<?php echo esc_url(wp_nonce_url(
+            <a class="button" href="<?php echo esc_url(wp_nonce_url(
                 admin_url("admin-post.php?action=plaidact_actyl_test_connection"),
                 "plaidact_actyl_test_connection"
             )); ?>"><?php esc_html_e("Tester la connexion", "plaidact-campaign-core"); ?></a>
-        </p>
+        </div>
 
-        <h3><?php esc_html_e("Rattrapage des signatures existantes", "plaidact-campaign-core"); ?></h3>
+        <h3 class="plaidact-admin-subhead"><?php esc_html_e("Rattrapage des signatures existantes", "plaidact-campaign-core"); ?></h3>
         <?php $this->render_backfill_box(); ?>
 
-        <h3><?php esc_html_e("Journal de synchronisation (100 derniers événements)", "plaidact-campaign-core"); ?></h3>
+        <h3 class="plaidact-admin-subhead"><?php esc_html_e("Journal de synchronisation", "plaidact-campaign-core"); ?></h3>
+        <p class="plaidact-admin-field__help"><?php esc_html_e("Les 100 derniers événements envoyés à Actyl.", "plaidact-campaign-core"); ?></p>
         <?php $this->render_log_table(); ?>
 
         <script>
@@ -1666,6 +1670,7 @@ final class Actyl
         })();
         </script>
         <?php
+        Admin_UI::section_end();
     }
 
     /**
@@ -1782,7 +1787,7 @@ final class Actyl
         $running = isset($_GET["actyl_backfill"])
             && "running" === sanitize_key(wp_unslash($_GET["actyl_backfill"]));
         ?>
-        <p>
+        <p class="plaidact-admin-field__help">
             <?php echo esc_html(sprintf(
                 /* translators: 1: parcourues, 2: total */
                 __("%1$d / %2$d signatures parcourues.", "plaidact-campaign-core"),
@@ -1792,31 +1797,39 @@ final class Actyl
             <?php esc_html_e("Les lignes sans campagne liée ou sans email sont ignorées ; rejouer un lot est sans risque (API idempotente).", "plaidact-campaign-core"); ?>
         </p>
 
-        <div style="background:#f0f0f1;border-radius:4px;height:20px;max-width:520px;overflow:hidden;">
-            <div style="background:#3858e9;height:100%;width:<?php echo esc_attr((string) $percent); ?>%;"></div>
+        <div
+            class="plaidact-admin-progress"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="<?php echo esc_attr((string) $percent); ?>"
+        >
+            <div class="plaidact-admin-progress__bar" style="width:<?php echo esc_attr((string) $percent); ?>%;"></div>
         </div>
 
-        <form method="post" action="<?php echo esc_url(admin_url("admin-post.php")); ?>" style="margin-top:10px;">
+        <form method="post" action="<?php echo esc_url(admin_url("admin-post.php")); ?>">
             <?php wp_nonce_field("plaidact_actyl_backfill"); ?>
             <input type="hidden" name="action" value="plaidact_actyl_backfill_batch" />
             <input type="hidden" name="petition_id" value="<?php echo esc_attr((string) $petition_filter); ?>" />
 
-            <button
-                type="submit"
-                class="button button-secondary"
-                id="plaidact_actyl_backfill_go"
-                data-running="<?php echo esc_attr($running ? "1" : "0"); ?>"
-            >
-                <?php echo $processed > 0
-                    ? esc_html__("Reprendre la synchronisation", "plaidact-campaign-core")
-                    : esc_html__("Synchroniser les signatures existantes", "plaidact-campaign-core"); ?>
-            </button>
-
-            <?php if ($processed > 0) : ?>
-                <button type="submit" name="reset" value="1" class="button-link" style="margin-left:12px;color:#b32d2e;">
-                    <?php esc_html_e("Recommencer depuis zéro", "plaidact-campaign-core"); ?>
+            <div class="plaidact-admin-item__actions">
+                <button
+                    type="submit"
+                    class="button"
+                    id="plaidact_actyl_backfill_go"
+                    data-running="<?php echo esc_attr($running ? "1" : "0"); ?>"
+                >
+                    <?php echo $processed > 0
+                        ? esc_html__("Reprendre la synchronisation", "plaidact-campaign-core")
+                        : esc_html__("Synchroniser les signatures existantes", "plaidact-campaign-core"); ?>
                 </button>
-            <?php endif; ?>
+
+                <?php if ($processed > 0) : ?>
+                    <button type="submit" name="reset" value="1" class="button-link plaidact-admin-danger-link">
+                        <?php esc_html_e("Recommencer depuis zéro", "plaidact-campaign-core"); ?>
+                    </button>
+                <?php endif; ?>
+            </div>
         </form>
 
         <?php if ($running && $counts["remaining"] > 0) : ?>
@@ -1846,31 +1859,33 @@ final class Actyl
     {
         $log = $this->get_log();
         ?>
-        <table class="widefat striped" style="max-width:860px;">
-            <thead><tr>
-                <th style="width:150px;"><?php esc_html_e("Horodatage", "plaidact-campaign-core"); ?></th>
-                <th><?php esc_html_e("Endpoint", "plaidact-campaign-core"); ?></th>
-                <th style="width:90px;"><?php esc_html_e("Code HTTP", "plaidact-campaign-core"); ?></th>
-                <th><?php esc_html_e("Détail", "plaidact-campaign-core"); ?></th>
-            </tr></thead>
-            <tbody>
-            <?php if ([] === $log) : ?>
-                <tr><td colspan="4"><?php esc_html_e("Aucun événement pour le moment.", "plaidact-campaign-core"); ?></td></tr>
-            <?php else : ?>
-                <?php foreach ($log as $entry) : ?>
-                    <?php $code = (int) ($entry["code"] ?? 0); ?>
-                    <tr>
-                        <td><?php echo esc_html((string) ($entry["time"] ?? "")); ?></td>
-                        <td><?php echo esc_html((string) ($entry["endpoint"] ?? "")); ?></td>
-                        <td><?php echo esc_html($code > 0 ? (string) $code : "—"); ?></td>
-                        <td><?php echo esc_html((string) ($entry["message"] ?? "")); ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-            </tbody>
-        </table>
-        <p style="margin-top:8px;">
-            <a class="button-link" style="color:#b32d2e;" href="<?php echo esc_url(wp_nonce_url(
+        <div class="plaidact-admin-table-wrap">
+            <table class="plaidact-admin-table">
+                <thead><tr>
+                    <th scope="col"><?php esc_html_e("Horodatage", "plaidact-campaign-core"); ?></th>
+                    <th scope="col"><?php esc_html_e("Endpoint", "plaidact-campaign-core"); ?></th>
+                    <th scope="col"><?php esc_html_e("Code HTTP", "plaidact-campaign-core"); ?></th>
+                    <th scope="col"><?php esc_html_e("Détail", "plaidact-campaign-core"); ?></th>
+                </tr></thead>
+                <tbody>
+                <?php if ([] === $log) : ?>
+                    <tr><td colspan="4"><?php esc_html_e("Aucun événement pour le moment.", "plaidact-campaign-core"); ?></td></tr>
+                <?php else : ?>
+                    <?php foreach ($log as $entry) : ?>
+                        <?php $code = (int) ($entry["code"] ?? 0); ?>
+                        <tr>
+                            <td><?php echo esc_html((string) ($entry["time"] ?? "")); ?></td>
+                            <td class="plaidact-admin-mono"><?php echo esc_html((string) ($entry["endpoint"] ?? "")); ?></td>
+                            <td><?php echo esc_html($code > 0 ? (string) $code : "—"); ?></td>
+                            <td><?php echo esc_html((string) ($entry["message"] ?? "")); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <p>
+            <a class="button-link plaidact-admin-danger-link" href="<?php echo esc_url(wp_nonce_url(
                 admin_url("admin-post.php?action=plaidact_actyl_clear_log"),
                 "plaidact_actyl_clear_log"
             )); ?>"><?php esc_html_e("Vider le journal", "plaidact-campaign-core"); ?></a>

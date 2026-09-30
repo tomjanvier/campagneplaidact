@@ -60,83 +60,227 @@ final class PlaidAct_Contact_Directory {
 
 		$this->handle_admin_postbacks();
 		$lists = $this->get_lists();
+		$visible_columns = $this->get_visible_columns();
+		$branding        = $this->get_export_branding();
+
+		\Plaidact\CampaignCore\Admin_UI::page_start( array(
+			'title'       => __( 'Répertoire de contacts', 'plaidact-campaign-core' ),
+			'description' => __( 'Créez des listes, importez vos CSV et affichez-les sur le site avec le shortcode [plaidact_contact_directory].', 'plaidact-campaign-core' ),
+		) );
 		?>
-		<div class="wrap">
-			<h1><?php echo esc_html__( 'Répertoire de contacts', 'plaidact-campaign-core' ); ?></h1>
-			<p><?php echo esc_html__( 'Créez des listes, importez vos CSV et affichez-les sur le site avec le shortcode [plaidact_contact_directory].', 'plaidact-campaign-core' ); ?></p>
-			<?php $visible_columns = $this->get_visible_columns(); ?>
-			<h2><?php echo esc_html__( 'Colonnes à afficher (front office)', 'plaidact-campaign-core' ); ?></h2>
-			<form method="post">
-				<?php wp_nonce_field( self::NONCE_IMPORT ); ?>
-				<input type="hidden" name="plaidact_contact_action" value="update_visible_columns" />
-				<p>
-					<label><input type="checkbox" name="visible_columns[]" value="groupe" <?php checked( in_array( 'groupe', $visible_columns, true ) ); ?> /> <?php echo esc_html__( 'Groupe politique', 'plaidact-campaign-core' ); ?></label><br />
-					<label><input type="checkbox" name="visible_columns[]" value="commission" <?php checked( in_array( 'commission', $visible_columns, true ) ); ?> /> <?php echo esc_html__( 'Commission', 'plaidact-campaign-core' ); ?></label><br />
-					<label><input type="checkbox" name="visible_columns[]" value="custom" <?php checked( in_array( 'custom', $visible_columns, true ) ); ?> /> <?php echo esc_html__( 'Fonction', 'plaidact-campaign-core' ); ?></label><br />
-					<label><input type="checkbox" name="visible_columns[]" value="social" <?php checked( in_array( 'social', $visible_columns, true ) ); ?> /> <?php echo esc_html__( 'Réseaux sociaux', 'plaidact-campaign-core' ); ?></label>
-				</p>
-				<?php submit_button( __( 'Enregistrer les colonnes', 'plaidact-campaign-core' ), 'secondary' ); ?>
-			</form>
 
-			<h2><?php echo esc_html__( 'Nouvelle liste', 'plaidact-campaign-core' ); ?></h2>
-			<form method="post">
-				<?php wp_nonce_field( self::NONCE_IMPORT ); ?>
-				<input type="hidden" name="plaidact_contact_action" value="create_list" />
-				<table class="form-table"><tbody>
-					<tr><th scope="row"><?php echo esc_html__( 'Nom de la liste', 'plaidact-campaign-core' ); ?></th><td><input type="text" class="regular-text" name="list_name" required /></td></tr>
-					<tr><th scope="row"><?php echo esc_html__( 'Libellé colonne personnalisée', 'plaidact-campaign-core' ); ?></th><td><input type="text" class="regular-text" name="column_label" placeholder="Fonction ou Groupe politique" required /></td></tr>
-					<tr><th scope="row"><?php echo esc_html__( 'Description', 'plaidact-campaign-core' ); ?></th><td><textarea class="large-text" rows="2" name="description"></textarea></td></tr>
-					<tr><th scope="row"><?php echo esc_html__( 'Image (URL)', 'plaidact-campaign-core' ); ?></th><td><input type="url" class="regular-text" name="image_url" placeholder="https://..." /></td></tr>
-				</tbody></table>
-				<?php submit_button( __( 'Créer la liste', 'plaidact-campaign-core' ) ); ?>
-			</form>
+		<?php
+		\Plaidact\CampaignCore\Admin_UI::section_start(
+			__( 'Colonnes à afficher', 'plaidact-campaign-core' ),
+			__( 'Colonnes communes à toutes les listes, sur le front office.', 'plaidact-campaign-core' ),
+			'dashicons-columns'
+		);
+		?>
+		<form method="post">
+			<?php wp_nonce_field( self::NONCE_IMPORT ); ?>
+			<input type="hidden" name="plaidact_contact_action" value="update_visible_columns" />
+			<div class="plaidact-admin-checklist">
+				<?php foreach ( array(
+					'groupe'     => esc_html__( 'Groupe politique', 'plaidact-campaign-core' ),
+					'commission' => esc_html__( 'Commission', 'plaidact-campaign-core' ),
+					'custom'     => esc_html__( 'Fonction', 'plaidact-campaign-core' ),
+					'social'     => esc_html__( 'Réseaux sociaux', 'plaidact-campaign-core' ),
+				) as $column_key => $column_label ) : ?>
+					<label class="plaidact-admin-checklist__item">
+						<input type="checkbox" name="visible_columns[]" value="<?php echo esc_attr( $column_key ); ?>" <?php checked( in_array( $column_key, $visible_columns, true ) ); ?> />
+						<span><?php echo esc_html( $column_label ); ?></span>
+					</label>
+				<?php endforeach; ?>
+			</div>
+			<?php submit_button( __( 'Enregistrer les colonnes', 'plaidact-campaign-core' ), 'secondary' ); ?>
+		</form>
+		<?php \Plaidact\CampaignCore\Admin_UI::section_end(); ?>
 
-			<h2><?php echo esc_html__( 'Listes existantes', 'plaidact-campaign-core' ); ?></h2>
-			<?php if ( empty( $lists ) ) : ?>
-				<p><?php echo esc_html__( 'Aucune liste pour le moment.', 'plaidact-campaign-core' ); ?></p>
-			<?php else : ?>
+		<?php
+		\Plaidact\CampaignCore\Admin_UI::section_start(
+			__( 'Nouvelle liste', 'plaidact-campaign-core' ),
+			__( 'La liste est créée vide ; vous pourrez ensuite la compléter par import CSV.', 'plaidact-campaign-core' ),
+			'dashicons-plus-alt2'
+		);
+		?>
+		<form method="post">
+			<?php wp_nonce_field( self::NONCE_IMPORT ); ?>
+			<input type="hidden" name="plaidact_contact_action" value="create_list" />
+			<div class="plaidact-admin-fields">
+				<div class="plaidact-admin-field">
+					<label class="plaidact-admin-field__label" for="plaidact-list-name">
+						<?php echo esc_html__( 'Nom de la liste', 'plaidact-campaign-core' ); ?>
+					</label>
+					<input id="plaidact-list-name" type="text" name="list_name" required />
+				</div>
+				<div class="plaidact-admin-field">
+					<label class="plaidact-admin-field__label" for="plaidact-list-column-label">
+						<?php echo esc_html__( 'Libellé de la colonne personnalisée', 'plaidact-campaign-core' ); ?>
+					</label>
+					<input id="plaidact-list-column-label" type="text" name="column_label" placeholder="<?php echo esc_attr__( 'Fonction ou Groupe politique', 'plaidact-campaign-core' ); ?>" required />
+				</div>
+				<div class="plaidact-admin-field plaidact-admin-field--wide">
+					<label class="plaidact-admin-field__label" for="plaidact-list-description">
+						<?php echo esc_html__( 'Description', 'plaidact-campaign-core' ); ?>
+					</label>
+					<textarea id="plaidact-list-description" rows="2" name="description"></textarea>
+				</div>
+				<div class="plaidact-admin-field plaidact-admin-field--wide">
+					<label class="plaidact-admin-field__label" for="plaidact-list-image">
+						<?php echo esc_html__( 'Image (URL)', 'plaidact-campaign-core' ); ?>
+					</label>
+					<input id="plaidact-list-image" type="url" name="image_url" placeholder="https://…" />
+				</div>
+			</div>
+			<?php submit_button( __( 'Créer la liste', 'plaidact-campaign-core' ) ); ?>
+		</form>
+		<?php \Plaidact\CampaignCore\Admin_UI::section_end(); ?>
+
+		<?php
+		\Plaidact\CampaignCore\Admin_UI::section_start(
+			__( 'Listes existantes', 'plaidact-campaign-core' ),
+			'',
+			'dashicons-list-view'
+		);
+		?>
+		<?php if ( empty( $lists ) ) : ?>
+			<p class="plaidact-admin-empty">
+				<span class="dashicons dashicons-groups" aria-hidden="true"></span>
+				<?php echo esc_html__( 'Aucune liste pour le moment. Créez-en une ci-dessus pour commencer.', 'plaidact-campaign-core' ); ?>
+			</p>
+		<?php else : ?>
+			<div class="plaidact-admin-list">
 				<?php foreach ( $lists as $list ) : ?>
-					<div style="background:#fff;border:1px solid #ddd;padding:16px;margin-bottom:14px;">
-						<h3><?php echo esc_html( $list['name'] ); ?></h3>
-						<p><strong><?php echo esc_html__( 'Colonne personnalisée :', 'plaidact-campaign-core' ); ?></strong> <?php echo esc_html( $list['column_label'] ); ?></p>
-						<p><?php echo esc_html( $list['description'] ); ?></p>
-						<p><strong><?php echo esc_html__( 'Contacts :', 'plaidact-campaign-core' ); ?></strong> <?php echo esc_html( (string) count( $list['contacts'] ) ); ?></p>
-						<p><strong><?php echo esc_html__( 'Dernière mise à jour :', 'plaidact-campaign-core' ); ?></strong> <?php echo esc_html( ! empty( $list['updated_at'] ) ? wp_date( 'd/m/Y H:i', (int) $list['updated_at'] ) : '—' ); ?></p>
-						<p><a class="button button-secondary" href="<?php echo esc_url( add_query_arg( array( 'action' => self::DOWNLOAD_ACTION, 'list_id' => (int) $list['id'], 'format' => 'csv', 'nonce' => wp_create_nonce( self::NONCE_DOWNLOAD_PREFIX . $list['id'] ) ), admin_url( 'admin-post.php' ) ) ); ?>"><?php echo esc_html__( 'Télécharger cette liste (CSV)', 'plaidact-campaign-core' ); ?></a></p>
-						<form method="post" style="margin-top:8px;">
+					<article class="plaidact-admin-item">
+						<div class="plaidact-admin-item__head">
+							<div>
+								<h3 class="plaidact-admin-item__title"><?php echo esc_html( $list['name'] ); ?></h3>
+								<dl class="plaidact-admin-defs">
+									<dt><?php echo esc_html__( 'Colonne personnalisée', 'plaidact-campaign-core' ); ?></dt>
+									<dd><?php echo esc_html( $list['column_label'] ); ?></dd>
+									<dt><?php echo esc_html__( 'Contacts', 'plaidact-campaign-core' ); ?></dt>
+									<dd><?php echo esc_html( (string) count( $list['contacts'] ) ); ?></dd>
+									<dt><?php echo esc_html__( 'Dernière mise à jour', 'plaidact-campaign-core' ); ?></dt>
+									<dd><?php echo esc_html( ! empty( $list['updated_at'] ) ? wp_date( 'd/m/Y H:i', (int) $list['updated_at'] ) : '—' ); ?></dd>
+								</dl>
+								<?php if ( ! empty( $list['description'] ) ) : ?>
+									<p class="plaidact-admin-item__meta"><?php echo esc_html( $list['description'] ); ?></p>
+								<?php endif; ?>
+							</div>
+							<?php
+							\Plaidact\CampaignCore\Admin_UI::status(
+								sprintf(
+									/* translators: %d: nombre de contacts */
+									_n( '%d contact', '%d contacts', count( $list['contacts'] ), 'plaidact-campaign-core' ),
+									count( $list['contacts'] )
+								),
+								count( $list['contacts'] ) > 0
+									? \Plaidact\CampaignCore\Admin_UI::STATE_SUCCESS
+									: \Plaidact\CampaignCore\Admin_UI::STATE_NEUTRAL
+							);
+							?>
+						</div>
+
+						<form method="post">
 							<?php wp_nonce_field( self::NONCE_IMPORT ); ?>
 							<input type="hidden" name="plaidact_contact_action" value="update_list_meta" />
 							<input type="hidden" name="list_id" value="<?php echo esc_attr( (string) $list['id'] ); ?>" />
-							<p><label><strong><?php echo esc_html__( 'Nom de la liste', 'plaidact-campaign-core' ); ?></strong><br /><input type="text" class="regular-text" name="list_name" value="<?php echo esc_attr( (string) $list['name'] ); ?>" required /></label></p>
-							<p><label><strong><?php echo esc_html__( 'Libellé colonne personnalisée', 'plaidact-campaign-core' ); ?></strong><br /><input type="text" class="regular-text" name="column_label" value="<?php echo esc_attr( (string) $list['column_label'] ); ?>" required /></label></p>
-							<p><label><strong><?php echo esc_html__( 'Description', 'plaidact-campaign-core' ); ?></strong><br /><textarea class="large-text" rows="2" name="description"><?php echo esc_textarea( (string) ( $list['description'] ?? '' ) ); ?></textarea></label></p>
-							<p><label><strong><?php echo esc_html__( 'Image (URL)', 'plaidact-campaign-core' ); ?></strong><br /><input type="url" class="regular-text" name="image_url" value="<?php echo esc_attr( (string) ( $list['image_url'] ?? '' ) ); ?>" placeholder="https://..." /></label></p>
-							<p><label><input type="checkbox" name="show_groupe" value="1" <?php checked( ! isset( $list['show_groupe'] ) || ! empty( $list['show_groupe'] ) ); ?> /> <?php echo esc_html__( 'Afficher la colonne Groupe politique', 'plaidact-campaign-core' ); ?></label></p>
-							<p><label><input type="checkbox" name="show_commission" value="1" <?php checked( ! isset( $list['show_commission'] ) || ! empty( $list['show_commission'] ) ); ?> /> <?php echo esc_html__( 'Afficher la colonne Commission', 'plaidact-campaign-core' ); ?></label></p>
-							<p><label><input type="checkbox" name="show_institution" value="1" <?php checked( ! empty( $list['show_institution'] ) ); ?> /> <?php echo esc_html__( 'Afficher la colonne Institution', 'plaidact-campaign-core' ); ?></label></p>
+							<div class="plaidact-admin-fields">
+								<div class="plaidact-admin-field">
+									<label class="plaidact-admin-field__label" for="plaidact-list-<?php echo esc_attr( (string) $list['id'] ); ?>-name">
+										<?php echo esc_html__( 'Nom de la liste', 'plaidact-campaign-core' ); ?>
+									</label>
+									<input id="plaidact-list-<?php echo esc_attr( (string) $list['id'] ); ?>-name" type="text" name="list_name" value="<?php echo esc_attr( (string) $list['name'] ); ?>" required />
+								</div>
+								<div class="plaidact-admin-field">
+									<label class="plaidact-admin-field__label" for="plaidact-list-<?php echo esc_attr( (string) $list['id'] ); ?>-column">
+										<?php echo esc_html__( 'Libellé de la colonne personnalisée', 'plaidact-campaign-core' ); ?>
+									</label>
+									<input id="plaidact-list-<?php echo esc_attr( (string) $list['id'] ); ?>-column" type="text" name="column_label" value="<?php echo esc_attr( (string) $list['column_label'] ); ?>" required />
+								</div>
+								<div class="plaidact-admin-field plaidact-admin-field--wide">
+									<label class="plaidact-admin-field__label" for="plaidact-list-<?php echo esc_attr( (string) $list['id'] ); ?>-description">
+										<?php echo esc_html__( 'Description', 'plaidact-campaign-core' ); ?>
+									</label>
+									<textarea id="plaidact-list-<?php echo esc_attr( (string) $list['id'] ); ?>-description" rows="2" name="description"><?php echo esc_textarea( (string) ( $list['description'] ?? '' ) ); ?></textarea>
+								</div>
+								<div class="plaidact-admin-field plaidact-admin-field--wide">
+									<label class="plaidact-admin-field__label" for="plaidact-list-<?php echo esc_attr( (string) $list['id'] ); ?>-image">
+										<?php echo esc_html__( 'Image (URL)', 'plaidact-campaign-core' ); ?>
+									</label>
+									<input id="plaidact-list-<?php echo esc_attr( (string) $list['id'] ); ?>-image" type="url" name="image_url" value="<?php echo esc_attr( (string) ( $list['image_url'] ?? '' ) ); ?>" placeholder="https://…" />
+								</div>
+							</div>
+							<div class="plaidact-admin-checklist">
+								<label class="plaidact-admin-checklist__item">
+									<input type="checkbox" name="show_groupe" value="1" <?php checked( ! isset( $list['show_groupe'] ) || ! empty( $list['show_groupe'] ) ); ?> />
+									<span><?php echo esc_html__( 'Afficher la colonne Groupe politique', 'plaidact-campaign-core' ); ?></span>
+								</label>
+								<label class="plaidact-admin-checklist__item">
+									<input type="checkbox" name="show_commission" value="1" <?php checked( ! isset( $list['show_commission'] ) || ! empty( $list['show_commission'] ) ); ?> />
+									<span><?php echo esc_html__( 'Afficher la colonne Commission', 'plaidact-campaign-core' ); ?></span>
+								</label>
+								<label class="plaidact-admin-checklist__item">
+									<input type="checkbox" name="show_institution" value="1" <?php checked( ! empty( $list['show_institution'] ) ); ?> />
+									<span><?php echo esc_html__( 'Afficher la colonne Institution', 'plaidact-campaign-core' ); ?></span>
+								</label>
+							</div>
 							<?php submit_button( __( 'Mettre à jour la liste', 'plaidact-campaign-core' ), 'secondary', 'submit', false ); ?>
 						</form>
-						<form method="post" enctype="multipart/form-data" style="margin-top:8px;">
+
+						<div class="plaidact-admin-item__actions">
+							<a class="button" href="<?php echo esc_url( add_query_arg( array( 'action' => self::DOWNLOAD_ACTION, 'list_id' => (int) $list['id'], 'format' => 'csv', 'nonce' => wp_create_nonce( self::NONCE_DOWNLOAD_PREFIX . $list['id'] ) ), admin_url( 'admin-post.php' ) ) ); ?>">
+								<?php echo esc_html__( 'Télécharger cette liste (CSV)', 'plaidact-campaign-core' ); ?>
+							</a>
+						</div>
+
+						<form method="post" enctype="multipart/form-data">
 							<?php wp_nonce_field( self::NONCE_IMPORT ); ?>
 							<input type="hidden" name="plaidact_contact_action" value="import_csv" />
 							<input type="hidden" name="list_id" value="<?php echo esc_attr( (string) $list['id'] ); ?>" />
-							<input type="file" name="contacts_csv" accept=".csv,text/csv" required />
-							<button type="submit" class="button button-secondary"><?php echo esc_html__( 'Importer CSV', 'plaidact-campaign-core' ); ?></button>
+							<div class="plaidact-admin-field">
+								<label class="plaidact-admin-field__label" for="plaidact-list-<?php echo esc_attr( (string) $list['id'] ); ?>-csv">
+									<?php echo esc_html__( 'Importer un CSV dans cette liste', 'plaidact-campaign-core' ); ?>
+								</label>
+								<input id="plaidact-list-<?php echo esc_attr( (string) $list['id'] ); ?>-csv" type="file" name="contacts_csv" accept=".csv,text/csv" required />
+							</div>
+							<button type="submit" class="button"><?php echo esc_html__( 'Importer CSV', 'plaidact-campaign-core' ); ?></button>
 						</form>
-					</div>
+					</article>
 				<?php endforeach; ?>
-			<?php endif; ?>
-			<h2><?php echo esc_html__( 'Branding export', 'plaidact-campaign-core' ); ?></h2>
-			<?php $branding = $this->get_export_branding(); ?>
-			<form method="post">
-				<?php wp_nonce_field( self::NONCE_IMPORT ); ?>
-				<input type="hidden" name="plaidact_contact_action" value="update_export_branding" />
-				<p><label><strong><?php echo esc_html__( 'Nom de marque', 'plaidact-campaign-core' ); ?></strong><br /><input type="text" class="regular-text" name="brand_name" value="<?php echo esc_attr( $branding['brand_name'] ); ?>" /></label></p>
-				<p><label><strong><?php echo esc_html__( 'Logo (URL)', 'plaidact-campaign-core' ); ?></strong><br /><input type="url" class="regular-text" name="logo_url" value="<?php echo esc_attr( $branding['logo_url'] ); ?>" /></label></p>
-				<?php submit_button( __( 'Enregistrer le branding export', 'plaidact-campaign-core' ), 'secondary' ); ?>
-			</form>
-		</div>
+			</div>
+		<?php endif; ?>
+		<?php \Plaidact\CampaignCore\Admin_UI::section_end(); ?>
+
 		<?php
+		\Plaidact\CampaignCore\Admin_UI::section_start(
+			__( 'Branding des exports', 'plaidact-campaign-core' ),
+			__( 'Ces informations sont ajoutées aux fichiers CSV et XLS générés depuis le front office.', 'plaidact-campaign-core' ),
+			'dashicons-media-default'
+		);
+		?>
+		<form method="post">
+			<?php wp_nonce_field( self::NONCE_IMPORT ); ?>
+			<input type="hidden" name="plaidact_contact_action" value="update_export_branding" />
+			<div class="plaidact-admin-fields">
+				<div class="plaidact-admin-field">
+					<label class="plaidact-admin-field__label" for="plaidact-export-brand-name">
+						<?php echo esc_html__( 'Nom de marque', 'plaidact-campaign-core' ); ?>
+					</label>
+					<input id="plaidact-export-brand-name" type="text" name="brand_name" value="<?php echo esc_attr( $branding['brand_name'] ); ?>" />
+				</div>
+				<div class="plaidact-admin-field">
+					<label class="plaidact-admin-field__label" for="plaidact-export-logo-url">
+						<?php echo esc_html__( 'Logo (URL)', 'plaidact-campaign-core' ); ?>
+					</label>
+					<input id="plaidact-export-logo-url" type="url" name="logo_url" value="<?php echo esc_attr( $branding['logo_url'] ); ?>" />
+				</div>
+			</div>
+			<?php submit_button( __( 'Enregistrer le branding export', 'plaidact-campaign-core' ), 'secondary' ); ?>
+		</form>
+		<?php
+		\Plaidact\CampaignCore\Admin_UI::section_end();
+		\Plaidact\CampaignCore\Admin_UI::page_end();
 	}
 
 	private function handle_admin_postbacks(): void {

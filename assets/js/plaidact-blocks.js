@@ -9,11 +9,45 @@
 	var ToggleControl = components.ToggleControl;
 	var SelectControl = components.SelectControl;
 	var RangeControl = components.RangeControl;
+	var ServerSideRender = window.wp.serverSideRender && (window.wp.serverSideRender.default || window.wp.serverSideRender);
+	var useSelect = window.wp.data && window.wp.data.useSelect;
+
+	function useWpTerms(taxonomy) {
+		return useSelect
+			? useSelect(function (select) { return select('core').getEntityRecords('taxonomy', taxonomy, { per_page: 100, hide_empty: false, _fields: 'id,name,slug' }); }, [taxonomy]) || []
+			: [];
+	}
+
+	function termOptions(terms, selectedSlug, emptyLabel) {
+		var options = [{ label: emptyLabel || __('Toutes les catégories', 'plaidact-campaign-core'), value: '' }];
+		if (selectedSlug && !terms.some(function (term) { return term.slug === selectedSlug; })) {
+			options.push({ label: selectedSlug, value: selectedSlug });
+		}
+		return options.concat(terms.map(function (term) { return { label: term.name, value: term.slug }; }));
+	}
+
+	function BlockPreview(props) {
+		var blockProps = blockEditor.useBlockProps ? blockEditor.useBlockProps({ className: 'plaidact-block-preview' }) : { className: 'plaidact-block-preview' };
+		var fallback = el(PlaceholderCard, props);
+		var preview = ServerSideRender
+			? el(ServerSideRender, {
+				block: props.block,
+				attributes: props.attributes,
+				EmptyResponsePlaceholder: fallback,
+				ErrorResponsePlaceholder: el(PlaceholderCard, {
+					title: props.title,
+					description: __('Aperçu indisponible. Le bloc sera rendu sur le site avec les données actuelles.', 'plaidact-campaign-core'),
+					shortcode: props.shortcode,
+				}),
+			})
+			: fallback;
+		return el('div', blockProps, preview);
+	}
 
 	function PlaceholderCard(props) {
 		return el(
 			'div',
-			{ className: props.className, style: { border: '1px dashed #8c8f94', padding: '1rem', borderRadius: '8px' } },
+			{ className: 'plaidact-block-placeholder', style: { border: '1px dashed #8c8f94', padding: '1rem', borderRadius: '8px' } },
 			el('strong', null, props.title),
 			el('p', null, props.description),
 			el('code', null, props.shortcode)
@@ -37,6 +71,7 @@
 		},
 		edit: function (props) {
 			var attrs = props.attributes;
+			var timelines = useWpTerms('agenda_timeline');
 			return el(
 				element.Fragment,
 				null,
@@ -46,11 +81,12 @@
 					el(
 						PanelBody,
 						{ title: __('Réglages timeline', 'plaidact-campaign-core') },
-						el(TextControl, {
-							label: __('Slug de la timeline (term)', 'plaidact-campaign-core'),
+						el(SelectControl, {
+							label: __('Timeline', 'plaidact-campaign-core'),
 							value: attrs.term,
+							options: termOptions(timelines, attrs.term, __('Choisissez une timeline', 'plaidact-campaign-core')),
 							onChange: function (value) { props.setAttributes({ term: value }); },
-							help: __('Slug de la taxonomie agenda_timeline, par exemple geopolitique.', 'plaidact-campaign-core')
+							help: __('Choisissez une timeline existante.', 'plaidact-campaign-core')
 						}),
 						el(TextControl, {
 							label: __('Titre (vide = nom de la timeline)', 'plaidact-campaign-core'),
@@ -95,7 +131,9 @@
 						})
 					)
 				),
-				el(PlaceholderCard, {
+				el(BlockPreview, {
+					block: 'plaidact/timeline',
+					attributes: attrs,
 					title: attrs.title || __('Bloc timeline agenda', 'plaidact-campaign-core'),
 					description: attrs.term
 						? __('Le site public affichera la timeline sélectionnée.', 'plaidact-campaign-core')
@@ -120,6 +158,7 @@
 		},
 		edit: function (props) {
 			var attrs = props.attributes;
+			var causes = useWpTerms('associations');
 			return el(
 				element.Fragment,
 				null,
@@ -129,9 +168,10 @@
 					el(
 						PanelBody,
 						{ title: __('Réglages répertoire', 'plaidact-campaign-core') },
-						el(TextControl, {
-							label: __('Slug de la cause', 'plaidact-campaign-core'),
+						el(SelectControl, {
+							label: __('Catégorie', 'plaidact-campaign-core'),
 							value: attrs.cause,
+							options: termOptions(causes, attrs.cause, __('Toutes les catégories', 'plaidact-campaign-core')),
 							onChange: function (value) { props.setAttributes({ cause: value }); }
 						}),
 						el(RangeControl, {
@@ -143,7 +183,9 @@
 						})
 					)
 				),
-				el(PlaceholderCard, {
+				el(BlockPreview, {
+					block: 'plaidact/asso-cause-list',
+					attributes: attrs,
 					title: __('Bloc répertoire des associations', 'plaidact-campaign-core'),
 					description: __('La liste réelle sera rendue sur le site public.', 'plaidact-campaign-core'),
 					shortcode: '[plaidact_asso_directory]'
