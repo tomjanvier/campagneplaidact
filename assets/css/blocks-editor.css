@@ -1,0 +1,30 @@
+/* Présentation des aperçus PLAID·ACT dans l’éditeur de blocs. */
+.plaidact-block-preview {
+	margin: 0.5rem 0;
+	max-width: 100%;
+}
+
+.plaidact-block-placeholder {
+	background: #fbf9fc;
+	border: 1px dashed #b8a7c0;
+	border-radius: 10px;
+	color: #2b1533;
+	font-size: 13px;
+	line-height: 1.5;
+	padding: 0.9rem 1rem;
+}
+
+.plaidact-block-placeholder p {
+	color: #65556a;
+	margin: 0.35rem 0 0.55rem;
+}
+
+.plaidact-block-placeholder code {
+	background: #f1edf4;
+	border-radius: 4px;
+	padding: 0.12rem 0.3rem;
+}
+
+.wp-block[data-type^="plaidact/"] .components-placeholder {
+	min-height: 72px;
+}

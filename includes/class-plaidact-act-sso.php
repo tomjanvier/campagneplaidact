@@ -1089,67 +1089,123 @@ final class Act_SSO
         $module_enabled = !empty($campaign_settings["enable_sso"]);
         $client_configured = "" !== trim((string) ($settings["client_id"] ?? ""));
         $secret_configured = "" !== trim((string) ($settings["client_secret"] ?? ""));
+
+        if (!$module_enabled) {
+            $module_state = Admin_UI::STATE_WARNING;
+            $module_label = __("désactivé dans PLAID·ACT → Modules", "plaidact-campaign-core");
+        } elseif (!$client_configured || !$secret_configured) {
+            $module_state = Admin_UI::STATE_WARNING;
+            $module_label = __("activé, mais identifiants client incomplets", "plaidact-campaign-core");
+        } else {
+            $module_state = Admin_UI::STATE_SUCCESS;
+            $module_label = __("activé, identifiants client enregistrés", "plaidact-campaign-core");
+        }
+
+        Admin_UI::section_start(
+            __("Connexion Act (SSO)", "plaidact-campaign-core"),
+            __(
+                "Act authentifie les utilisateurs ; WordPress suit et provisionne les comptes de façon additive. Activez le module dans PLAID·ACT → Modules, puis renseignez le client enregistré côté Act.",
+                "plaidact-campaign-core"
+            ),
+            "dashicons-universal-access"
+        );
         ?>
-        <div class="wrap">
-            <h2><?php esc_html_e("Connexion Act (SSO)", "plaidact-campaign-core"); ?></h2>
-            <?php if ("discovered" === $status) : ?>
-                <div class="notice notice-success"><p><?php esc_html_e("Découverte OIDC réussie.", "plaidact-campaign-core"); ?></p></div>
-            <?php elseif ("discovery_failed" === $status) : ?>
-                <div class="notice notice-error"><p><?php esc_html_e("Découverte OIDC impossible : vérifiez l’URL Act.", "plaidact-campaign-core"); ?></p></div>
-            <?php elseif ("client_ready" === $status) : ?>
-                <div class="notice notice-success"><p><?php esc_html_e("Le client Act est actif et l’URL de rappel correspond. Le secret sera vérifié lors d’une vraie connexion.", "plaidact-campaign-core"); ?></p></div>
-            <?php elseif ("client_invalid" === $status) : ?>
-                <div class="notice notice-error"><p><?php esc_html_e("Act refuse le client ou l’URL de rappel. Comparez l’identifiant et l’URL affichée avec la configuration du client dans Act.", "plaidact-campaign-core"); ?></p></div>
-            <?php elseif ("client_unreachable" === $status) : ?>
-                <div class="notice notice-error"><p><?php esc_html_e("Act ne répond pas au test du client. Vérifiez la disponibilité de l’émetteur et réessayez.", "plaidact-campaign-core"); ?></p></div>
-            <?php elseif ("client_incomplete" === $status) : ?>
-                <div class="notice notice-warning"><p><?php esc_html_e("Renseignez l’identifiant client et son secret avant de tester la configuration.", "plaidact-campaign-core"); ?></p></div>
-            <?php endif; ?>
-            <p><?php esc_html_e("Act authentifie les utilisateurs ; WordPress suit et provisionne les comptes de façon additive. Activez le module dans PLAID·ACT → Modules, puis renseignez le client enregistré côté Act.", "plaidact-campaign-core"); ?></p>
-            <p>
-                <strong><?php esc_html_e("État du module :", "plaidact-campaign-core"); ?></strong>
-                <?php if (!$module_enabled) : ?>
-                    <?php esc_html_e("désactivé dans PLAID·ACT → Modules", "plaidact-campaign-core"); ?>
-                <?php elseif (!$client_configured || !$secret_configured) : ?>
-                    <?php esc_html_e("activé, mais identifiants client incomplets", "plaidact-campaign-core"); ?>
-                <?php else : ?>
-                    <?php esc_html_e("activé, identifiants client enregistrés", "plaidact-campaign-core"); ?>
-                <?php endif; ?>
-            </p>
-            <p>
-                <label for="plaidact_sso_redirect_uri"><strong><?php esc_html_e("URL de rappel à enregistrer côté Act", "plaidact-campaign-core"); ?></strong></label><br />
-                <input id="plaidact_sso_redirect_uri" type="text" class="large-text code" readonly value="<?php echo esc_attr(self::get_redirect_uri()); ?>" onclick="this.select();" />
-            </p>
-            <p><?php esc_html_e("Découverte :", "plaidact-campaign-core"); ?>
-                <strong><?php echo is_array($discovery) && !empty($discovery["authorization_endpoint"]) ? esc_html__("configurée", "plaidact-campaign-core") : esc_html__("non configurée", "plaidact-campaign-core"); ?></strong>
-            </p>
-            <form method="post" action="options.php">
-                <?php settings_fields(self::OPTION_SETTINGS); ?>
-                <table class="form-table" role="presentation">
-                    <tr><th scope="row"><?php esc_html_e("Émetteur Act (issuer)", "plaidact-campaign-core"); ?></th><td><input name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[issuer]" type="url" value="<?php echo esc_attr((string) $settings["issuer"]); ?>" class="regular-text" placeholder="https://act.plaidact.org" /></td></tr>
-                    <tr><th scope="row"><?php esc_html_e("Identifiant client", "plaidact-campaign-core"); ?></th><td><input name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[client_id]" type="text" value="<?php echo esc_attr((string) $settings["client_id"]); ?>" class="regular-text" autocomplete="off" /></td></tr>
-                    <tr><th scope="row"><?php esc_html_e("Secret client", "plaidact-campaign-core"); ?></th><td><input name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[client_secret]" type="password" value="" class="regular-text" autocomplete="new-password" placeholder="••••••••" /><p class="description"><?php esc_html_e("Laissé vide, le secret enregistré est conservé.", "plaidact-campaign-core"); ?></p></td></tr>
-                    <tr><th scope="row"><?php esc_html_e("Claim des rôles", "plaidact-campaign-core"); ?></th><td><input name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[roles_claim]" type="text" value="<?php echo esc_attr((string) $settings["roles_claim"]); ?>" class="small-text" /></td></tr>
-                    <tr><th scope="row"><?php esc_html_e("Mappage des rôles", "plaidact-campaign-core"); ?></th><td><textarea name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[role_map]" class="large-text code" rows="5"><?php echo esc_textarea((string) $settings["role_map"]); ?></textarea><p class="description"><?php esc_html_e("Une ligne par rôle : role_act=role_wp. Rôle inconnu : abonné. Filtrable via plaidact_act_sso_role_map.", "plaidact-campaign-core"); ?></p></td></tr>
-                    <tr><th scope="row"><?php esc_html_e("Exiger un email vérifié", "plaidact-campaign-core"); ?></th><td><label><input name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[require_verified_email]" type="checkbox" value="1" <?php checked((string) $settings["require_verified_email"], "1"); ?> /> <?php esc_html_e("Refuser les identités dont l’email n’est pas vérifié côté Act.", "plaidact-campaign-core"); ?></label></td></tr>
-                    <tr><th scope="row"><?php esc_html_e("Synchroniser le rôle", "plaidact-campaign-core"); ?></th><td><label><input name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[sync_role_on_login]" type="checkbox" value="1" <?php checked((string) $settings["sync_role_on_login"], "1"); ?> /> <?php esc_html_e("Mettre à jour le rôle à chaque connexion (sans jamais rétrograder un administrateur).", "plaidact-campaign-core"); ?></label></td></tr>
-                    <tr><th scope="row"><?php esc_html_e("Libellé du bouton", "plaidact-campaign-core"); ?></th><td><input name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[button_label]" type="text" value="<?php echo esc_attr((string) $settings["button_label"]); ?>" class="regular-text" /></td></tr>
-                </table>
-                <?php submit_button(); ?>
-            </form>
+        <?php if ("discovered" === $status) : ?>
+            <p class="plaidact-admin-notice plaidact-admin-notice--success"><?php esc_html_e("Découverte OIDC réussie.", "plaidact-campaign-core"); ?></p>
+        <?php elseif ("discovery_failed" === $status) : ?>
+            <p class="plaidact-admin-notice plaidact-admin-notice--danger"><?php esc_html_e("Découverte OIDC impossible : vérifiez l’URL Act.", "plaidact-campaign-core"); ?></p>
+        <?php elseif ("client_ready" === $status) : ?>
+            <p class="plaidact-admin-notice plaidact-admin-notice--success"><?php esc_html_e("Le client Act est actif et l’URL de rappel correspond. Le secret sera vérifié lors d’une vraie connexion.", "plaidact-campaign-core"); ?></p>
+        <?php elseif ("client_invalid" === $status) : ?>
+            <p class="plaidact-admin-notice plaidact-admin-notice--danger"><?php esc_html_e("Act refuse le client ou l’URL de rappel. Comparez l’identifiant et l’URL affichée avec la configuration du client dans Act.", "plaidact-campaign-core"); ?></p>
+        <?php elseif ("client_unreachable" === $status) : ?>
+            <p class="plaidact-admin-notice plaidact-admin-notice--danger"><?php esc_html_e("Act ne répond pas au test du client. Vérifiez la disponibilité de l’émetteur et réessayez.", "plaidact-campaign-core"); ?></p>
+        <?php elseif ("client_incomplete" === $status) : ?>
+            <p class="plaidact-admin-notice plaidact-admin-notice--warning"><?php esc_html_e("Renseignez l’identifiant client et son secret avant de tester la configuration.", "plaidact-campaign-core"); ?></p>
+        <?php endif; ?>
+
+        <div class="plaidact-admin-item__actions">
+            <?php Admin_UI::status($module_label, $module_state); ?>
+            <?php
+            Admin_UI::status(
+                is_array($discovery) && !empty($discovery["authorization_endpoint"])
+                    ? __("Découverte OIDC configurée", "plaidact-campaign-core")
+                    : __("Découverte OIDC non configurée", "plaidact-campaign-core"),
+                is_array($discovery) && !empty($discovery["authorization_endpoint"])
+                    ? Admin_UI::STATE_SUCCESS
+                    : Admin_UI::STATE_NEUTRAL
+            );
+            ?>
+        </div>
+
+        <div class="plaidact-admin-field plaidact-admin-field--wide">
+            <span class="plaidact-admin-field__label"><?php esc_html_e("URL de rappel à enregistrer côté Act", "plaidact-campaign-core"); ?></span>
+            <input id="plaidact_sso_redirect_uri" type="text" class="plaidact-admin-mono" readonly value="<?php echo esc_attr(self::get_redirect_uri()); ?>" onclick="this.select();" />
+        </div>
+
+        <form method="post" action="options.php">
+            <?php settings_fields(self::OPTION_SETTINGS); ?>
+            <div class="plaidact-admin-fields">
+                <div class="plaidact-admin-field">
+                    <label class="plaidact-admin-field__label" for="plaidact_sso_issuer"><?php esc_html_e("Émetteur Act (issuer)", "plaidact-campaign-core"); ?></label>
+                    <input id="plaidact_sso_issuer" name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[issuer]" type="url" value="<?php echo esc_attr((string) $settings["issuer"]); ?>" placeholder="https://act.plaidact.org" />
+                </div>
+                <div class="plaidact-admin-field">
+                    <label class="plaidact-admin-field__label" for="plaidact_sso_client_id"><?php esc_html_e("Identifiant client", "plaidact-campaign-core"); ?></label>
+                    <input id="plaidact_sso_client_id" name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[client_id]" type="text" value="<?php echo esc_attr((string) $settings["client_id"]); ?>" autocomplete="off" />
+                </div>
+                <div class="plaidact-admin-field">
+                    <label class="plaidact-admin-field__label" for="plaidact_sso_client_secret"><?php esc_html_e("Secret client", "plaidact-campaign-core"); ?></label>
+                    <input id="plaidact_sso_client_secret" name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[client_secret]" type="password" value="" autocomplete="new-password" placeholder="••••••••" />
+                    <p class="plaidact-admin-field__help"><?php esc_html_e("Laissé vide, le secret enregistré est conservé.", "plaidact-campaign-core"); ?></p>
+                </div>
+                <div class="plaidact-admin-field">
+                    <label class="plaidact-admin-field__label" for="plaidact_sso_roles_claim"><?php esc_html_e("Claim des rôles", "plaidact-campaign-core"); ?></label>
+                    <input id="plaidact_sso_roles_claim" name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[roles_claim]" type="text" value="<?php echo esc_attr((string) $settings["roles_claim"]); ?>" />
+                </div>
+                <div class="plaidact-admin-field">
+                    <label class="plaidact-admin-field__label" for="plaidact_sso_button_label"><?php esc_html_e("Libellé du bouton", "plaidact-campaign-core"); ?></label>
+                    <input id="plaidact_sso_button_label" name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[button_label]" type="text" value="<?php echo esc_attr((string) $settings["button_label"]); ?>" />
+                </div>
+                <div class="plaidact-admin-field">
+                    <label class="plaidact-admin-switch">
+                        <input class="plaidact-admin-switch__input" name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[require_verified_email]" type="checkbox" value="1" <?php checked((string) $settings["require_verified_email"], "1"); ?> />
+                        <span class="plaidact-admin-switch__label"><?php esc_html_e("Exiger un email vérifié", "plaidact-campaign-core"); ?></span>
+                    </label>
+                    <p class="plaidact-admin-field__help"><?php esc_html_e("Refuser les identités dont l’email n’est pas vérifié côté Act.", "plaidact-campaign-core"); ?></p>
+                </div>
+                <div class="plaidact-admin-field">
+                    <label class="plaidact-admin-switch">
+                        <input class="plaidact-admin-switch__input" name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[sync_role_on_login]" type="checkbox" value="1" <?php checked((string) $settings["sync_role_on_login"], "1"); ?> />
+                        <span class="plaidact-admin-switch__label"><?php esc_html_e("Synchroniser le rôle", "plaidact-campaign-core"); ?></span>
+                    </label>
+                    <p class="plaidact-admin-field__help"><?php esc_html_e("Mettre à jour le rôle à chaque connexion (sans jamais rétrograder un administrateur).", "plaidact-campaign-core"); ?></p>
+                </div>
+                <div class="plaidact-admin-field plaidact-admin-field--wide">
+                    <label class="plaidact-admin-field__label" for="plaidact_sso_role_map"><?php esc_html_e("Mappage des rôles", "plaidact-campaign-core"); ?></label>
+                    <textarea id="plaidact_sso_role_map" name="<?php echo esc_attr(self::OPTION_SETTINGS); ?>[role_map]" class="code" rows="5"><?php echo esc_textarea((string) $settings["role_map"]); ?></textarea>
+                    <p class="plaidact-admin-field__help"><?php esc_html_e("Une ligne par rôle : role_act=role_wp. Rôle inconnu : abonné. Filtrable via plaidact_act_sso_role_map.", "plaidact-campaign-core"); ?></p>
+                </div>
+            </div>
+            <?php submit_button(); ?>
+        </form>
+
+        <h3 class="plaidact-admin-subhead"><?php esc_html_e("Vérifications", "plaidact-campaign-core"); ?></h3>
+        <div class="plaidact-admin-item__actions">
             <form method="post" action="<?php echo esc_url(admin_url("admin-post.php")); ?>">
                 <?php wp_nonce_field("plaidact_act_sso_discover"); ?>
                 <input type="hidden" name="action" value="plaidact_act_sso_discover" />
-                <?php submit_button(__("Tester la découverte OIDC", "plaidact-campaign-core"), "secondary"); ?>
+                <button type="submit" class="button"><?php esc_html_e("Tester la découverte OIDC", "plaidact-campaign-core"); ?></button>
             </form>
             <form method="post" action="<?php echo esc_url(admin_url("admin-post.php")); ?>">
                 <?php wp_nonce_field("plaidact_act_sso_test_client"); ?>
                 <input type="hidden" name="action" value="plaidact_act_sso_test_client" />
-                <?php submit_button(__("Tester le client et l’URL de rappel", "plaidact-campaign-core"), "secondary"); ?>
-                <p class="description"><?php esc_html_e("Ce contrôle confirme que Act reconnaît l’identifiant et l’URL de rappel. Il ne connecte aucun utilisateur et ne vérifie pas le secret, qui n’est vérifié qu’à l’échange du code.", "plaidact-campaign-core"); ?></p>
+                <button type="submit" class="button"><?php esc_html_e("Tester le client et l’URL de rappel", "plaidact-campaign-core"); ?></button>
             </form>
         </div>
+        <p class="plaidact-admin-field__help"><?php esc_html_e("Ces contrôles confirment que Act reconnaît l’identifiant et l’URL de rappel. Ils ne connectent aucun utilisateur et ne vérifient pas le secret, qui n’est contrôlé qu’à l’échange du code.", "plaidact-campaign-core"); ?></p>
         <?php
+        Admin_UI::section_end();
     }
 
     /**
@@ -1231,12 +1287,28 @@ final class Act_SSO
         $issuer_host = strtolower((string) wp_parse_url((string) $settings["issuer"], PHP_URL_HOST));
         $location_host = strtolower((string) wp_parse_url($location, PHP_URL_HOST));
         $location_path = (string) wp_parse_url($location, PHP_URL_PATH);
+        $location_scheme = strtolower((string) wp_parse_url($location, PHP_URL_SCHEME));
+        $issuer_scheme = strtolower((string) wp_parse_url((string) $settings["issuer"], PHP_URL_SCHEME));
+        $issuer_port = wp_parse_url((string) $settings["issuer"], PHP_URL_PORT);
+        $location_port = wp_parse_url($location, PHP_URL_PORT);
+        $same_origin = $location_host === $issuer_host
+            && $location_scheme === $issuer_scheme
+            && $location_port === $issuer_port;
         $valid_login_redirect = in_array($status_code, [302, 303, 307, 308], true)
-            && $issuer_host !== ""
-            && $location_host === $issuer_host
+            && "" !== $issuer_host
+            && $same_origin
             && $location_path === "/login";
 
-        self::redirect_with_sso_status($valid_login_redirect ? "client_ready" : "client_invalid");
+        if ($valid_login_redirect) {
+            self::redirect_with_sso_status("client_ready");
+        }
+
+        // Un refus HTTP prouve que l'émetteur est joignable, contrairement à
+        // une erreur de transport ou une réponse serveur temporaire.
+        $status = $status_code >= 500 || 0 === $status_code
+            ? "client_unreachable"
+            : "client_invalid";
+        self::redirect_with_sso_status($status);
     }
 
     /** Redirige vers les réglages avec un état de résultat borné. */

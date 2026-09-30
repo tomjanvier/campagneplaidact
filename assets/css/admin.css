@@ -1,142 +1,170 @@
 /* PLAID·ACT — Administration
- * Design éditorial raffiné : tons neutres chauds, accent rouge PLAID·ACT,
- * cartes aérées, tabs pill, focus visibles, responsive.
- * Chargé uniquement sur les pages du plugin via admin_enqueue_scripts.
+ * Charte éditoriale : encre prune, lavande et crème.
+ * Les variables sont définies à la racine car cette feuille n'est jamais
+ * chargée hors des écrans de l'extension ; en revanche tous les sélecteurs de
+ * composants restent descendants de .plaidact-admin-wrap, pour ne rien
+ * modifier dans le reste de l'administration WordPress.
  */
 
-.plaidact-admin-wrap {
+:root {
   --plaidact-brand-lavender: #C4B5FD;
   --plaidact-brand-plum: #2B1533;
   --plaidact-brand-ink: #16091C;
   --plaidact-brand-cream: #F7F1E8;
-  --plaidact-brand-coral: #F25F4C;
   --plaidact-admin-bg: var(--plaidact-brand-cream);
   --plaidact-admin-surface: #FFFCF7;
+  --plaidact-admin-raised: #FFFFFF;
   --plaidact-admin-text: var(--plaidact-brand-ink);
   --plaidact-admin-muted: #65556A;
+  --plaidact-admin-faint: #8A7A8E;
   --plaidact-admin-border: #E6DDCF;
   --plaidact-admin-border-strong: #CEC0AF;
   --plaidact-admin-primary: var(--plaidact-brand-lavender);
   --plaidact-admin-primary-hover: #A892F0;
   --plaidact-admin-on-primary: var(--plaidact-brand-ink);
-  --plaidact-admin-focus: var(--plaidact-brand-plum);
   --plaidact-admin-primary-soft: #F1EDFE;
+  --plaidact-admin-focus: var(--plaidact-brand-plum);
+  --plaidact-admin-success: #0F7B4F;
+  --plaidact-admin-success-soft: #E4F6EC;
+  --plaidact-admin-warning: #A4600A;
+  --plaidact-admin-warning-soft: #FDF1DC;
+  --plaidact-admin-danger: #B3261E;
+  --plaidact-admin-danger-soft: #FDECEA;
+  --plaidact-admin-info: #1F5FA8;
+  --plaidact-admin-info-soft: #E8F1FC;
   --plaidact-admin-radius: 14px;
   --plaidact-admin-radius-sm: 10px;
-  --plaidact-admin-shadow: 0 4px 24px rgba(15,23,42,.06), 0 1px 3px rgba(15,23,42,.05);
-  --plaidact-admin-shadow-hover: 0 8px 32px rgba(15,23,42,.08), 0 2px 6px rgba(15,23,42,.06);
-  --plaidact-admin-font: ui-sans-system, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --plaidact-admin-shadow: 0 4px 24px rgba(22, 9, 28, .06), 0 1px 3px rgba(22, 9, 28, .05);
+  --plaidact-admin-shadow-hover: 0 8px 32px rgba(22, 9, 28, .09), 0 2px 6px rgba(22, 9, 28, .05);
+  --plaidact-admin-font: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   --plaidact-admin-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-
-  font-family: var(--plaidact-admin-font);
-  color: var(--plaidact-admin-text);
-  max-width: 1100px;
-  margin: 0;
 }
 
-.plaidact-admin-wrap * {
+.plaidact-admin-wrap {
+  color: var(--plaidact-admin-text);
+  font-family: var(--plaidact-admin-font);
+  max-width: 1100px;
+}
+
+.plaidact-admin-wrap *,
+.plaidact-admin-wrap *::before,
+.plaidact-admin-wrap *::after {
   box-sizing: border-box;
 }
 
-/* Header — carte d'identité du plugin */
-.plaidact-admin-header {
-  background: linear-gradient(135deg, var(--plaidact-admin-surface) 0%, var(--plaidact-admin-bg) 58%, var(--plaidact-admin-primary-soft) 100%);
-  border: 1px solid var(--plaidact-admin-border);
-  border-radius: var(--plaidact-admin-radius);
-  box-shadow: var(--plaidact-admin-shadow);
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  padding: 1.15rem 1.25rem;
-  margin: 1rem 0 1.25rem;
-  position: relative;
-  overflow: hidden;
-}
-.plaidact-admin-header::after {
-  background: radial-gradient(circle at 88% 20%, rgba(196,181,253,.16), transparent 42%);
-  content: "";
-  inset: 0;
-  position: absolute;
-  pointer-events: none;
-}
-.plaidact-admin-header__icon {
-  align-items: center;
-  background: var(--plaidact-admin-primary);
-  border-radius: 12px;
-  color: var(--plaidact-admin-on-primary);
-  display: inline-flex;
-  flex: 0 0 auto;
-  font-size: 1.35rem;
-  height: 44px;
-  justify-content: center;
-  position: relative;
-  width: 44px;
-  z-index: 1;
-}
-.plaidact-admin-header__icon .dashicons {
-  font-size: 22px;
-  height: 22px;
-  width: 22px;
-}
-.plaidact-admin-header__content { position: relative; z-index: 1; min-width: 0; }
-.plaidact-admin-header__title {
-  font-size: 1.2rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-  margin: 0;
-}
-.plaidact-admin-header__desc {
-  color: var(--plaidact-admin-muted);
-  font-size: .92rem;
-  line-height: 1.5;
-  margin: .25rem 0 0;
-  max-width: 68ch;
-}
-
-/* Tabs — pill + indicateur */
-.plaidact-admin-tabs {
-  border-bottom: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
-  margin: 0 0 1rem;
-  padding: 0;
-}
-.plaidact-admin-tabs .nav-tab {
-  background: var(--plaidact-admin-surface);
-  border: 1px solid var(--plaidact-admin-border);
-  border-radius: 999px;
-  color: var(--plaidact-admin-muted);
-  font-size: .87rem;
-  font-weight: 600;
-  line-height: 1;
-  margin: 0;
-  padding: .62rem .9rem;
-  transition: all 160ms ease;
-}
-.plaidact-admin-tabs .nav-tab:hover {
-  border-color: var(--plaidact-admin-border-strong);
+.plaidact-admin-wrap h1,
+.plaidact-admin-wrap h2,
+.plaidact-admin-wrap h3 {
   color: var(--plaidact-admin-text);
 }
-.plaidact-admin-tabs .nav-tab-active,
-.plaidact-admin-tabs .nav-tab-active:hover {
-  background: var(--plaidact-admin-primary);
-  border-color: var(--plaidact-admin-primary);
-  color: var(--plaidact-admin-on-primary);
-  box-shadow: 0 2px 10px rgba(43,21,51,.12);
-}
-.plaidact-admin-tabs .nav-tab:focus-visible {
-  outline: 2px solid var(--plaidact-admin-focus);
-  outline-offset: 2px;
+
+/* ---------------------------------------------------------------------------
+ * En-tête de marque
+ * Bandeau prune commun à tous les écrans : le logo Act pose l'identité, le
+ * titre nomme l'écran, l'action de droite indique quoi faire ici.
+ * ------------------------------------------------------------------------- */
+
+.plaidact-masthead {
+  align-items: center;
+  background:
+    radial-gradient(120% 160% at 92% -10%, rgba(196, 181, 253, .28), transparent 58%),
+    linear-gradient(135deg, #2B1533 0%, #16091C 62%, #24102B 100%);
+  border-radius: var(--plaidact-admin-radius);
+  box-shadow: 0 10px 30px rgba(22, 9, 28, .18);
+  color: #F7F1E8;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem 1.5rem;
+  margin: 1rem 0 1.25rem;
+  overflow: hidden;
+  padding: 1.35rem 1.5rem;
+  position: relative;
 }
 
-/* Panels */
-.plaidact-admin-tab-panel { display: none; }
-.plaidact-admin-tab-panel.is-active { display: block; animation: plaidact-admin-fade .22s ease; }
-@keyframes plaidact-admin-fade { from { opacity: 0; transform: translateY(4px);} to {opacity:1; transform:none;} }
+.plaidact-masthead__brand {
+  flex: 0 0 auto;
+}
 
-/* Cards */
+.plaidact-masthead__content {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+
+.plaidact-masthead__eyebrow {
+  color: var(--plaidact-brand-lavender);
+  font-size: .74rem;
+  font-weight: 700;
+  letter-spacing: .16em;
+  margin: 0 0 .3rem;
+  text-transform: uppercase;
+}
+
+.plaidact-masthead__title {
+  color: #FFFFFF;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.plaidact-masthead__desc {
+  color: rgba(247, 241, 232, .78);
+  font-size: .93rem;
+  line-height: 1.55;
+  margin: .35rem 0 0;
+  max-width: 62ch;
+}
+
+.plaidact-masthead__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+
+.plaidact-masthead .button {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(247, 241, 232, .3);
+  border-radius: 999px !important;
+  color: #F7F1E8;
+  font-weight: 600;
+}
+
+.plaidact-masthead .button:hover {
+  background: rgba(255, 255, 255, .18);
+  border-color: rgba(247, 241, 232, .55);
+  color: #FFFFFF;
+}
+
+.plaidact-masthead .button-primary,
+.plaidact-masthead .button-primary:hover {
+  background: var(--plaidact-brand-lavender) !important;
+  border-color: var(--plaidact-brand-lavender) !important;
+  color: var(--plaidact-brand-ink) !important;
+}
+
+/* Le lockup Act est en encre prune : il doit reposer sur une surface claire,
+   y compris sur le bandeau prune. */
+.plaidact-logo {
+  align-items: center;
+  background: var(--plaidact-admin-surface);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .18);
+  display: inline-flex;
+  padding: 10px 14px;
+}
+
+.plaidact-logo img {
+  display: block;
+  height: auto;
+  width: 150px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Carte de section
+ * ------------------------------------------------------------------------- */
+
 .plaidact-admin-card {
   background: var(--plaidact-admin-surface);
   border: 1px solid var(--plaidact-admin-border);
@@ -146,66 +174,199 @@
   overflow: hidden;
   transition: box-shadow 160ms ease, border-color 160ms ease;
 }
-.plaidact-admin-card:hover { box-shadow: var(--plaidact-admin-shadow-hover); }
+
+.plaidact-admin-card:hover {
+  border-color: var(--plaidact-admin-border-strong);
+}
+
 .plaidact-admin-card__header {
+  align-items: flex-start;
+  background: linear-gradient(180deg, var(--plaidact-admin-raised), #FCFAFD);
   border-bottom: 1px solid var(--plaidact-admin-border);
-  padding: 1rem 1.25rem .9rem;
-  background: linear-gradient(180deg, #ffffff, #fcfcfd);
-}
-.plaidact-admin-card__title {
-  font-size: .98rem;
-  font-weight: 750;
-  letter-spacing: -0.01em;
-  margin: 0;
   display: flex;
-  align-items: center;
-  gap: .5rem;
+  flex-wrap: wrap;
+  gap: .75rem 1rem;
+  justify-content: space-between;
+  padding: 1rem 1.25rem .95rem;
 }
-.plaidact-admin-card__title .dashicons { color: var(--plaidact-admin-primary); font-size: 18px; width: 18px; height: 18px; }
+
+.plaidact-admin-card__heading {
+  min-width: 0;
+}
+
+.plaidact-admin-card__title {
+  align-items: center;
+  display: flex;
+  font-size: 1rem;
+  font-weight: 750;
+  gap: .5rem;
+  letter-spacing: -.01em;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.plaidact-admin-card__title .dashicons {
+  color: var(--plaidact-admin-primary-hover);
+  font-size: 19px;
+  height: 19px;
+  width: 19px;
+}
+
 .plaidact-admin-card__desc {
   color: var(--plaidact-admin-muted);
   font-size: .86rem;
   line-height: 1.5;
-  margin: .35rem 0 0;
-}
-.plaidact-admin-card__body {
-  padding: 1.1rem 1.25rem 1.25rem;
+  margin: .3rem 0 0;
+  max-width: 74ch;
 }
 
-/* Grid util */
+.plaidact-admin-card__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.plaidact-admin-card__body {
+  padding: 1.15rem 1.25rem 1.25rem;
+}
+
+.plaidact-admin-card__body > :last-child {
+  margin-bottom: 0;
+}
+
+/* État vide, pour les listes sans donnée au premier lancement. */
+.plaidact-admin-empty {
+  align-items: center;
+  background: var(--plaidact-admin-bg);
+  border: 1px dashed var(--plaidact-admin-border-strong);
+  border-radius: var(--plaidact-admin-radius-sm);
+  color: var(--plaidact-admin-muted);
+  display: flex;
+  font-size: .9rem;
+  gap: .7rem;
+  margin: 0;
+  padding: 1.5rem 1.1rem;
+  text-align: center;
+}
+
+.plaidact-admin-empty .dashicons {
+  color: var(--plaidact-admin-faint);
+  font-size: 24px;
+  height: 24px;
+  width: 24px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Grilles
+ * ------------------------------------------------------------------------- */
+
 .plaidact-admin-grid {
   display: grid;
   gap: 1rem;
 }
-.plaidact-admin-grid--2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
-.plaidact-admin-grid--3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+
+.plaidact-admin-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
 @media (max-width: 960px) {
-  .plaidact-admin-grid--2, .plaidact-admin-grid--3 { grid-template-columns: 1fr; }
+  .plaidact-admin-grid--3 { grid-template-columns: 1fr; }
 }
 
-/* Fields */
+/* ---------------------------------------------------------------------------
+ * Onglets
+ * Sans JavaScript, les panneaux restent visibles et les liens servaient
+ * d'ancres ; le script retire ensuite les panneaux inactifs.
+ * ------------------------------------------------------------------------- */
+
+.plaidact-admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: 0 0 1.1rem;
+}
+
+.plaidact-admin-tabs .nav-tab {
+  background: var(--plaidact-admin-surface);
+  border: 1px solid var(--plaidact-admin-border);
+  border-radius: 999px;
+  color: var(--plaidact-admin-muted);
+  font-size: .88rem;
+  font-weight: 600;
+  line-height: 1;
+  margin: 0;
+  padding: .68rem 1rem;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.plaidact-admin-tabs .nav-tab:hover {
+  border-color: var(--plaidact-admin-border-strong);
+  color: var(--plaidact-admin-text);
+}
+
+.plaidact-admin-tabs .nav-tab-active,
+.plaidact-admin-tabs .nav-tab-active:hover {
+  background: var(--plaidact-admin-primary);
+  border-color: var(--plaidact-brand-lavender);
+  box-shadow: 0 2px 10px rgba(43, 21, 51, .16);
+  color: var(--plaidact-admin-on-primary);
+}
+
+.plaidact-admin-tabs .nav-tab:focus-visible {
+  outline: 2px solid var(--plaidact-admin-focus);
+  outline-offset: 2px;
+}
+
+.plaidact-admin-tab-panel[hidden] { display: none; }
+.plaidact-admin-tab-panel.is-active { animation: plaidact-admin-fade .22s ease; }
+
+@keyframes plaidact-admin-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Champs
+ * ------------------------------------------------------------------------- */
+
+.plaidact-admin-fields {
+  display: grid;
+  gap: 0 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+}
+
 .plaidact-admin-field {
   display: grid;
   gap: .45rem;
-  margin: 0 0 1rem;
+  margin: 0 0 1.1rem;
+  max-width: 46rem;
 }
+
 .plaidact-admin-field:last-child { margin-bottom: 0; }
+.plaidact-admin-field--wide {
+  grid-column: 1 / -1;
+  max-width: none;
+}
+
 .plaidact-admin-field__label {
   color: var(--plaidact-admin-text);
-  font-size: .86rem;
+  font-size: .88rem;
   font-weight: 650;
   line-height: 1.3;
 }
+
 .plaidact-admin-field__label small {
   color: var(--plaidact-admin-muted);
   font-weight: 500;
 }
+
 .plaidact-admin-field__help {
   color: var(--plaidact-admin-muted);
-  font-size: .82rem;
+  font-size: .83rem;
   line-height: 1.5;
   margin: 0;
+  max-width: 70ch;
 }
+
 .plaidact-admin-field input[type="text"],
 .plaidact-admin-field input[type="email"],
 .plaidact-admin-field input[type="url"],
@@ -213,39 +374,99 @@
 .plaidact-admin-field input[type="password"],
 .plaidact-admin-field select,
 .plaidact-admin-field textarea {
-  background: #fff;
+  background: var(--plaidact-admin-raised);
   border: 1px solid var(--plaidact-admin-border-strong);
-  border-radius: 10px;
+  border-radius: var(--plaidact-admin-radius-sm);
   color: var(--plaidact-admin-text);
   font-size: .9rem;
   line-height: 1.4;
+  max-width: 100%;
   padding: .62rem .75rem;
-  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
   width: 100%;
 }
+
+.plaidact-admin-field input[type="file"] {
+  background: var(--plaidact-admin-bg);
+  border: 1px dashed var(--plaidact-admin-border-strong);
+  border-radius: var(--plaidact-admin-radius-sm);
+  font-size: .86rem;
+  max-width: 100%;
+  padding: .7rem .75rem;
+  width: 100%;
+}
+
+.plaidact-admin-field input[type="checkbox"],
+.plaidact-admin-field input[type="radio"] {
+  accent-color: var(--plaidact-brand-plum);
+}
+
 .plaidact-admin-field input::placeholder,
-.plaidact-admin-field textarea::placeholder { color: #94a3b8; }
+.plaidact-admin-field textarea::placeholder {
+  color: var(--plaidact-admin-faint);
+}
+
 .plaidact-admin-field input:focus,
 .plaidact-admin-field select:focus,
 .plaidact-admin-field textarea:focus {
-  background: #fff;
-  border-color: var(--plaidact-admin-primary);
-  box-shadow: 0 0 0 3px rgba(43,21,51,.16);
+  background: var(--plaidact-admin-raised);
+  border-color: var(--plaidact-admin-primary-hover);
+  box-shadow: 0 0 0 3px rgba(43, 21, 51, .14);
   outline: none;
 }
+
+.plaidact-admin-field input:focus-visible,
+.plaidact-admin-field select:focus-visible,
+.plaidact-admin-field textarea:focus-visible {
+  outline: 2px solid var(--plaidact-admin-focus);
+  outline-offset: 1px;
+}
+
 .plaidact-admin-field textarea.code {
   font-family: var(--plaidact-admin-mono);
   font-size: .84rem;
 }
+
 .plaidact-admin-field--inline {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: .6rem .75rem;
 }
-.plaidact-admin-field--inline .plaidact-admin-field__label { margin: 0; }
 
-/* Checkbox / Switch */
+/* Dans une ligne, le contrôle principal occupe l'espace restant. */
+.plaidact-admin-field--inline input,
+.plaidact-admin-field--inline select {
+  flex: 1 1 12rem;
+  width: auto;
+}
+
+/* Groupes de cases à cocher, pour les choix courts en colonnes. */
+.plaidact-admin-checklist {
+  display: grid;
+  gap: .5rem 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 0 0 1rem;
+}
+
+.plaidact-admin-checklist__item {
+  align-items: flex-start;
+  display: flex;
+  font-size: .89rem;
+  gap: .55rem;
+  line-height: 1.4;
+}
+
+.plaidact-admin-checklist__item input {
+  accent-color: var(--plaidact-brand-plum);
+  flex: 0 0 auto;
+  margin: .1rem 0 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Interrupteur
+ * ------------------------------------------------------------------------- */
+
 .plaidact-admin-switch {
   align-items: center;
   cursor: pointer;
@@ -253,23 +474,26 @@
   gap: .65rem;
   user-select: none;
 }
+
 .plaidact-admin-switch__input {
   appearance: none;
   -webkit-appearance: none;
-  background: #e2e8f0;
-  border: 1px solid #cbd5e1;
+  background: #DDD3E2;
+  border: 1px solid #C4B7CB;
   border-radius: 999px;
   cursor: pointer;
+  flex: 0 0 auto;
   height: 22px;
+  margin: 0;
   position: relative;
   transition: background 160ms ease, border-color 160ms ease;
   width: 42px;
-  flex: 0 0 auto;
 }
+
 .plaidact-admin-switch__input::after {
-  background: #fff;
+  background: #FFFFFF;
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(15,23,42,.2);
+  box-shadow: 0 1px 3px rgba(22, 9, 28, .25);
   content: "";
   height: 18px;
   left: 1px;
@@ -278,32 +502,40 @@
   transition: transform 160ms ease;
   width: 18px;
 }
+
 .plaidact-admin-switch__input:checked {
   background: var(--plaidact-admin-primary);
-  border-color: var(--plaidact-admin-primary);
+  border-color: var(--plaidact-brand-plum);
 }
+
 .plaidact-admin-switch__input:checked::after { transform: translateX(20px); }
 .plaidact-admin-switch__input:focus-visible {
   outline: 2px solid var(--plaidact-admin-focus);
   outline-offset: 2px;
 }
+
 .plaidact-admin-switch__label {
   font-size: .9rem;
   font-weight: 600;
   line-height: 1.3;
 }
+
 .plaidact-admin-switch__desc {
   color: var(--plaidact-admin-muted);
-  font-size: .82rem;
+  font-size: .83rem;
   line-height: 1.5;
 }
 
-/* Modules grid — cartes avec switch */
+/* ---------------------------------------------------------------------------
+ * Modules
+ * ------------------------------------------------------------------------- */
+
 .plaidact-admin-modules {
   display: grid;
   gap: .9rem;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
 }
+
 .plaidact-admin-module {
   background: var(--plaidact-admin-surface);
   border: 1px solid var(--plaidact-admin-border);
@@ -312,53 +544,148 @@
   display: flex;
   flex-direction: column;
   gap: .75rem;
-  padding: 1rem 1.05rem;
+  padding: 1.05rem 1.1rem;
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
+
 .plaidact-admin-module:hover {
   border-color: var(--plaidact-admin-border-strong);
   box-shadow: var(--plaidact-admin-shadow-hover);
   transform: translateY(-1px);
 }
+
 .plaidact-admin-module.is-active {
-  border-color: rgba(43,21,51,.12);
-  background: linear-gradient(180deg, #fff, var(--plaidact-admin-primary-soft));
+  background: linear-gradient(180deg, var(--plaidact-admin-raised), var(--plaidact-admin-primary-soft));
+  border-color: var(--plaidact-brand-lavender);
 }
+
 .plaidact-admin-module__head {
   align-items: flex-start;
   display: flex;
   gap: .75rem;
   justify-content: space-between;
 }
-.plaidact-admin-module__icon {
-  align-items: center;
-  background: #f1f5f9;
-  border-radius: 10px;
-  color: var(--plaidact-admin-muted);
-  display: inline-flex;
-  flex: 0 0 auto;
-  height: 36px;
-  justify-content: center;
-  width: 36px;
-}
-.plaidact-admin-module.is-active .plaidact-admin-module__icon {
-  background: var(--plaidact-admin-primary);
-  color: var(--plaidact-admin-on-primary);
-}
+
 .plaidact-admin-module__title {
-  font-size: .92rem;
+  font-size: .93rem;
   font-weight: 700;
   line-height: 1.3;
   margin: 0;
 }
+
 .plaidact-admin-module__desc {
   color: var(--plaidact-admin-muted);
-  font-size: .82rem;
+  font-size: .83rem;
   line-height: 1.5;
   margin: .25rem 0 0;
 }
 
-/* Table signataires */
+.plaidact-admin-module__shortcode {
+  background: var(--plaidact-admin-bg);
+  border: 1px solid var(--plaidact-admin-border);
+  border-radius: 8px;
+  display: block;
+  font-size: .78rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding: .45rem .55rem;
+}
+
+.plaidact-admin-dashboard__metric {
+  color: var(--plaidact-admin-text);
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -.04em;
+  line-height: 1;
+  margin: .55rem 0 1rem;
+}
+
+.plaidact-admin-dashboard__metric span {
+  color: var(--plaidact-admin-muted);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.plaidact-admin-quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .65rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Listes d'objets (listes de contacts, dossiers d'import)
+ * ------------------------------------------------------------------------- */
+
+.plaidact-admin-list {
+  display: grid;
+  gap: .9rem;
+  margin: 0;
+  padding: 0;
+}
+
+.plaidact-admin-item {
+  background: var(--plaidact-admin-bg);
+  border: 1px solid var(--plaidact-admin-border);
+  border-radius: var(--plaidact-admin-radius-sm);
+  display: grid;
+  gap: .9rem;
+  padding: 1rem 1.1rem;
+}
+
+.plaidact-admin-item__head {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem 1rem;
+  justify-content: space-between;
+}
+
+.plaidact-admin-item__title {
+  font-size: .95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.plaidact-admin-item__meta {
+  color: var(--plaidact-admin-muted);
+  font-size: .83rem;
+  line-height: 1.6;
+  margin: .3rem 0 0;
+}
+
+.plaidact-admin-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+
+/* Lignes clé/valeur des méta-données d'un objet. */
+.plaidact-admin-defs {
+  display: grid;
+  gap: .1rem .9rem;
+  grid-template-columns: max-content 1fr;
+  margin: 0;
+}
+
+.plaidact-admin-defs dt {
+  color: var(--plaidact-admin-muted);
+  font-size: .83rem;
+  font-weight: 600;
+  padding: .2rem 0;
+}
+
+.plaidact-admin-defs dd {
+  font-size: .87rem;
+  margin: 0;
+  padding: .2rem 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Tableaux
+ * ------------------------------------------------------------------------- */
+
 .plaidact-admin-table-wrap {
   background: var(--plaidact-admin-surface);
   border: 1px solid var(--plaidact-admin-border);
@@ -366,117 +693,280 @@
   box-shadow: var(--plaidact-admin-shadow);
   overflow: hidden;
 }
+
 .plaidact-admin-table-wrap .tablenav {
+  align-items: center;
+  border-bottom: 1px solid var(--plaidact-admin-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
   padding: .75rem 1rem;
 }
+
 .plaidact-admin-table {
   border-collapse: separate !important;
   border-spacing: 0;
   width: 100%;
 }
+
 .plaidact-admin-table thead th {
-  background: #f8fafc;
+  background: var(--plaidact-admin-bg);
   border-bottom: 1px solid var(--plaidact-admin-border);
   color: var(--plaidact-admin-muted);
-  font-size: .78rem;
+  font-size: .76rem;
   font-weight: 700;
-  letter-spacing: .04em;
+  letter-spacing: .05em;
   padding: .7rem .9rem;
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
 }
+
 .plaidact-admin-table tbody td {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--plaidact-admin-border);
   font-size: .88rem;
-  padding: .65rem .9rem;
+  padding: .7rem .9rem;
   vertical-align: middle;
 }
+
 .plaidact-admin-table tbody tr:last-child td { border-bottom: 0; }
-.plaidact-admin-table tbody tr:hover td { background: #f8fafc; }
+.plaidact-admin-table tbody tr:hover td { background: var(--plaidact-admin-primary-soft); }
+
+/* ---------------------------------------------------------------------------
+ * Pastilles d'état et messages
+ * ------------------------------------------------------------------------- */
+
 .plaidact-admin-badge {
-  background: #f1f5f9;
+  align-items: center;
+  background: var(--plaidact-admin-bg);
   border: 1px solid var(--plaidact-admin-border);
   border-radius: 999px;
   color: var(--plaidact-admin-muted);
   display: inline-flex;
   font-size: .75rem;
   font-weight: 650;
-  padding: .2rem .55rem;
+  gap: .35rem;
+  line-height: 1.4;
+  padding: .22rem .6rem;
   white-space: nowrap;
 }
-.plaidact-admin-badge--success { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
-.plaidact-admin-badge--warn { background: #fef3c7; border-color: #fde68a; color: #92400e; }
 
-/* Notices inline */
+.plaidact-admin-badge--success {
+  background: var(--plaidact-admin-success-soft);
+  border-color: rgba(15, 123, 79, .3);
+  color: var(--plaidact-admin-success);
+}
+
+.plaidact-admin-badge--warning {
+  background: var(--plaidact-admin-warning-soft);
+  border-color: rgba(164, 96, 10, .3);
+  color: var(--plaidact-admin-warning);
+}
+
+.plaidact-admin-badge--danger {
+  background: var(--plaidact-admin-danger-soft);
+  border-color: rgba(179, 38, 30, .3);
+  color: var(--plaidact-admin-danger);
+}
+
+.plaidact-admin-badge--info {
+  background: var(--plaidact-admin-info-soft);
+  border-color: rgba(31, 95, 168, .3);
+  color: var(--plaidact-admin-info);
+}
+
 .plaidact-admin-notice {
-  background: #f8fafc;
-  border: 1px solid var(--plaidact-admin-border);
-  border-left-width: 4px;
-  border-radius: 10px;
-  padding: .75rem .9rem;
+  background: var(--plaidact-admin-info-soft);
+  border: 1px solid rgba(31, 95, 168, .28);
+  border-left: 4px solid var(--plaidact-admin-info);
+  border-radius: var(--plaidact-admin-radius-sm);
+  color: var(--plaidact-admin-text);
+  font-size: .88rem;
+  line-height: 1.55;
+  margin: 0 0 1rem;
+  padding: .8rem .95rem;
 }
-.plaidact-admin-notice--info { border-left-color: var(--plaidact-admin-primary); background: var(--plaidact-admin-primary-soft); }
-.plaidact-admin-notice--success { border-left-color: #10b981; background: #ecfdf5; }
-.plaidact-admin-notice--warn { border-left-color: #f59e0b; background: #fffbeb; }
 
-/* Buttons */
-.plaidact-admin-wrap .button-primary {
-  background: var(--plaidact-admin-primary) !important;
-  border-color: var(--plaidact-admin-primary) !important;
-  border-radius: 999px !important;
-  box-shadow: 0 2px 10px rgba(43,21,51,.16) !important;
-  font-weight: 700 !important;
-  padding: .15rem 1.1rem !important;
+.plaidact-admin-notice--success {
+  background: var(--plaidact-admin-success-soft);
+  border-color: rgba(15, 123, 79, .28);
+  border-left-color: var(--plaidact-admin-success);
 }
-.plaidact-admin-wrap .button-primary:hover {
-  background: var(--plaidact-admin-primary-hover) !important;
-  border-color: var(--plaidact-admin-primary-hover) !important;
+
+.plaidact-admin-notice--warning {
+  background: var(--plaidact-admin-warning-soft);
+  border-color: rgba(164, 96, 10, .28);
+  border-left-color: var(--plaidact-admin-warning);
 }
-.plaidact-admin-wrap .button {
+
+.plaidact-admin-notice--danger {
+  background: var(--plaidact-admin-danger-soft);
+  border-color: rgba(179, 38, 30, .28);
+  border-left-color: var(--plaidact-admin-danger);
+}
+
+/* Les notices WordPress natives adopts dans la charte du plugin. */
+.plaidact-admin-wrap .notice {
+  background: var(--plaidact-admin-info-soft);
+  border: 1px solid rgba(31, 95, 168, .28);
+  border-left: 4px solid var(--plaidact-admin-info);
+  border-radius: var(--plaidact-admin-radius-sm);
+  box-shadow: none;
+  color: var(--plaidact-admin-text);
+  margin: 0 0 1rem;
+  padding: .35rem .95rem;
+}
+
+.plaidact-admin-wrap .notice p {
+  font-size: .89rem;
+  line-height: 1.55;
+  margin: .6rem 0;
+}
+
+.plaidact-admin-wrap .notice-success {
+  background: var(--plaidact-admin-success-soft);
+  border-color: rgba(15, 123, 79, .28);
+  border-left-color: var(--plaidact-admin-success);
+}
+
+.plaidact-admin-wrap .notice-warning {
+  background: var(--plaidact-admin-warning-soft);
+  border-color: rgba(164, 96, 10, .28);
+  border-left-color: var(--plaidact-admin-warning);
+}
+
+.plaidact-admin-wrap .notice-error {
+  background: var(--plaidact-admin-danger-soft);
+  border-color: rgba(179, 38, 30, .28);
+  border-left-color: var(--plaidact-admin-danger);
+}
+
+/* Barre de progression (rattrapage des signatures). */
+.plaidact-admin-progress {
+  background: var(--plaidact-admin-bg);
+  border: 1px solid var(--plaidact-admin-border);
+  border-radius: 999px;
+  height: 10px;
+  max-width: 32rem;
+  overflow: hidden;
+}
+
+.plaidact-admin-progress__bar {
+  background: linear-gradient(90deg, var(--plaidact-brand-lavender), var(--plaidact-brand-plum));
+  height: 100%;
+  transition: width 240ms ease;
+}
+
+/* ---------------------------------------------------------------------------
+ * Boutons
+ * ------------------------------------------------------------------------- */
+
+.plaidact-admin-wrap .button,
+.plaidact-admin-wrap .button-secondary {
   border-radius: 999px !important;
   font-weight: 600;
 }
 
-/* Import pages */
-.plaidact-admin-import-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .6rem;
-  margin: .75rem 0;
+.plaidact-admin-wrap .button-primary {
+  background: var(--plaidact-admin-primary) !important;
+  border-color: var(--plaidact-brand-lavender) !important;
+  box-shadow: 0 2px 10px rgba(43, 21, 51, .16) !important;
+  color: var(--plaidact-admin-on-primary) !important;
+  font-weight: 700 !important;
+  padding-left: 1.1rem !important;
+  padding-right: 1.1rem !important;
 }
 
-/* Utilities */
-.plaidact-admin-muted { color: var(--plaidact-admin-muted); }
+.plaidact-admin-wrap .button-primary:hover,
+.plaidact-admin-wrap .button-primary:focus {
+  background: var(--plaidact-admin-primary-hover) !important;
+  border-color: var(--plaidact-admin-primary-hover) !important;
+}
+
+.plaidact-admin-wrap .button:focus-visible {
+  outline: 2px solid var(--plaidact-admin-focus);
+  outline-offset: 2px;
+}
+
+.plaidact-admin-wrap .submitrow,
+.plaidact-admin-wrap p.submit {
+  border-top: 1px solid var(--plaidact-admin-border);
+  margin: 1.25rem 0 0;
+  padding: 1.1rem 0 0;
+}
+
+.plaidact-admin-wrap p.submit .button-primary {
+  padding-bottom: .35rem;
+  padding-top: .35rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Utilitaires
+ * ------------------------------------------------------------------------- */
+
 .plaidact-admin-mono { font-family: var(--plaidact-admin-mono); font-size: .84rem; }
-.plaidact-admin-divider { border: 0; border-top: 1px solid var(--plaidact-admin-border); margin: 1rem 0; }
 
-/* Responsive */
-@media (max-width: 782px) {
-  .plaidact-admin-header { padding: 1rem; }
-  .plaidact-admin-card__body { padding: 1rem; }
-  .plaidact-admin-tabs .nav-tab { font-size: .82rem; padding: .55rem .75rem; }
+/* Sous-titre à l'intérieur d'une section, pour les blocs empilés. */
+.plaidact-admin-subhead {
+  border-top: 1px solid var(--plaidact-admin-border);
+  font-size: .92rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  margin: 1.4rem 0 .3rem;
+  padding-top: 1.2rem;
 }
 
-/* Focus visible global */
+/* Lien de suppression : même commodité qu'un bouton, gravité explicite. */
+.plaidact-admin-danger-link {
+  color: var(--plaidact-admin-danger);
+  font-weight: 600;
+}
+
+.plaidact-admin-danger-link:hover,
+.plaidact-admin-danger-link:focus {
+  color: var(--plaidact-admin-danger);
+}
+
+.plaidact-admin-wrap code {
+  background: var(--plaidact-admin-bg);
+  border-radius: 5px;
+  font-size: .84em;
+  padding: .1rem .35rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Adaptations
+ * ------------------------------------------------------------------------- */
+
+@media (max-width: 782px) {
+  .plaidact-masthead { padding: 1.1rem 1.15rem; }
+  .plaidact-masthead__title { font-size: 1.35rem; }
+  .plaidact-masthead__actions { width: 100%; }
+  .plaidact-admin-card__header { padding: .9rem 1rem .85rem; }
+  .plaidact-admin-card__body { padding: 1rem; }
+  .plaidact-admin-tabs .nav-tab { font-size: .82rem; padding: .6rem .8rem; }
+  .plaidact-logo img { width: 128px; }
+}
+
+@media (max-width: 600px) {
+  .plaidact-admin-defs { grid-template-columns: 1fr; }
+  .plaidact-admin-defs dd { padding-bottom: .5rem; }
+}
+
 .plaidact-admin-wrap :focus-visible {
   outline: 2px solid var(--plaidact-admin-focus);
   outline-offset: 2px;
 }
 
-/* Masque l'ancien form-table quand refacto en cards (rétrocompat) */
-.plaidact-admin-wrap .form-table { background: transparent; }
-.plaidact-admin-wrap .form-table th { font-weight: 650; }
-
-/* Animation réduite */
 @media (prefers-reduced-motion: reduce) {
-  .plaidact-admin-card, .plaidact-admin-module, .plaidact-admin-tabs .nav-tab { transition: none; }
+  .plaidact-admin-card,
+  .plaidact-admin-module,
+  .plaidact-admin-tabs .nav-tab,
+  .plaidact-admin-switch__input,
+  .plaidact-admin-switch__input::after,
+  .plaidact-admin-progress__bar {
+    transition: none;
+  }
+
   .plaidact-admin-tab-panel.is-active { animation: none; }
 }
-
-
-/* Identité ACT : lavande, noir prune et crème. */
-.plaidact-brand-banner { display: flex; align-items: center; width: fit-content; max-width: 100%; padding: 14px 18px; margin: 0 0 18px; border: 1px solid var(--plaidact-admin-border); border-radius: 12px; background: var(--plaidact-admin-surface); }
-.plaidact-brand-banner img { display: block; width: min(240px, 100%); height: auto; }
-.plaidact-brand-banner__dark { display: none !important; }
-@media (prefers-color-scheme: dark) { .plaidact-brand-banner { background: #16091C; border-color: rgba(247,241,232,.16); } .plaidact-brand-banner__light { display: none !important; } .plaidact-brand-banner__dark { display: block !important; } }

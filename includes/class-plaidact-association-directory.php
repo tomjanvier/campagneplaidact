@@ -230,10 +230,22 @@ final class Association_Directory {
 	}
 
 	public static function register_blocks(): void {
+		wp_register_style(
+			'plaidact-blocks-frontend-preview',
+			PLAIDACT_CORE_URL . 'assets/campaign-shortcodes.css',
+			[],
+			plaidact_campaign_core_asset_version( 'assets/campaign-shortcodes.css' )
+		);
+		wp_register_style(
+			'plaidact-blocks-editor',
+			PLAIDACT_CORE_URL . 'assets/css/blocks-editor.css',
+			[ 'plaidact-blocks-frontend-preview' ],
+			plaidact_campaign_core_asset_version( 'assets/css/blocks-editor.css' )
+		);
 		wp_register_script(
 			'plaidact-blocks',
 			PLAIDACT_CORE_URL . 'assets/js/plaidact-blocks.js',
-			[ 'wp-blocks', 'wp-element', 'wp-i18n', 'wp-components', 'wp-server-side-render', 'wp-block-editor' ],
+			[ 'wp-blocks', 'wp-element', 'wp-i18n', 'wp-components', 'wp-server-side-render', 'wp-block-editor', 'wp-data' ],
 			PLAIDACT_CORE_VERSION,
 			true
 		);
@@ -243,6 +255,7 @@ final class Association_Directory {
 			[
 				'api_version'     => 2,
 				'editor_script'   => 'plaidact-blocks',
+				'editor_style'    => [ 'plaidact-blocks-frontend-preview', 'plaidact-blocks-editor' ],
 				'render_callback' => [ __CLASS__, 'render_timeline_block' ],
 				'attributes'      => [
 					'term' => [ 'type' => 'string', 'default' => '' ],
@@ -254,6 +267,7 @@ final class Association_Directory {
 					'fillEmptyMonths' => [ 'type' => 'boolean', 'default' => false ],
 					'eventsPerColumn' => [ 'type' => 'number', 'default' => 0 ],
 				],
+				'supports'        => [ 'className' => true, 'anchor' => true ],
 			]
 		);
 
@@ -262,11 +276,13 @@ final class Association_Directory {
 			[
 				'api_version'     => 2,
 				'editor_script'   => 'plaidact-blocks',
+				'editor_style'    => [ 'plaidact-blocks-frontend-preview', 'plaidact-blocks-editor' ],
 				'render_callback' => [ __CLASS__, 'render_asso_block' ],
 				'attributes'      => [
 					'cause'       => [ 'type' => 'string', 'default' => '' ],
 					'postsToShow' => [ 'type' => 'number', 'default' => 9 ],
 				],
+				'supports'        => [ 'className' => true, 'anchor' => true ],
 			]
 		);
 	}
@@ -278,7 +294,7 @@ final class Association_Directory {
 		$term = isset( $attributes['term'] ) ? sanitize_title( (string) $attributes['term'] ) : '';
 		$layout = isset( $attributes['layout'] ) && in_array( (string) $attributes['layout'], [ 'vertical', 'horizontal' ], true ) ? (string) $attributes['layout'] : 'vertical';
 		$fill = isset( $attributes['fillEmptyMonths'] ) && $attributes['fillEmptyMonths'] ? '1' : '0';
-		return self::timeline_shortcode(
+		return self::wrap_block_output( self::timeline_shortcode(
 			[
 				'term'              => $term,
 					'title'             => isset( $attributes['title'] ) ? sanitize_text_field( (string) $attributes['title'] ) : '',
@@ -289,20 +305,29 @@ final class Association_Directory {
 				'fill_empty_months' => $fill,
 				'events_per_column' => isset( $attributes['eventsPerColumn'] ) ? (string) absint( (int) $attributes['eventsPerColumn'] ) : '0',
 			]
-		);
+		) );
 	}
 
 	public static function render_asso_block( array $attributes ): string {
 		if ( class_exists( Shortcodes::class ) && ! Shortcodes::is_module_enabled( 'enable_directory' ) ) {
 			return '';
 		}
-		return self::asso_directory_shortcode(
+		return self::wrap_block_output( self::asso_directory_shortcode(
 			[
 				'cause'          => isset( $attributes['cause'] ) ? sanitize_title( (string) $attributes['cause'] ) : '',
 				'posts_per_page' => isset( $attributes['postsToShow'] ) ? (string) absint( $attributes['postsToShow'] ) : '9',
 				'pagination_key' => 'asso_page',
 			]
-		);
+		) );
+	}
+
+	/** Applique les attributs natifs du bloc au rendu dynamique public. */
+	private static function wrap_block_output( string $content ): string {
+		if ( '' === $content || ! function_exists( 'get_block_wrapper_attributes' ) ) {
+			return $content;
+		}
+
+		return '<div ' . get_block_wrapper_attributes() . '>' . $content . '</div>';
 	}
 
 	public static function register_asso_import_page(): void {
@@ -362,54 +387,72 @@ final class Association_Directory {
 Linktree|https://linktr.ee/acat"',
 		] );
 		$template_csv = $template_headers . "\n" . $template_row;
+
+		Admin_UI::page_start( array(
+			'title'       => __( 'Import des associations', 'plaidact-campaign-core' ),
+			'description' => __( 'Importe un fichier CSV UTF-8. Un logo peut être fourni via une URL (logo_url) ou un ZIP de logos (colonne logo_file).', 'plaidact-campaign-core' ),
+			'eyebrow'     => __( 'Répertoire associatif', 'plaidact-campaign-core' ),
+			'actions'     => array(
+				array(
+					'label' => esc_html__( 'Exporter les entrées en CSV', 'plaidact-campaign-core' ),
+					'url'   => wp_nonce_url( admin_url( 'admin-post.php?action=plaidact_export_asso_csv' ), 'plaidact_export_asso_csv' ),
+				),
+				array(
+					'label'   => esc_html__( 'Télécharger un modèle CSV', 'plaidact-campaign-core' ),
+					'url'     => 'data:text/csv;charset=utf-8,' . rawurlencode( $template_csv ),
+					'download' => 'modele-import-associations.csv',
+					'primary' => true,
+				),
+			),
+		) );
 		?>
-		<div class="wrap">
-			<h1><?php esc_html_e( 'Import des associations', 'plaidact-campaign-core' ); ?></h1>
-			<?php if ( 'ok' === $status ) : ?>
-				<div class="notice notice-success"><p><?php echo esc_html( sprintf( __( '%d associations importées/mises à jour.', 'plaidact-campaign-core' ), $count ) ); ?></p></div>
-			<?php elseif ( 'taxonomy_migrated' === $status ) : ?>
-				<div class="notice notice-success"><p><?php echo esc_html( sprintf( __( 'Migration terminée : %1$d associations mises à jour, %2$d catégories migrées.', 'plaidact-campaign-core' ), $migrated_posts, $migrated_terms ) ); ?></p></div>
-			<?php elseif ( 'error' === $status && '' !== $error ) : ?>
-				<div class="notice notice-error"><p><?php echo esc_html( $error ); ?></p></div>
-			<?php endif; ?>
+		<?php if ( 'ok' === $status ) : ?>
+			<p class="plaidact-admin-notice plaidact-admin-notice--success"><?php echo esc_html( sprintf( __( '%d associations importées/mises à jour.', 'plaidact-campaign-core' ), $count ) ); ?></p>
+		<?php elseif ( 'taxonomy_migrated' === $status ) : ?>
+			<p class="plaidact-admin-notice plaidact-admin-notice--success"><?php echo esc_html( sprintf( __( 'Migration terminée : %1$d associations mises à jour, %2$d catégories migrées.', 'plaidact-campaign-core' ), $migrated_posts, $migrated_terms ) ); ?></p>
+		<?php elseif ( 'error' === $status && '' !== $error ) : ?>
+			<p class="plaidact-admin-notice plaidact-admin-notice--danger"><?php echo esc_html( $error ); ?></p>
+		<?php endif; ?>
 
-			<p><?php esc_html_e( 'Importe un fichier CSV UTF-8. Un logo peut être fourni via une URL (logo_url) ou un ZIP de logos (colonne logo_file).', 'plaidact-campaign-core' ); ?></p>
-			<p>
-				<a class="button" href="data:text/csv;charset=utf-8,<?php echo rawurlencode( $template_csv ); ?>" download="modele-import-associations.csv">
-					<?php esc_html_e( 'Télécharger un modèle CSV', 'plaidact-campaign-core' ); ?>
-				</a>
-			</p>
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
-				<?php wp_nonce_field( 'plaidact_import_asso' ); ?>
-				<input type="hidden" name="action" value="plaidact_import_asso" />
-				<table class="form-table" role="presentation">
-					<tr>
-						<th scope="row"><label for="plaidact_asso_csv"><?php esc_html_e( 'Fichier CSV', 'plaidact-campaign-core' ); ?></label></th>
-						<td><input id="plaidact_asso_csv" type="file" name="asso_csv" accept=".csv,text/csv" required /></td>
-					</tr>
-					<tr>
-						<th scope="row"><label for="plaidact_asso_zip"><?php esc_html_e( 'ZIP des logos (optionnel)', 'plaidact-campaign-core' ); ?></label></th>
-						<td><input id="plaidact_asso_zip" type="file" name="asso_logos_zip" accept=".zip,application/zip" /></td>
-					</tr>
-				</table>
-				<?php submit_button( __( 'Importer', 'plaidact-campaign-core' ) ); ?>
-			</form>
-			<p>
-				<a class="button button-secondary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=plaidact_export_asso_csv' ), 'plaidact_export_asso_csv' ) ); ?>">
-					<?php esc_html_e( 'Exporter les entrées en CSV', 'plaidact-campaign-core' ); ?>
-				</a>
-			</p>
-
-			<hr />
-			<h2><?php esc_html_e( 'Migration des taxonomies', 'plaidact-campaign-core' ); ?></h2>
-			<p><?php esc_html_e( 'Ce bouton copie les catégories WordPress existantes (taxonomy "category") des fiches associations vers la taxonomy "Catégories d’associations".', 'plaidact-campaign-core' ); ?></p>
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<?php wp_nonce_field( 'plaidact_migrate_asso_taxonomies' ); ?>
-				<input type="hidden" name="action" value="plaidact_migrate_asso_taxonomies" />
-				<?php submit_button( __( 'Migrer les taxonomies existantes', 'plaidact-campaign-core' ), 'secondary' ); ?>
-			</form>
-		</div>
 		<?php
+		Admin_UI::section_start(
+			__( 'Importer un fichier', 'plaidact-campaign-core' ),
+			__( 'L’import est additif : une association déjà connue est complétée, jamais réinitialisée.', 'plaidact-campaign-core' ),
+			'dashicons-upload'
+		);
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
+			<?php wp_nonce_field( 'plaidact_import_asso' ); ?>
+			<input type="hidden" name="action" value="plaidact_import_asso" />
+			<div class="plaidact-admin-fields">
+				<div class="plaidact-admin-field">
+					<label class="plaidact-admin-field__label" for="plaidact_asso_csv"><?php esc_html_e( 'Fichier CSV', 'plaidact-campaign-core' ); ?></label>
+					<input id="plaidact_asso_csv" type="file" name="asso_csv" accept=".csv,text/csv" required />
+				</div>
+				<div class="plaidact-admin-field">
+					<label class="plaidact-admin-field__label" for="plaidact_asso_zip"><?php esc_html_e( 'ZIP des logos (optionnel)', 'plaidact-campaign-core' ); ?></label>
+					<input id="plaidact_asso_zip" type="file" name="asso_logos_zip" accept=".zip,application/zip" />
+				</div>
+			</div>
+			<?php submit_button( __( 'Importer', 'plaidact-campaign-core' ) ); ?>
+		</form>
+		<?php Admin_UI::section_end(); ?>
+
+		<?php
+		Admin_UI::section_start(
+			__( 'Migration des taxonomies', 'plaidact-campaign-core' ),
+			__( 'Copie les catégories WordPress existantes (taxonomy « category ») des fiches associations vers la taxonomy « Catégories d’associations ».', 'plaidact-campaign-core' ),
+			'dashicons-tag'
+		);
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<?php wp_nonce_field( 'plaidact_migrate_asso_taxonomies' ); ?>
+			<input type="hidden" name="action" value="plaidact_migrate_asso_taxonomies" />
+			<?php submit_button( __( 'Migrer les taxonomies existantes', 'plaidact-campaign-core' ), 'secondary' ); ?>
+		</form>
+		<?php
+		Admin_UI::section_end();
+		Admin_UI::page_end();
 	}
 
 	public static function render_agenda_import_page(): void {
@@ -422,23 +465,46 @@ Linktree|https://linktr.ee/acat"',
 		$error  = isset( $_GET['error'] ) ? sanitize_text_field( (string) $_GET['error'] ) : '';
 		$template_headers = implode( ',', [ 'title', 'slug', 'timeline', 'date_debut', 'date_fin', 'type_evenement', 'lieu', 'nom_organisation', 'lien_evenement' ] );
 		$template_row     = 'Réunion G7,reunion-g7,geopolitique,2026-06-02,2026-06-02,ponctuels,Ottawa,PLAID·ACT,https://example.org/evenement';
+
+		Admin_UI::page_start( array(
+			'title'       => __( 'Import des événements Agenda', 'plaidact-campaign-core' ),
+			'description' => __( 'Alimente la frise publique à partir d’un fichier CSV. Les événements déjà connus sont mis à jour, les doublons ignorés.', 'plaidact-campaign-core' ),
+			'eyebrow'     => __( 'Agenda', 'plaidact-campaign-core' ),
+			'actions'     => array(
+				array(
+					'label'   => esc_html__( 'Télécharger un modèle CSV', 'plaidact-campaign-core' ),
+					'url'     => 'data:text/csv;charset=utf-8,' . rawurlencode( $template_headers . "\n" . $template_row ),
+					'download' => 'modele-import-agenda.csv',
+					'primary' => true,
+				),
+			),
+		) );
 		?>
-		<div class="wrap">
-			<h1><?php esc_html_e( 'Import des événements Agenda', 'plaidact-campaign-core' ); ?></h1>
-			<?php if ( 'ok' === $status ) : ?>
-				<div class="notice notice-success"><p><?php echo esc_html( sprintf( __( '%d événements importés/mis à jour (%d doublons ignorés).', 'plaidact-campaign-core' ), $count, $dupes ) ); ?></p></div>
-			<?php elseif ( 'error' === $status ) : ?>
-				<div class="notice notice-error"><p><?php echo esc_html( '' !== $error ? $error : __( 'Import impossible : vérifiez le fichier CSV.', 'plaidact-campaign-core' ) ); ?></p></div>
-			<?php endif; ?>
-			<p><a class="button" href="data:text/csv;charset=utf-8,<?php echo rawurlencode( $template_headers . "\n" . $template_row ); ?>" download="modele-import-agenda.csv"><?php esc_html_e( 'Télécharger un modèle CSV', 'plaidact-campaign-core' ); ?></a></p>
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
-				<?php wp_nonce_field( 'plaidact_import_agenda' ); ?>
-				<input type="hidden" name="action" value="plaidact_import_agenda" />
-				<input type="file" name="agenda_csv" accept=".csv,text/csv" required />
-				<?php submit_button( __( 'Importer', 'plaidact-campaign-core' ) ); ?>
-			</form>
-		</div>
+		<?php if ( 'ok' === $status ) : ?>
+			<p class="plaidact-admin-notice plaidact-admin-notice--success"><?php echo esc_html( sprintf( __( '%d événements importés/mis à jour (%d doublons ignorés).', 'plaidact-campaign-core' ), $count, $dupes ) ); ?></p>
+		<?php elseif ( 'error' === $status ) : ?>
+			<p class="plaidact-admin-notice plaidact-admin-notice--danger"><?php echo esc_html( '' !== $error ? $error : __( 'Import impossible : vérifiez le fichier CSV.', 'plaidact-campaign-core' ) ); ?></p>
+		<?php endif; ?>
+
 		<?php
+		Admin_UI::section_start(
+			__( 'Importer un fichier', 'plaidact-campaign-core' ),
+			__( 'Colonnes attendues : title, slug, timeline, date_debut, date_fin, type_evenement, lieu, nom_organisation, lien_evenement.', 'plaidact-campaign-core' ),
+			'dashicons-calendar-alt'
+		);
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
+			<?php wp_nonce_field( 'plaidact_import_agenda' ); ?>
+			<input type="hidden" name="action" value="plaidact_import_agenda" />
+			<div class="plaidact-admin-field">
+				<label class="plaidact-admin-field__label" for="plaidact_agenda_csv"><?php esc_html_e( 'Fichier CSV', 'plaidact-campaign-core' ); ?></label>
+				<input id="plaidact_agenda_csv" type="file" name="agenda_csv" accept=".csv,text/csv" required />
+			</div>
+			<?php submit_button( __( 'Importer', 'plaidact-campaign-core' ) ); ?>
+		</form>
+		<?php
+		Admin_UI::section_end();
+		Admin_UI::page_end();
 	}
 
 	public static function enqueue_assets(): void {
@@ -805,6 +871,9 @@ Linktree|https://linktr.ee/acat"',
 				'orderby'        => 'meta_value',
 				'order'          => 'ASC',
 				'no_found_rows'  => true,
+				'update_post_meta_cache' => true,
+				'update_post_term_cache' => false,
+				'ignore_sticky_posts' => true,
 				'tax_query'      => [
 					[
 						'taxonomy' => 'agenda_timeline',

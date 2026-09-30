@@ -111,6 +111,7 @@ function plaidact_campaign_core_missing_petitioner_notice(): void
 }
 add_action("admin_notices", "plaidact_campaign_core_missing_petitioner_notice");
 
+require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-admin-ui.php";
 require_once PLAIDACT_CORE_PATH . "includes/class-plaidact-campaign-cpt.php";
 require_once PLAIDACT_CORE_PATH .
     "includes/class-plaidact-campaign-polylang.php";
@@ -234,6 +235,7 @@ register_uninstall_hook(__FILE__, "plaidact_campaign_core_uninstall");
  */
 function plaidact_campaign_core_init(): void
 {
+    \Plaidact\CampaignCore\Admin_UI::boot();
     \Plaidact\CampaignCore\CPT::boot();
     \Plaidact\CampaignCore\Polylang::boot();
     \Plaidact\CampaignCore\Petitioner_Integration::boot();

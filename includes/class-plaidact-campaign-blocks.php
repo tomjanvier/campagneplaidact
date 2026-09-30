@@ -31,10 +31,22 @@ final class Blocks {
 	 * @return void
 	 */
 	public static function register_blocks(): void {
+		wp_register_style(
+			'plaidact-blocks-frontend-preview',
+			PLAIDACT_CORE_URL . 'assets/campaign-shortcodes.css',
+			array(),
+			plaidact_campaign_core_asset_version( 'assets/campaign-shortcodes.css' )
+		);
+		wp_register_style(
+			'plaidact-blocks-editor',
+			PLAIDACT_CORE_URL . 'assets/css/blocks-editor.css',
+			array( 'plaidact-blocks-frontend-preview' ),
+			plaidact_campaign_core_asset_version( 'assets/css/blocks-editor.css' )
+		);
 		wp_register_script(
 			'plaidact-campaign-blocks',
 			PLAIDACT_CORE_URL . 'assets/blocks.js',
-			array( 'wp-blocks', 'wp-element', 'wp-components', 'wp-block-editor', 'wp-i18n' ),
+			array( 'wp-blocks', 'wp-element', 'wp-components', 'wp-block-editor', 'wp-i18n', 'wp-server-side-render', 'wp-data' ),
 			plaidact_campaign_core_asset_version( 'assets/blocks.js' ),
 			true
 		);
@@ -44,11 +56,13 @@ final class Blocks {
 			array(
 				'api_version'     => 2,
 				'editor_script'   => 'plaidact-campaign-blocks',
+				'editor_style'    => array( 'plaidact-blocks-frontend-preview', 'plaidact-blocks-editor' ),
 				'render_callback' => static function ( array $attributes ): string {
-					return Shortcodes::render_newsletter_form( $attributes );
+					return self::wrap_block_output( Shortcodes::render_newsletter_form( $attributes ) );
 				},
 				'supports'        => array(
 					'className' => true,
+					'anchor'    => true,
 				),
 				'attributes'      => array(
 					'title'        => array(
@@ -67,10 +81,6 @@ final class Blocks {
 						'type'    => 'boolean',
 						'default' => false,
 					),
-					'className'    => array(
-						'type'    => 'string',
-						'default' => '',
-					),
 				),
 			)
 		);
@@ -80,8 +90,9 @@ final class Blocks {
 			array(
 				'api_version'     => 2,
 				'editor_script'   => 'plaidact-campaign-blocks',
+				'editor_style'    => array( 'plaidact-blocks-frontend-preview', 'plaidact-blocks-editor' ),
 				'render_callback' => static function ( array $attributes ): string {
-					return Shortcodes::render_petition_gauge( $attributes );
+					return self::wrap_block_output( Shortcodes::render_petition_gauge( $attributes ) );
 				},
 				'attributes'      => array(
 					'id'    => array(
@@ -100,7 +111,12 @@ final class Blocks {
 						'type'    => 'number',
 						'default' => 0,
 					),
+					'goal' => array(
+						'type'    => 'number',
+						'default' => 0,
+					),
 				),
+				'supports'        => array( 'className' => true, 'anchor' => true ),
 			)
 		);
 
@@ -109,8 +125,9 @@ final class Blocks {
 			array(
 				'api_version'     => 2,
 				'editor_script'   => 'plaidact-campaign-blocks',
+				'editor_style'    => array( 'plaidact-blocks-frontend-preview', 'plaidact-blocks-editor' ),
 				'render_callback' => static function ( array $attributes ): string {
-					return Shortcodes::render_partners( $attributes );
+					return self::wrap_block_output( Shortcodes::render_partners( $attributes ) );
 				},
 				'attributes'      => array(
 					'title' => array(
@@ -122,6 +139,7 @@ final class Blocks {
 						'default' => -1,
 					),
 				),
+				'supports'        => array( 'className' => true, 'anchor' => true ),
 			)
 		);
 
@@ -130,12 +148,13 @@ final class Blocks {
 			array(
 				'api_version'     => 2,
 				'editor_script'   => 'plaidact-campaign-blocks',
+				'editor_style'    => array( 'plaidact-blocks-frontend-preview', 'plaidact-blocks-editor' ),
 				'render_callback' => static function ( array $attributes ): string {
 					// Respect du toggle module comme pour le shortcode.
 					if ( ! Shortcodes::is_module_enabled( 'enable_breves' ) ) {
 						return '';
 					}
-					return Shortcodes::render_breves(
+					return self::wrap_block_output( Shortcodes::render_breves(
 						array(
 							'title'       => isset( $attributes['title'] ) ? (string) $attributes['title'] : '',
 							'description' => isset( $attributes['description'] ) ? (string) $attributes['description'] : '',
@@ -147,7 +166,7 @@ final class Blocks {
 							'continuous'  => isset( $attributes['continuous'] ) ? (bool) $attributes['continuous'] : true,
 							'speed'       => isset( $attributes['speed'] ) ? (int) $attributes['speed'] : 40,
 						)
-					);
+					) );
 				},
 				'attributes'      => array(
 					'title'       => array(
@@ -193,5 +212,14 @@ final class Blocks {
 				),
 			)
 		);
+	}
+
+	/** Applique les attributs natifs du bloc au rendu dynamique public. */
+	private static function wrap_block_output( string $content ): string {
+		if ( '' === $content || ! function_exists( 'get_block_wrapper_attributes' ) ) {
+			return $content;
+		}
+
+		return '<div ' . get_block_wrapper_attributes() . '>' . $content . '</div>';
 	}
 }
